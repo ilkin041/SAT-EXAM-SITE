@@ -28,6 +28,7 @@
     "@radix-ui/react-slot": "^1.1.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
+    "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "dompurify": "^3.2.2",
     "isomorphic-dompurify": "^2.18.0",
