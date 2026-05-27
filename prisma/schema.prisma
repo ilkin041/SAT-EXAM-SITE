@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum TestMode {
+  ADAPTIVE
+  LINEAR
+}
+
+enum SectionType {
+  READING_WRITING
+  MATH
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  MIXED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  STUDENT_PRODUCED_RESPONSE
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum AnnotationColor {
+  YELLOW
+  BLUE
+  PINK
+}
+
+enum ImagePosition {
+  TOP
+  INLINE
+}
+
+// ---------- Models ----------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  testsCreated Test[]        @relation("TestCreatedBy")
+  attempts     TestAttempt[]
+}
+
+model Test {
+  id                String   @id @default(cuid())
+  title             String
+  description       String?
+  mode              TestMode @default(ADAPTIVE)
+  isPublic          Boolean  @default(false)
+  adaptiveThreshold Float    @default(0.6)
+  /// JSON lookup table for raw->scaled conversion, shape: { readingWriting: number[], math: number[] }
+  scoringTable      Json?
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  createdBy User?         @relation("TestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  sections  Section[]
+  attempts  TestAttempt[]
+
+  @@index([createdById])
+}
+
+model Section {
+  id                String      @id @default(cuid())
+  testId            String
+  type              SectionType
+  order             Int
+  module1TimeLimit  Int // seconds
+  module2TimeLimit  Int // seconds
+
+  test    Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  modules Module[]
+
+  @@unique([testId, order])
+  @@index([testId])
+}
+
+model Module {
+  id           String     @id @default(cuid())
+  sectionId    String
+  moduleNumber Int // 1 or 2
+  difficulty   Difficulty // module1 = MIXED, module2 = EASY or HARD (or MIXED in linear mode)
+
+  section         Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  moduleQuestions ModuleQuestion[]
+  moduleResults   ModuleResult[]
+
+  @@index([sectionId])
+}
+
+model Question {
+  id              String        @id @default(cuid())
+  /// Which SAT section this question belongs to — splits the bank into Math
+  /// and Reading-and-Writing. Enforced by `assignQuestionToModule` so a
+  /// MATH question can't be dropped into an R&W module by mistake.
+  sectionType     SectionType
+  type            QuestionType
+  domain          String
+  skill           String?
+  difficulty      Difficulty    @default(MEDIUM)
+  passage         String? // sanitized HTML, optional (R&W)
+  stem            String // sanitized HTML
+  imageUrl        String?
+  /// Where the image renders relative to the stem.
+  ///   TOP    → above the stem
+  ///   INLINE → between the stem and the answer choices (default)
+  imagePosition   ImagePosition @default(INLINE)
+  /// Optional cap on rendered image width in pixels. NULL → browser default.
+  imageMaxWidth   Int?
+  /// JSON: [{ label: 'A'|'B'|'C'|'D', text: string }]
+  choices         Json?
+  correctAnswer   String
+  /// JSON: string[] — alternate accepted forms for SPR
+  acceptedAnswers Json?
+  explanation     String?
+
+  moduleAssignments ModuleQuestion[]
+  answers           Answer[]
+  annotations       Annotation[]
+
+  @@index([sectionType])
+  @@index([domain])
+  @@index([difficulty])
+}
+
+/// Join table linking a question in the global bank to a specific module of a
+/// specific test, with a display `order`. The same Question can appear in many
+/// modules (across tests) but only once per module.
+model ModuleQuestion {
+  id         String   @id @default(cuid())
+  moduleId   String
+  questionId String
+  order      Int
+  createdAt  DateTime @default(now())
+
+  module   Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, questionId])
+  @@unique([moduleId, order])
+  @@index([moduleId])
+  @@index([questionId])
+}
+
+model TestAttempt {
+  id                    String        @id @default(cuid())
+  userId                String? // null = public/anonymous attempt
+  testId                String
+  startedAt             DateTime      @default(now())
+  completedAt           DateTime?
+  currentSectionId      String?
+  currentModuleId       String?
+  currentQuestionIndex  Int           @default(0)
+  /// Server-recorded UTC time the current module started — drives the authoritative timer.
+  moduleStartedAt       DateTime?
+  /// Set when the student finishes one section and is on the 10-minute break before the next.
+  breakStartedAt        DateTime?
+  status                AttemptStatus @default(IN_PROGRESS)
+  /// Tab-switch / focus-loss events for light anti-cheat logging.
+  focusEvents           Json?
+
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  test          Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
+  answers       Answer[]
+  moduleResults ModuleResult[]
+  annotations   Annotation[]
+
+  @@index([userId])
+  @@index([testId])
+  @@index([status])
+}
+
+model Answer {
+  id                 String   @id @default(cuid())
+  attemptId          String
+  questionId         String
+  response           String   @default("")
+  isCorrect          Boolean  @default(false)
+  isMarkedForReview  Boolean  @default(false)
+  /// JSON: ('A'|'B'|'C'|'D')[]
+  eliminatedChoices  Json?
+  timeSpent          Int      @default(0) // seconds accumulated on this question
+  updatedAt          DateTime @updatedAt
+
+  attempt  TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+}
+
+model Annotation {
+  id          String          @id @default(cuid())
+  attemptId   String
+  questionId  String
+  /// Character offsets into the passage's plain text.
+  startOffset Int
+  endOffset   Int
+  /// The selected text (denormalized for resilience if offsets shift).
+  text        String
+  color       AnnotationColor @default(YELLOW)
+  note        String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  attempt  TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+  @@index([questionId])
+}
+
+model ModuleResult {
+  id           String   @id @default(cuid())
+  attemptId    String
+  moduleId     String
+  correctCount Int
+  totalCount   Int
+  /// For adaptive Module 1 results: id of the Module 2 the student was routed to.
+  routedTo     String?
+  createdAt    DateTime @default(now())
+
+  attempt TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  module  Module      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, moduleId])
+  @@index([attemptId])
+}

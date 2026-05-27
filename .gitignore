@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+build
+dist
+.env
+.env.local
+.env*.local
+*.log
+.DS_Store
+/public/uploads
+/prisma/*.db
+/prisma/*.db-journal
+.vercel
+.turbo
+coverage

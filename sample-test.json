@@ -1,0 +1,176 @@
+{
+  "test": {
+    "title": "Sample Practice Test 1",
+    "description": "A small demo test covering the full adaptive structure with a few questions per module.",
+    "mode": "ADAPTIVE",
+    "isPublic": true,
+    "adaptiveThreshold": 0.6
+  },
+  "sections": [
+    {
+      "type": "READING_WRITING",
+      "order": 1,
+      "module1TimeLimit": 1920,
+      "module2TimeLimit": 1920,
+      "modules": [
+        {
+          "moduleNumber": 1,
+          "difficulty": "MIXED",
+          "questions": [
+            {
+              "type": "MULTIPLE_CHOICE",
+              "domain": "Information and Ideas",
+              "skill": "Central Ideas and Details",
+              "difficulty": "MEDIUM",
+              "passage": "<p>Marine biologist Asha Patel studies bioluminescent plankton off the coast of Maine. Her recent work suggests that the timing of plankton blooms has shifted noticeably earlier in the year over the past two decades, a change she attributes primarily to warming surface waters.</p>",
+              "stem": "Which choice best states the main idea of the passage?",
+              "choices": [
+                { "label": "A", "text": "Plankton blooms are bioluminescent only in cold water." },
+                { "label": "B", "text": "Patel's research links earlier plankton blooms to warmer surface waters." },
+                { "label": "C", "text": "Maine's coastline is the only place where plankton are studied." },
+                { "label": "D", "text": "Bioluminescence is decreasing as oceans warm." }
+              ],
+              "correctAnswer": "B",
+              "explanation": "The passage's central claim is that earlier blooms correlate with warming surface waters, which is exactly what choice B states."
+            },
+            {
+              "type": "MULTIPLE_CHOICE",
+              "domain": "Standard English Conventions",
+              "skill": "Subject-verb agreement",
+              "difficulty": "EASY",
+              "stem": "<p>The committee, along with its three subcommittees, ____ scheduled to release a report next week.</p><p>Which choice completes the text so that it conforms to the conventions of Standard English?</p>",
+              "choices": [
+                { "label": "A", "text": "are" },
+                { "label": "B", "text": "were" },
+                { "label": "C", "text": "is" },
+                { "label": "D", "text": "have been" }
+              ],
+              "correctAnswer": "C",
+              "explanation": "The subject 'committee' is singular; the intervening phrase 'along with its three subcommittees' does not change the number of the subject."
+            }
+          ]
+        },
+        {
+          "moduleNumber": 2,
+          "difficulty": "EASY",
+          "questions": [
+            {
+              "type": "MULTIPLE_CHOICE",
+              "domain": "Craft and Structure",
+              "skill": "Words in Context",
+              "difficulty": "EASY",
+              "passage": "<p>The novelist's debut was <em>unassuming</em>: a slim volume released by a small press, with little fanfare.</p>",
+              "stem": "As used in the passage, the word \"unassuming\" most nearly means:",
+              "choices": [
+                { "label": "A", "text": "modest" },
+                { "label": "B", "text": "expensive" },
+                { "label": "C", "text": "controversial" },
+                { "label": "D", "text": "lengthy" }
+              ],
+              "correctAnswer": "A",
+              "explanation": "'Unassuming' here describes a low-key, modest debut — choice A."
+            }
+          ]
+        },
+        {
+          "moduleNumber": 2,
+          "difficulty": "HARD",
+          "questions": [
+            {
+              "type": "MULTIPLE_CHOICE",
+              "domain": "Information and Ideas",
+              "skill": "Inferences",
+              "difficulty": "HARD",
+              "passage": "<p>Although early 20th-century critics dismissed Zora Neale Hurston's use of dialect as a literary liability, contemporary scholars increasingly view it as the linguistic backbone of her aesthetic project — a deliberate insistence that vernacular speech could carry the same emotional and intellectual weight as standard prose.</p>",
+              "stem": "Which choice best describes the function of the dash in the passage?",
+              "choices": [
+                { "label": "A", "text": "It signals a contradiction between two critical schools." },
+                { "label": "B", "text": "It introduces an elaboration that reframes the preceding clause." },
+                { "label": "C", "text": "It marks an aside that could be removed without changing meaning." },
+                { "label": "D", "text": "It separates a list of contemporary scholars." }
+              ],
+              "correctAnswer": "B",
+              "explanation": "The text after the dash elaborates on what 'linguistic backbone' means, reframing the prior clause as a deliberate aesthetic choice."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "MATH",
+      "order": 2,
+      "module1TimeLimit": 2100,
+      "module2TimeLimit": 2100,
+      "modules": [
+        {
+          "moduleNumber": 1,
+          "difficulty": "MIXED",
+          "questions": [
+            {
+              "type": "STUDENT_PRODUCED_RESPONSE",
+              "domain": "Algebra",
+              "skill": "Linear equations in one variable",
+              "difficulty": "EASY",
+              "stem": "If $3x + 5 = 17$, what is the value of $x$?",
+              "correctAnswer": "4",
+              "acceptedAnswers": ["4", "4.0"],
+              "explanation": "Subtract 5 from both sides to get $3x = 12$, then divide by 3."
+            },
+            {
+              "type": "MULTIPLE_CHOICE",
+              "domain": "Advanced Math",
+              "skill": "Quadratic equations",
+              "difficulty": "MEDIUM",
+              "stem": "What are the solutions to $x^2 - 5x + 6 = 0$?",
+              "choices": [
+                { "label": "A", "text": "$x = 1, 6$" },
+                { "label": "B", "text": "$x = 2, 3$" },
+                { "label": "C", "text": "$x = -2, -3$" },
+                { "label": "D", "text": "$x = 0, 5$" }
+              ],
+              "correctAnswer": "B",
+              "explanation": "Factor as $(x-2)(x-3)=0$."
+            }
+          ]
+        },
+        {
+          "moduleNumber": 2,
+          "difficulty": "EASY",
+          "questions": [
+            {
+              "type": "MULTIPLE_CHOICE",
+              "domain": "Algebra",
+              "skill": "Linear functions",
+              "difficulty": "EASY",
+              "stem": "A line passes through $(0, 2)$ with slope $3$. What is its equation?",
+              "choices": [
+                { "label": "A", "text": "$y = 2x + 3$" },
+                { "label": "B", "text": "$y = 3x + 2$" },
+                { "label": "C", "text": "$y = 3x - 2$" },
+                { "label": "D", "text": "$y = -3x + 2$" }
+              ],
+              "correctAnswer": "B",
+              "explanation": "Slope-intercept form: $y = mx + b$ with $m = 3$, $b = 2$."
+            }
+          ]
+        },
+        {
+          "moduleNumber": 2,
+          "difficulty": "HARD",
+          "questions": [
+            {
+              "type": "STUDENT_PRODUCED_RESPONSE",
+              "domain": "Advanced Math",
+              "skill": "Exponential functions",
+              "difficulty": "HARD",
+              "stem": "If $2^{x+1} = 32$, what is the value of $x$?",
+              "correctAnswer": "4",
+              "acceptedAnswers": ["4"],
+              "explanation": "$32 = 2^5$, so $x + 1 = 5$, giving $x = 4$."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
