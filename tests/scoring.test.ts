@@ -4,6 +4,8 @@ import {
   computeRawScores,
   computeScaledScores,
   computeDomainBreakdown,
+  DEFAULT_RW_TABLE,
+  DEFAULT_MATH_TABLE,
   SCALED_MIN,
   SCALED_MAX,
 } from "@/lib/scoring";
@@ -73,12 +75,27 @@ describe("computeRawScores", () => {
 });
 
 describe("computeScaledScores", () => {
-  it("totals the two scaled sections", () => {
+  it("uses the real SAT default tables (proportional index lookup)", () => {
+    // 27/54 R&W → proportionalIdx=27 → DEFAULT_RW_TABLE[27] = 570
+    // 22/44 Math → proportionalIdx=22 → DEFAULT_MATH_TABLE[22] = 600
     const scaled = computeScaledScores({
-      readingWriting: { correct: 27, total: 54 }, // → 500
-      math: { correct: 22, total: 44 }, // → 500
+      readingWriting: { correct: 27, total: 54 },
+      math: { correct: 22, total: 44 },
     });
-    expect(scaled).toEqual({ readingWriting: 500, math: 500, total: 1000 });
+    expect(scaled.readingWriting).toBe(DEFAULT_RW_TABLE[27]);
+    expect(scaled.math).toBe(DEFAULT_MATH_TABLE[22]);
+    expect(scaled.total).toBe(DEFAULT_RW_TABLE[27] + DEFAULT_MATH_TABLE[22]);
+  });
+
+  it("proportionally maps a smaller test against the default tables", () => {
+    // 10-question R&W: 5 correct → proportionalIdx = round(5/10 * 54) = 27 → 570
+    // 10-question Math: 5 correct → proportionalIdx = round(5/10 * 44) = 22 → 600
+    const scaled = computeScaledScores({
+      readingWriting: { correct: 5, total: 10 },
+      math: { correct: 5, total: 10 },
+    });
+    expect(scaled.readingWriting).toBe(DEFAULT_RW_TABLE[27]);
+    expect(scaled.math).toBe(DEFAULT_MATH_TABLE[22]);
   });
 
   it("uses per-section tables when provided", () => {

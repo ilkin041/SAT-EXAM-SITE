@@ -7,7 +7,10 @@
       "Bash(npx prisma *)",
       "Bash(python -c \"import json, sys; pkg = json.load\\(sys.stdin\\); print\\(json.dumps\\(pkg.get\\('exports', {}\\).get\\('./jwt'\\), indent=2\\)\\)\")",
       "Bash(npm run *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(npm ls *)",
+      "Bash(npm prune *)",
+      "Bash(npm test *)"
     ]
   }
 }
