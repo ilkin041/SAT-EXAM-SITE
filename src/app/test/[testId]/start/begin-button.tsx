@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   testId: string;
@@ -20,7 +22,6 @@ export function BeginButton({ testId }: Props) {
   async function go() {
     setError(null);
     try {
-      // Request fullscreen first so the request comes inside the user gesture.
       await document.documentElement.requestFullscreen().catch(() => {});
     } catch {
       /* ignore */
@@ -38,26 +39,25 @@ export function BeginButton({ testId }: Props) {
 
   return (
     <div>
-      <button
+      <Button
         type="button"
         onClick={go}
-        disabled={pending}
-        className="rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+        loading={pending}
+        size="lg"
+        className="w-full sm:w-auto"
       >
         {pending ? "Starting…" : "Begin test"}
-      </button>
-      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
-      <p className="mt-3 text-xs text-muted-foreground">
-        The test opens in fullscreen. Keyboard shortcuts: A/B/C/D choose an answer,{" "}
-        <kbd className="rounded border border-border bg-muted px-1">←</kbd>{" "}
-        /{" "}
-        <kbd className="rounded border border-border bg-muted px-1">→</kbd>{" "}
-        navigate,{" "}
-        <kbd className="rounded border border-border bg-muted px-1">M</kbd>{" "}
-        marks for review,{" "}
-        <kbd className="rounded border border-border bg-muted px-1">E</kbd>{" "}
-        toggles the answer eliminator.
-      </p>
+        {!pending && <ArrowRight className="h-4 w-4" />}
+      </Button>
+      {error && (
+        <div
+          role="alert"
+          className="mt-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,12 @@
 import Link from "next/link";
+import { BookOpen, Plus, Search } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import type { Difficulty, QuestionType, SectionType } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { RowDeleteButton } from "./_components/row-delete-button";
 
 export const metadata = { title: "Questions — Admin" };
@@ -12,6 +18,9 @@ interface SearchParams {
   type?: string;
   section?: string;
 }
+
+const SELECT_CLS =
+  "h-10 rounded-md border border-input bg-card px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export default async function QuestionsPage({
   searchParams,
@@ -34,14 +43,14 @@ export default async function QuestionsPage({
   if (sp.type) where.type = sp.type as QuestionType;
   if (sp.section) where.sectionType = sp.section as SectionType;
 
+  const hasFilter = !!(sp.q || sp.domain || sp.difficulty || sp.type || sp.section);
+
   const [questions, domains] = await Promise.all([
     prisma.question.findMany({
       where,
       orderBy: { id: "desc" },
       take: 100,
-      include: {
-        _count: { select: { moduleAssignments: true } },
-      },
+      include: { _count: { select: { moduleAssignments: true } } },
     }),
     prisma.question.findMany({
       distinct: ["domain"],
@@ -52,105 +61,108 @@ export default async function QuestionsPage({
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Question bank</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Questions live in the global bank and are assigned to test modules from each test's detail page.
-          </p>
-        </div>
-        <Link
-          href="/admin/questions/new"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          New question
-        </Link>
-      </div>
+      <PageHeader
+        title="Question bank"
+        description="Questions live in the global bank and are assigned to test modules from each test's detail page."
+        actions={
+          <Button asChild>
+            <Link href="/admin/questions/new">
+              <Plus className="h-4 w-4" />
+              New question
+            </Link>
+          </Button>
+        }
+      />
 
-      <form className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-6">
-        <input
-          name="q"
-          defaultValue={sp.q ?? ""}
-          placeholder="Search…"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm sm:col-span-2"
-        />
-        <select
-          name="section"
-          defaultValue={sp.section ?? ""}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          <option value="">All sections</option>
-          <option value="READING_WRITING">English (R&amp;W)</option>
-          <option value="MATH">Math</option>
-        </select>
-        <select
-          name="type"
-          defaultValue={sp.type ?? ""}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          <option value="">All types</option>
-          <option value="MULTIPLE_CHOICE">Multiple choice</option>
-          <option value="STUDENT_PRODUCED_RESPONSE">Student-produced</option>
-        </select>
-        <select
-          name="difficulty"
-          defaultValue={sp.difficulty ?? ""}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          <option value="">All difficulties</option>
-          <option value="EASY">Easy</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HARD">Hard</option>
-          <option value="MIXED">Mixed</option>
-        </select>
-        <select
-          name="domain"
-          defaultValue={sp.domain ?? ""}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          <option value="">All domains</option>
-          {domains.map((d) => (
-            <option key={d.domain} value={d.domain}>
-              {d.domain}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:opacity-90"
-        >
-          Filter
-        </button>
-        <Link
-          href="/admin/questions"
-          className="flex items-center justify-center rounded-md border border-input px-4 py-2 text-sm hover:bg-accent"
-        >
-          Clear
-        </Link>
+      <form className="mb-6 rounded-xl border border-border bg-card p-4 shadow-card">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_repeat(4,minmax(0,160px))_auto]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              name="q"
+              defaultValue={sp.q ?? ""}
+              placeholder="Search stem, passage, domain…"
+              className="pl-9"
+            />
+          </div>
+          <select name="section" defaultValue={sp.section ?? ""} className={SELECT_CLS}>
+            <option value="">All sections</option>
+            <option value="READING_WRITING">English (R&amp;W)</option>
+            <option value="MATH">Math</option>
+          </select>
+          <select name="type" defaultValue={sp.type ?? ""} className={SELECT_CLS}>
+            <option value="">All types</option>
+            <option value="MULTIPLE_CHOICE">Multiple choice</option>
+            <option value="STUDENT_PRODUCED_RESPONSE">Student-produced</option>
+          </select>
+          <select name="difficulty" defaultValue={sp.difficulty ?? ""} className={SELECT_CLS}>
+            <option value="">All difficulties</option>
+            <option value="EASY">Easy</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HARD">Hard</option>
+            <option value="MIXED">Mixed</option>
+          </select>
+          <select name="domain" defaultValue={sp.domain ?? ""} className={SELECT_CLS}>
+            <option value="">All domains</option>
+            {domains.map((d) => (
+              <option key={d.domain} value={d.domain}>
+                {d.domain}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-2">
+            <Button type="submit" size="default">Filter</Button>
+            {hasFilter && (
+              <Button asChild variant="ghost" size="default">
+                <Link href="/admin/questions">Clear</Link>
+              </Button>
+            )}
+          </div>
+        </div>
       </form>
 
       {questions.length === 0 ? (
-        <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-          No questions match these filters.
-        </p>
+        <EmptyState
+          icon={BookOpen}
+          title={hasFilter ? "No questions match these filters" : "No questions yet"}
+          description={
+            hasFilter
+              ? "Try clearing some filters or broadening your search."
+              : "Add your first question to start building the bank."
+          }
+          action={
+            hasFilter ? (
+              <Button asChild variant="secondary">
+                <Link href="/admin/questions">Clear filters</Link>
+              </Button>
+            ) : (
+              <Button asChild>
+                <Link href="/admin/questions/new">
+                  <Plus className="h-4 w-4" />
+                  New question
+                </Link>
+              </Button>
+            )
+          }
+        />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="p-3">Stem</th>
-                <th className="p-3">Section</th>
-                <th className="p-3">Type</th>
-                <th className="p-3">Domain</th>
-                <th className="p-3">Diff.</th>
-                <th className="p-3">Assignments</th>
-                <th className="p-3 w-12"></th>
+                <th className="px-4 py-2.5 font-medium">Stem</th>
+                <th className="px-4 py-2.5 font-medium">Section</th>
+                <th className="px-4 py-2.5 font-medium">Type</th>
+                <th className="px-4 py-2.5 font-medium">Domain</th>
+                <th className="px-4 py-2.5 font-medium">Difficulty</th>
+                <th className="px-4 py-2.5 font-medium">Used in</th>
+                <th className="px-4 py-2.5 w-10" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-border bg-card">
+            <tbody className="divide-y divide-border">
               {questions.map((q) => (
-                <tr key={q.id} className="hover:bg-accent/30">
-                  <td className="p-3">
+                <tr key={q.id} className="transition-colors hover:bg-accent/40">
+                  <td className="px-4 py-3">
                     <Link
                       href={`/admin/questions/${q.id}`}
                       className="line-clamp-2 max-w-md font-medium hover:underline"
@@ -158,34 +170,33 @@ export default async function QuestionsPage({
                       {stripHtml(q.stem)}
                     </Link>
                   </td>
-                  <td className="p-3">
-                    <span
-                      className={
-                        "rounded-full px-2 py-0.5 text-xs " +
-                        (q.sectionType === "MATH"
-                          ? "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300")
-                      }
-                    >
+                  <td className="px-4 py-3">
+                    <Badge variant={q.sectionType === "MATH" ? "info" : "success"}>
                       {q.sectionType === "MATH" ? "Math" : "R&W"}
-                    </span>
+                    </Badge>
                   </td>
-                  <td className="p-3 text-muted-foreground">
-                    {q.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
+                  <td className="px-4 py-3">
+                    <Badge variant={q.type === "MULTIPLE_CHOICE" ? "outline" : "purple"}>
+                      {q.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
+                    </Badge>
                   </td>
-                  <td className="p-3 text-muted-foreground">{q.domain}</td>
-                  <td className="p-3 text-muted-foreground">{q.difficulty}</td>
-                  <td className="p-3">
+                  <td className="px-4 py-3 text-muted-foreground">{q.domain}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={difficultyVariant(q.difficulty)}>
+                      {q.difficulty}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
                     {q._count.moduleAssignments === 0 ? (
                       <span className="text-xs text-muted-foreground">Unassigned</span>
                     ) : (
-                      <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs">
-                        Used in {q._count.moduleAssignments} module
+                      <Badge variant="muted">
+                        {q._count.moduleAssignments} module
                         {q._count.moduleAssignments === 1 ? "" : "s"}
-                      </span>
+                      </Badge>
                     )}
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="px-4 py-3 text-right">
                     <RowDeleteButton questionId={q.id} />
                   </td>
                 </tr>
@@ -196,6 +207,15 @@ export default async function QuestionsPage({
       )}
     </>
   );
+}
+
+function difficultyVariant(
+  d: Difficulty,
+): "success" | "warning" | "destructive" | "muted" {
+  if (d === "EASY") return "success";
+  if (d === "MEDIUM") return "warning";
+  if (d === "HARD") return "destructive";
+  return "muted";
 }
 
 function stripHtml(s: string) {

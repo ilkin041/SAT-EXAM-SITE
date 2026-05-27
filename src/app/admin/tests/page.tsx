@@ -1,5 +1,10 @@
 import Link from "next/link";
+import { FileText, Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = { title: "Tests — Admin" };
 
@@ -18,68 +23,93 @@ export default async function TestsPage() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-semibold tracking-tight">Tests</h1>
-        <Link
-          href="/admin/tests/new"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          New test
-        </Link>
-      </div>
+      <PageHeader
+        title="Tests"
+        description="Manage your practice tests, sections, and modules."
+        actions={
+          <Button asChild>
+            <Link href="/admin/tests/new">
+              <Plus className="h-4 w-4" />
+              New test
+            </Link>
+          </Button>
+        }
+      />
 
       {tests.length === 0 ? (
-        <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-          No tests yet. Create one to get started.
-        </p>
+        <EmptyState
+          icon={FileText}
+          title="No tests yet"
+          description="Create your first practice test to get started."
+          action={
+            <Button asChild>
+              <Link href="/admin/tests/new">
+                <Plus className="h-4 w-4" />
+                Create test
+              </Link>
+            </Button>
+          }
+        />
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-          {tests.map((t) => {
-            const totalQ = t.sections
-              .flatMap((s) => s.modules)
-              .reduce((sum, m) => sum + m._count.moduleQuestions, 0);
-            return (
-              <li key={t.id} className="flex items-center justify-between gap-4 p-4">
-                <div className="min-w-0">
-                  <Link
-                    href={`/admin/tests/${t.id}`}
-                    className="block truncate font-medium hover:underline"
-                  >
-                    {t.title}
-                  </Link>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <Badge>{t.mode}</Badge>
-                    {t.isPublic && <Badge tone="green">Public</Badge>}
-                    <span>{totalQ} questions</span>
-                    <span>{t._count.attempts} attempts</span>
-                    <span>{t.createdAt.toLocaleDateString()}</span>
-                  </div>
-                </div>
-                <Link
-                  href={`/admin/tests/${t.id}`}
-                  className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent"
-                >
-                  Open
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-4 py-2.5 font-medium">Title</th>
+                <th className="px-4 py-2.5 font-medium">Mode</th>
+                <th className="px-4 py-2.5 font-medium">Visibility</th>
+                <th className="px-4 py-2.5 text-right font-medium">Questions</th>
+                <th className="px-4 py-2.5 text-right font-medium">Attempts</th>
+                <th className="px-4 py-2.5 font-medium">Created</th>
+                <th className="px-4 py-2.5" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {tests.map((t) => {
+                const totalQ = t.sections
+                  .flatMap((s) => s.modules)
+                  .reduce((sum, m) => sum + m._count.moduleQuestions, 0);
+                return (
+                  <tr key={t.id} className="transition-colors hover:bg-accent/40">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/tests/${t.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {t.title}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={t.mode === "ADAPTIVE" ? "info" : "muted"}>
+                        {t.mode}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={t.isPublic ? "success" : "outline"}>
+                        {t.isPublic ? "Public" : "Private"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {totalQ}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {t._count.attempts}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {t.createdAt.toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button asChild variant="secondary" size="sm">
+                        <Link href={`/admin/tests/${t.id}`}>Open</Link>
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
-  );
-}
-
-function Badge({ children, tone }: { children: React.ReactNode; tone?: "green" }) {
-  return (
-    <span
-      className={
-        tone === "green"
-          ? "rounded-full border border-green-500/40 bg-green-50 px-2 py-0.5 text-green-700 dark:bg-green-950/30 dark:text-green-300"
-          : "rounded-full border border-border bg-muted px-2 py-0.5"
-      }
-    >
-      {children}
-    </span>
   );
 }

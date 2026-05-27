@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/button";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   computeRawScores,
   computeScaledScores,
@@ -66,29 +68,34 @@ export default async function AttemptDetailPage({
 
   return (
     <>
-      <Link href="/admin" className="text-xs text-muted-foreground hover:underline">
-        ← Admin
+      <Link
+        href="/admin/attempts"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        ← Back to attempts
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Attempt</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {attempt.user?.email ?? "anonymous"} · {attempt.test.title} · {attempt.status}
-      </p>
+      <header className="mt-2 mb-6">
+        <h1 className="text-3xl font-semibold tracking-tight">Attempt</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          {attempt.user?.name ?? attempt.user?.email ?? "anonymous"} · {attempt.test.title}
+        </p>
+      </header>
 
-      <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Stat label="Total scaled" value={scaled.total} hint="400–1600" />
-        <Stat
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Total scaled" value={scaled.total} hint="400–1600" />
+        <StatCard
           label="R&W"
           value={scaled.readingWriting}
           hint={`${raw.readingWriting.correct}/${raw.readingWriting.total} raw`}
         />
-        <Stat
+        <StatCard
           label="Math"
           value={scaled.math}
           hint={`${raw.math.correct}/${raw.math.total} raw`}
         />
       </section>
 
-      <section className="mt-8 rounded-lg border border-border bg-card p-5">
+      <section className="mt-8 rounded-xl border border-border bg-card p-5 shadow-card">
         <h2 className="text-sm font-semibold">Focus-event log</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           {blurs} tab-switch{blurs === 1 ? "" : "es"} · {fullscreenExits} fullscreen exit
@@ -111,8 +118,8 @@ export default async function AttemptDetailPage({
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-medium">Modules served</h2>
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">Modules served</h2>
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-card">
           {attempt.moduleResults.map((r) => (
             <li key={r.id} className="flex items-center justify-between p-4 text-sm">
               <div>
@@ -131,23 +138,12 @@ export default async function AttemptDetailPage({
       </section>
 
       <section className="mt-8">
-        <Link
-          href={`/results/${attempt.id}/review`}
-          className="inline-block rounded-md border border-input px-4 py-2 text-sm hover:bg-accent"
-        >
-          View full answer review →
-        </Link>
+        <Button asChild variant="secondary">
+          <Link href={`/results/${attempt.id}/review`}>
+            View full answer review →
+          </Link>
+        </Button>
       </section>
     </>
-  );
-}
-
-function Stat({ label, value, hint }: { label: string; value: number; hint: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-5">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 text-3xl font-semibold tabular-nums">{value}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
-    </div>
   );
 }

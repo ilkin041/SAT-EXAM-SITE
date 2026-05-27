@@ -1,8 +1,16 @@
 import Link from "next/link";
+import { ArrowRight, BookOpen, ClipboardList, ShieldCheck } from "lucide-react";
 import { requireUser } from "@/lib/auth-helpers";
-import { signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { DarkModeToggle } from "@/components/dark-mode-toggle";
+import { StudentNav } from "@/components/student-nav";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  computeRawScores,
+  computeScaledScores,
+  type ScoringTable,
+} from "@/lib/scoring";
 
 export const metadata = { title: "Dashboard — SAT Practice" };
 
@@ -26,109 +34,189 @@ export default async function DashboardPage() {
       where: { userId: user.id },
       orderBy: { startedAt: "desc" },
       take: 10,
-      include: { test: { select: { title: true } } },
+      include: {
+        test: { select: { title: true, scoringTable: true } },
+        moduleResults: {
+          include: { module: { include: { section: { select: { type: true } } } } },
+        },
+      },
     }),
   ]);
 
+  const displayName = user.name?.trim() || user.email?.split("@")[0] || "there";
+
   return (
-    <main className="container mx-auto max-w-4xl py-12">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Signed in as {user.email} ({user.role})
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <DarkModeToggle />
+    <>
+      <StudentNav />
+      <main className="container mx-auto max-w-6xl px-4 py-10">
+        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Welcome back, {displayName}
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Pick up where you left off or start a new practice test.
+            </p>
+          </div>
           {user.role === "ADMIN" && (
-            <Link
-              href="/admin"
-              className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent"
-            >
-              Admin panel
-            </Link>
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/admin">
+                <ShieldCheck className="h-4 w-4" />
+                Admin panel
+              </Link>
+            </Button>
           )}
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/" });
-            }}
-          >
-            <button
-              type="submit"
-              className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent"
-            >
-              Sign out
-            </button>
-          </form>
         </div>
-      </div>
 
-      <section className="mb-10">
-        <h2 className="mb-3 text-lg font-medium">Available tests</h2>
-        {tests.length === 0 ? (
-          <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-            No tests available yet.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-            {tests.map((t) => {
-              const totalQ = t.sections
-                .flatMap((s) => s.modules)
-                .reduce((sum, m) => sum + m._count.moduleQuestions, 0);
-              return (
-                <li key={t.id} className="flex items-center justify-between gap-4 p-4">
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{t.title}</div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">
-                      {t.mode} · {totalQ} questions · {t.sections.length} sections
-                    </div>
-                  </div>
-                  <Link
-                    href={`/test/${t.id}/start`}
-                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+        {/* ----- Available tests ----- */}
+        <section className="mb-12">
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">Available tests</h2>
+            <span className="text-xs text-muted-foreground">
+              {tests.length} test{tests.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          {tests.length === 0 ? (
+            <EmptyState
+              icon={BookOpen}
+              title="No tests available yet"
+              description="Once an admin publishes a practice test, it'll show up here."
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {tests.map((t) => {
+                const totalQ = t.sections
+                  .flatMap((s) => s.modules)
+                  .reduce((sum, m) => sum + m._count.moduleQuestions, 0);
+                return (
+                  <div
+                    key={t.id}
+                    className="group flex flex-col rounded-xl border border-border bg-card p-5 shadow-card transition-shadow duration-150 hover:shadow-elevated"
                   >
-                    Start test
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-lg font-medium">Past attempts</h2>
-        {attempts.length === 0 ? (
-          <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-            No attempts yet.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-            {attempts.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-4 p-4 text-sm">
-                <div>
-                  <div className="font-medium">{a.test.title}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {a.status} · started {a.startedAt.toLocaleString()}
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-base font-semibold leading-tight">{t.title}</h3>
+                      <Badge variant={t.mode === "ADAPTIVE" ? "info" : "muted"}>
+                        {t.mode}
+                      </Badge>
+                    </div>
+                    {t.description && (
+                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                        {t.description}
+                      </p>
+                    )}
+                    <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>{t.sections.length} section{t.sections.length === 1 ? "" : "s"}</span>
+                      <span>·</span>
+                      <span>{totalQ} question{totalQ === 1 ? "" : "s"}</span>
+                    </div>
+                    <div className="mt-5 flex-1" />
+                    <Button asChild className="mt-4 w-full">
+                      <Link href={`/test/${t.id}/start`}>
+                        Start test
+                        <ArrowRight className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5" />
+                      </Link>
+                    </Button>
                   </div>
-                </div>
-                <Link
-                  href={
-                    a.status === "COMPLETED"
-                      ? `/results/${a.id}`
-                      : `/test/attempt/${a.id}`
-                  }
-                  className="rounded-md border border-input px-3 py-1.5 hover:bg-accent"
-                >
-                  {a.status === "COMPLETED" ? "View results" : "Resume"}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ----- Past attempts ----- */}
+        <section>
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">My past attempts</h2>
+            <span className="text-xs text-muted-foreground">
+              {attempts.length} attempt{attempts.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          {attempts.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="You haven't taken any tests yet"
+              description="Start one of the practice tests above to see your results here."
+            />
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-2.5 font-medium">Test</th>
+                    <th className="px-4 py-2.5 font-medium">Status</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Score</th>
+                    <th className="px-4 py-2.5 font-medium">Date</th>
+                    <th className="px-4 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {attempts.map((a) => {
+                    const liveResults = a.moduleResults.filter(
+                      (r) => r.module && r.module.section,
+                    );
+                    const moduleResults = liveResults.map((r) => ({
+                      sectionType: r.module.section.type,
+                      correctCount: r.correctCount,
+                      totalCount: r.totalCount,
+                    }));
+                    const raw = computeRawScores(moduleResults);
+                    const scaled = computeScaledScores(
+                      raw,
+                      (a.test.scoringTable as ScoringTable | null) ?? null,
+                    );
+                    const isDone = a.status === "COMPLETED";
+                    return (
+                      <tr key={a.id} className="transition-colors hover:bg-accent/40">
+                        <td className="px-4 py-3 font-medium">{a.test.title}</td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant={
+                              a.status === "COMPLETED"
+                                ? "success"
+                                : a.status === "IN_PROGRESS"
+                                  ? "warning"
+                                  : "muted"
+                            }
+                          >
+                            {a.status === "IN_PROGRESS"
+                              ? "In progress"
+                              : a.status === "COMPLETED"
+                                ? "Completed"
+                                : "Abandoned"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {isDone ? (
+                            <span className="font-semibold">{scaled.total}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {a.startedAt.toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button asChild variant="secondary" size="sm">
+                            <Link
+                              href={
+                                isDone ? `/results/${a.id}` : `/test/attempt/${a.id}`
+                              }
+                            >
+                              {isDone ? "View results" : "Resume"}
+                            </Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </main>
+    </>
   );
 }

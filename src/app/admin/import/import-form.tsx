@@ -2,6 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  BookOpen,
+  CheckCircle2,
+  FileJson,
+  FileText,
+  Upload,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/toast";
 import { cn } from "@/lib/utils";
 
@@ -45,11 +54,16 @@ export function ImportForm() {
 
   const [mode, setMode] = useState<Mode>("test");
   const [text, setText] = useState("");
+  const [filename, setFilename] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>("idle");
 
   const [testSummary, setTestSummary] = useState<TestSummary | null>(null);
-  const [bankPreview, setBankPreview] = useState<{ count: number; questions: BankPreviewRow[] } | null>(null);
+  const [bankPreview, setBankPreview] = useState<{
+    count: number;
+    questions: BankPreviewRow[];
+  } | null>(null);
 
   function resetPreviews() {
     setTestSummary(null);
@@ -64,12 +78,23 @@ export function ImportForm() {
     resetPreviews();
   }
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const t = await f.text();
+  async function loadFile(file: File) {
+    setFilename(file.name);
+    const t = await file.text();
     setText(t);
     resetPreviews();
+  }
+
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) void loadFile(f);
+  }
+
+  function onDrop(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) void loadFile(f);
   }
 
   function validate() {
@@ -85,9 +110,6 @@ export function ImportForm() {
       return;
     }
 
-    // Quick sanity check: mode-vs-payload mismatch is a common foot-gun, so
-    // tell the user explicitly instead of letting the server hand back a
-    // generic "unrecognized payload."
     const b = body as Record<string, unknown> | null;
     if (mode === "bank" && b?.import !== "questions") {
       setErrors([
@@ -140,7 +162,6 @@ export function ImportForm() {
         return;
       }
       setPhase("done");
-
       if (data.mode === "bank") {
         toast(`${data.count} question${data.count === 1 ? "" : "s"} added to the bank`);
         router.push("/admin/questions");
@@ -151,75 +172,122 @@ export function ImportForm() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* ---------- Mode toggle ---------- */}
-      <div className="inline-flex rounded-lg border border-border bg-card p-1 text-sm">
-        <ModeTab
+    <div className="space-y-6">
+      {/* ---------- Mode toggle (large cards) ---------- */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <ModeCard
           active={mode === "test"}
+          icon={FileText}
+          title="Full Test Import"
+          description="Build a new test from a JSON tree of sections, modules, and questions."
           onClick={() => switchMode("test")}
-          label="Full Test Import"
         />
-        <ModeTab
+        <ModeCard
           active={mode === "bank"}
+          icon={BookOpen}
+          title="Question Bank Import"
+          description="Add standalone questions to the global bank for later assignment."
           onClick={() => switchMode("bank")}
-          label="Question Bank Import"
         />
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4">
-        <label className="block text-sm font-medium">Upload JSON file</label>
+      {/* ---------- Drag & drop zone ---------- */}
+      <label
+        htmlFor="import-file"
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        className={cn(
+          "flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-card px-6 py-10 text-center transition-colors duration-150",
+          dragOver
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-primary/60 hover:bg-accent/40",
+        )}
+      >
+        <div className="rounded-full bg-primary/10 p-3 text-primary">
+          <Upload className="h-6 w-6" aria-hidden />
+        </div>
+        <div className="mt-3 text-sm font-medium text-foreground">
+          Drop your JSON file here or click to browse
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          {filename ? (
+            <span className="inline-flex items-center gap-1.5 text-primary">
+              <FileJson className="h-3.5 w-3.5" />
+              {filename}
+            </span>
+          ) : (
+            "JSON files only · up to 5 MB"
+          )}
+        </div>
         <input
+          id="import-file"
           type="file"
           accept="application/json,.json"
           onChange={onFile}
-          className="mt-2 block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-accent"
+          className="sr-only"
         />
-      </div>
+      </label>
 
-      <div>
-        <label className="block text-sm font-medium">Or paste JSON</label>
-        <textarea
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            resetPreviews();
-          }}
-          spellCheck={false}
-          className="mt-2 min-h-[260px] w-full rounded-md border border-input bg-background p-3 font-mono text-xs"
-          placeholder={
-            mode === "bank"
-              ? '{ "import": "questions", "questions": [ ... ] }'
-              : '{ "test": { ... }, "sections": [ ... ] }'
-          }
-        />
-      </div>
+      {/* ---------- Paste JSON (collapsible) ---------- */}
+      <details className="rounded-xl border border-border bg-card">
+        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium hover:bg-accent/40">
+          Or paste JSON instead
+        </summary>
+        <div className="border-t border-border p-4">
+          <textarea
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setFilename(null);
+              resetPreviews();
+            }}
+            spellCheck={false}
+            className="min-h-[260px] w-full rounded-md border border-input bg-background p-3 font-mono text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            placeholder={
+              mode === "bank"
+                ? '{ "import": "questions", "questions": [ ... ] }'
+                : '{ "test": { ... }, "sections": [ ... ] }'
+            }
+          />
+        </div>
+      </details>
 
+      {/* ---------- Actions ---------- */}
       <div className="flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={validate}
+          loading={pending && phase === "idle"}
           disabled={pending || !text.trim()}
-          className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:opacity-90 disabled:opacity-50"
         >
           {pending && phase === "idle" ? "Validating…" : "Validate"}
-        </button>
-        <button
-          type="button"
-          onClick={commit}
-          disabled={pending || phase !== "validated"}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-        >
-          {phase === "committing"
-            ? "Importing…"
-            : mode === "bank"
-              ? "Import to Bank"
-              : "Import"}
-        </button>
+        </Button>
+        {phase === "validated" && (
+          <Button
+            type="button"
+            onClick={commit}
+            loading={phase === "committing" || (pending && phase !== "idle")}
+            disabled={pending || phase !== "validated"}
+          >
+            {phase === "committing"
+              ? "Importing…"
+              : mode === "bank"
+                ? "Import to Bank"
+                : "Import"}
+          </Button>
+        )}
       </div>
 
+      {/* ---------- Validation results ---------- */}
       {errors.length > 0 && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4">
-          <div className="mb-2 text-sm font-medium text-destructive">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-destructive">
+            <AlertCircle className="h-4 w-4" />
             {errors.length} validation error{errors.length === 1 ? "" : "s"}
           </div>
           <ul className="space-y-1 text-xs text-destructive">
@@ -243,37 +311,52 @@ export function ImportForm() {
   );
 }
 
-function ModeTab({
+function ModeCard({
   active,
+  icon: Icon,
+  title,
+  description,
   onClick,
-  label,
 }: {
   active: boolean;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
   onClick: () => void;
-  label: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-md px-4 py-1.5 transition",
+        "flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-colors duration-150",
         active
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-accent",
+          ? "border-primary bg-primary/5"
+          : "border-border bg-card hover:border-primary/30 hover:bg-accent/40",
       )}
     >
-      {label}
+      <div
+        className={cn(
+          "shrink-0 rounded-lg p-2",
+          active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
+        )}
+      >
+        <Icon className="h-5 w-5" aria-hidden />
+      </div>
+      <div className="min-w-0">
+        <div className="text-sm font-semibold text-foreground">{title}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{description}</div>
+      </div>
     </button>
   );
 }
 
 function TestPreview({ summary }: { summary: TestSummary }) {
   return (
-    <div className="rounded-lg border border-green-500/40 bg-green-50 p-5 dark:bg-green-950/20">
-      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-300">
-        ✓ Looks good — review the preview, then click{" "}
-        <span className="font-semibold">Import</span>.
+    <div className="rounded-xl border border-green-500/30 bg-green-50 p-5 dark:bg-green-950/20">
+      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-green-800 dark:text-green-300">
+        <CheckCircle2 className="h-4 w-4" />
+        Looks good — review the preview, then click <span className="font-semibold">Import</span>.
       </div>
       <div className="space-y-3 text-sm">
         <div>
@@ -320,9 +403,10 @@ function BankPreview({
   questions: BankPreviewRow[];
 }) {
   return (
-    <div className="rounded-lg border border-green-500/40 bg-green-50 p-5 dark:bg-green-950/20">
-      <div className="mb-3 text-sm font-medium text-green-700 dark:text-green-300">
-        ✓ {count} question{count === 1 ? "" : "s"} will be added to the question bank.
+    <div className="rounded-xl border border-green-500/30 bg-green-50 p-5 dark:bg-green-950/20">
+      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-green-800 dark:text-green-300">
+        <CheckCircle2 className="h-4 w-4" />
+        {count} question{count === 1 ? "" : "s"} will be added to the question bank.
       </div>
       <div className="overflow-hidden rounded-md border border-border bg-card">
         <table className="w-full text-xs">

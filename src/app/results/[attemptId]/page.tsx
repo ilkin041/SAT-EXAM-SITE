@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { ArrowLeft, ArrowRight, Award, BookOpen, Calculator } from "lucide-react";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   computeDomainBreakdown,
   computeRawScores,
@@ -39,13 +42,10 @@ export default async function ResultsPage({
   });
   if (!attempt) notFound();
 
-  // Defensive: any ModuleResult whose module/section was deleted (or never
-  // loaded) gets filtered out — better than 500ing the whole results page.
   const liveResults = attempt.moduleResults.filter(
     (mr) => mr.module && mr.module.section && Array.isArray(mr.module.moduleQuestions),
   );
 
-  // Build questionId → sectionType map from the modules this attempt actually served.
   const questionSectionType = new Map<string, "READING_WRITING" | "MATH">();
   for (const mr of liveResults) {
     const t = mr.module.section.type;
@@ -59,7 +59,6 @@ export default async function ResultsPage({
   const isAnonymousPublic = !attempt.userId && attempt.test.isPublic;
   if (!isOwner && !isAdmin && !isAnonymousPublic) notFound();
 
-  // ---------- Aggregate ----------
   const moduleResults = liveResults.map((r) => ({
     sectionType: r.module.section.type,
     correctCount: r.correctCount,
@@ -81,100 +80,155 @@ export default async function ResultsPage({
   const isCompleted = attempt.status === "COMPLETED";
 
   return (
-    <main className="container mx-auto max-w-4xl py-12">
-      <Link href="/dashboard" className="text-xs text-muted-foreground hover:underline">
-        ← Back to dashboard
+    <main className="container mx-auto max-w-4xl px-4 py-10">
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to dashboard
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">{attempt.test.title}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {attempt.status}
-        {attempt.completedAt
-          ? ` · completed ${attempt.completedAt.toLocaleString()}`
-          : ""}
-      </p>
+
+      <header className="mt-4">
+        <h1 className="text-3xl font-semibold tracking-tight">{attempt.test.title}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <Badge
+            variant={
+              isCompleted
+                ? "success"
+                : attempt.status === "IN_PROGRESS"
+                  ? "warning"
+                  : "muted"
+            }
+          >
+            {attempt.status === "IN_PROGRESS"
+              ? "In progress"
+              : isCompleted
+                ? "Completed"
+                : "Abandoned"}
+          </Badge>
+          {attempt.completedAt && (
+            <span>completed {attempt.completedAt.toLocaleString()}</span>
+          )}
+        </div>
+      </header>
 
       {!isCompleted && (
-        <div className="mt-4 rounded-md border border-amber-400/40 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-          This attempt isn't complete yet — the scores below reflect only the modules that
-          have been submitted.
+        <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+          This attempt isn&apos;t complete yet — the scores below reflect only the modules
+          that have been submitted.
         </div>
       )}
 
-      {/* ---------- Total / per-section scaled ---------- */}
-      <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <ScoreCard
-          big
-          label="Total"
-          value={scaled.total}
-          range="400–1600"
-        />
-        <ScoreCard
-          label="Reading & Writing"
-          value={scaled.readingWriting}
-          range="200–800"
-          raw={`${raw.readingWriting.correct} / ${raw.readingWriting.total} correct`}
-        />
-        <ScoreCard
-          label="Math"
-          value={scaled.math}
-          range="200–800"
-          raw={`${raw.math.correct} / ${raw.math.total} correct`}
-        />
+      {/* ---------- Score hero ---------- */}
+      <section className="mt-8 rounded-2xl border border-border bg-card p-8 shadow-card">
+        <div className="flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <Award className="h-3.5 w-3.5" />
+            Total Score
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-7xl font-semibold tracking-tight tabular-nums">
+              {scaled.total}
+            </span>
+            <span className="text-2xl text-muted-foreground">/1600</span>
+          </div>
+          <div
+            className={cn(
+              "mt-2 text-sm font-medium",
+              tierColor(scaled.total / 1600),
+            )}
+          >
+            {tierLabel(scaled.total / 1600)}
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <SectionScore
+            label="Reading & Writing"
+            icon={BookOpen}
+            value={scaled.readingWriting}
+            raw={`${raw.readingWriting.correct} / ${raw.readingWriting.total} correct`}
+          />
+          <SectionScore
+            label="Math"
+            icon={Calculator}
+            value={scaled.math}
+            raw={`${raw.math.correct} / ${raw.math.total} correct`}
+          />
+        </div>
       </section>
 
       {/* ---------- Domain breakdown ---------- */}
-      <section className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <DomainTable
-          title="Reading & Writing by domain"
-          stats={domainBreakdown.readingWriting}
-        />
-        <DomainTable title="Math by domain" stats={domainBreakdown.math} />
+      <section className="mt-10">
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">Performance by domain</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <DomainTable
+            title="Reading & Writing"
+            stats={domainBreakdown.readingWriting}
+          />
+          <DomainTable title="Math" stats={domainBreakdown.math} />
+        </div>
       </section>
 
-      <div className="mt-10 flex gap-3">
-        <Link
-          href={`/results/${attempt.id}/review`}
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          Review answers
-        </Link>
-        <Link
-          href="/dashboard"
-          className="rounded-md border border-input px-5 py-2.5 text-sm font-medium hover:bg-accent"
-        >
-          Back to dashboard
-        </Link>
+      {/* ---------- Actions ---------- */}
+      <div className="mt-10 flex flex-wrap gap-3">
+        <Button asChild size="lg">
+          <Link href={`/results/${attempt.id}/review`}>
+            Review answers
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+        <Button asChild variant="secondary" size="lg">
+          <Link href="/dashboard">Back to dashboard</Link>
+        </Button>
       </div>
     </main>
   );
 }
 
-function ScoreCard({
+function tierLabel(pct: number): string {
+  if (pct >= 0.75) return "Above average";
+  if (pct >= 0.5) return "Solid performance";
+  if (pct >= 0.25) return "Room to grow";
+  return "Keep practicing";
+}
+
+function tierColor(pct: number): string {
+  if (pct >= 0.75) return "text-green-700 dark:text-green-400";
+  if (pct >= 0.5) return "text-blue-700 dark:text-blue-400";
+  if (pct >= 0.25) return "text-amber-700 dark:text-amber-400";
+  return "text-muted-foreground";
+}
+
+function SectionScore({
   label,
+  icon: Icon,
   value,
-  range,
   raw,
-  big,
 }: {
   label: string;
+  icon: React.ComponentType<{ className?: string }>;
   value: number;
-  range: string;
-  raw?: string;
-  big?: boolean;
+  raw: string;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-border bg-card p-5",
-        big && "sm:row-span-2 sm:p-7",
-      )}
-    >
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className={cn("mt-1 font-semibold tabular-nums", big ? "text-5xl" : "text-3xl")}>
-        {value}
+    <div className="rounded-xl border border-border bg-card p-5">
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <Icon className="h-4 w-4 text-primary" aria-hidden />
+        {label}
       </div>
-      <div className="mt-1 text-xs text-muted-foreground">{range}</div>
-      {raw && <div className="mt-2 text-xs text-muted-foreground">{raw}</div>}
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className="text-4xl font-semibold tabular-nums">{value}</span>
+        <span className="text-sm text-muted-foreground">/800</span>
+      </div>
+      <div className="mt-1.5 text-xs text-muted-foreground">{raw}</div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-500"
+          style={{ width: `${((value - 200) / 600) * 100}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -187,25 +241,37 @@ function DomainTable({
   stats: { domain: string; correct: number; total: number }[];
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-5">
-      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+    <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+      <h3 className="mb-4 text-sm font-semibold">{title}</h3>
       {stats.length === 0 ? (
         <p className="text-xs text-muted-foreground">No data.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3.5">
           {stats.map((s) => {
             const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0;
+            const barColor =
+              pct >= 75
+                ? "bg-green-600"
+                : pct >= 50
+                  ? "bg-blue-600"
+                  : pct >= 25
+                    ? "bg-amber-500"
+                    : "bg-destructive";
             return (
               <li key={s.domain} className="text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="truncate">{s.domain}</span>
-                  <span className="shrink-0 tabular-nums text-muted-foreground">
-                    {s.correct} / {s.total}
+                <div className="mb-1.5 flex items-center justify-between gap-3">
+                  <span className="truncate font-medium">{s.domain}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {s.correct} / {s.total}{" "}
+                    <span className="ml-1 font-semibold">{pct}%</span>
                   </span>
                 </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full bg-primary"
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      barColor,
+                    )}
                     style={{ width: `${pct}%` }}
                   />
                 </div>

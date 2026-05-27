@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   computeRawScores,
@@ -6,6 +7,12 @@ import {
   type ScoringTable,
 } from "@/lib/scoring";
 import type { Prisma, AttemptStatus } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import { Activity } from "lucide-react";
 
 export const metadata = { title: "Attempts — Admin" };
 
@@ -99,49 +106,47 @@ export default async function AdminAttemptsPage({
     return s ? `?${s}` : "";
   };
 
+  const SELECT_CLS =
+    "h-10 rounded-md border border-input bg-card px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
   return (
     <>
-      <h1 className="mb-6 text-3xl font-semibold tracking-tight">Attempts</h1>
+      <PageHeader
+        title="Attempts"
+        description="Every test attempt across your platform, with computed scaled scores."
+      />
 
       <form
         method="get"
-        className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto]"
+        className="mb-6 rounded-xl border border-border bg-card p-4 shadow-card"
       >
-        <input
-          type="text"
-          name="q"
-          defaultValue={q}
-          placeholder="Search by student email or name…"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
-        <select
-          name="status"
-          defaultValue={statusFilter ?? ""}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          <option value="">All statuses</option>
-          <option value="IN_PROGRESS">In progress</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="ABANDONED">Abandoned</option>
-        </select>
-        <select
-          name="testId"
-          defaultValue={testIdFilter ?? ""}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          <option value="">All tests</option>
-          {tests.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.title}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          Filter
-        </button>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              name="q"
+              defaultValue={q}
+              placeholder="Search by student email or name…"
+              className="pl-9"
+            />
+          </div>
+          <select name="status" defaultValue={statusFilter ?? ""} className={SELECT_CLS}>
+            <option value="">All statuses</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="ABANDONED">Abandoned</option>
+          </select>
+          <select name="testId" defaultValue={testIdFilter ?? ""} className={SELECT_CLS}>
+            <option value="">All tests</option>
+            {tests.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+          <Button type="submit">Filter</Button>
+        </div>
       </form>
 
       <p className="mb-3 text-xs text-muted-foreground">
@@ -150,11 +155,13 @@ export default async function AdminAttemptsPage({
       </p>
 
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-          No attempts match.
-        </p>
+        <EmptyState
+          icon={Activity}
+          title="No attempts match"
+          description="Try clearing some filters or broadening your search."
+        />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
               <tr>
@@ -209,22 +216,20 @@ export default async function AdminAttemptsPage({
       {totalPages > 1 && (
         <nav className="mt-4 flex items-center justify-between text-sm">
           {page > 1 ? (
-            <Link
-              href={`/admin/attempts${qs({ page: String(page - 1) })}`}
-              className="rounded-md border border-input px-3 py-1.5 hover:bg-accent"
-            >
-              ← Previous
-            </Link>
+            <Button asChild variant="secondary" size="sm">
+              <Link href={`/admin/attempts${qs({ page: String(page - 1) })}`}>
+                ← Previous
+              </Link>
+            </Button>
           ) : (
             <span />
           )}
           {page < totalPages ? (
-            <Link
-              href={`/admin/attempts${qs({ page: String(page + 1) })}`}
-              className="rounded-md border border-input px-3 py-1.5 hover:bg-accent"
-            >
-              Next →
-            </Link>
+            <Button asChild variant="secondary" size="sm">
+              <Link href={`/admin/attempts${qs({ page: String(page + 1) })}`}>
+                Next →
+              </Link>
+            </Button>
           ) : (
             <span />
           )}
