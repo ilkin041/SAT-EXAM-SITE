@@ -23,6 +23,13 @@ declare module "next-auth" {
   }
 }
 
+// `JWT` lives in @auth/core/jwt (next-auth re-exports it from next-auth/jwt).
+// @auth/core is a direct dependency so the path resolves on Vercel as well as
+// locally. The bare `import type` below ensures TypeScript treats the module
+// as referenced before augmentation — without it, TS2664 fires intermittently
+// under strict module resolution.
+import type {} from "@auth/core/jwt";
+
 declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
@@ -70,9 +77,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     session: async ({ session, token }) => {
+      // The augmented JWT interface defines `id` and `role`, but in v5-beta
+      // the session callback narrows `token` to a looser type; cast through
+      // the augmented shape to read them safely.
       if (token && session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
+        const t = token as { id?: string; role?: Role };
+        if (t.id) session.user.id = t.id;
+        if (t.role) session.user.role = t.role;
       }
       return session;
     },
