@@ -39,10 +39,15 @@ export default async function ResultsPage({
   });
   if (!attempt) notFound();
 
+  // Defensive: any ModuleResult whose module/section was deleted (or never
+  // loaded) gets filtered out — better than 500ing the whole results page.
+  const liveResults = attempt.moduleResults.filter(
+    (mr) => mr.module && mr.module.section && Array.isArray(mr.module.moduleQuestions),
+  );
+
   // Build questionId → sectionType map from the modules this attempt actually served.
-  // Falls back gracefully if a question was removed from the bank later.
   const questionSectionType = new Map<string, "READING_WRITING" | "MATH">();
-  for (const mr of attempt.moduleResults) {
+  for (const mr of liveResults) {
     const t = mr.module.section.type;
     for (const mq of mr.module.moduleQuestions) {
       questionSectionType.set(mq.questionId, t);
@@ -55,7 +60,7 @@ export default async function ResultsPage({
   if (!isOwner && !isAdmin && !isAnonymousPublic) notFound();
 
   // ---------- Aggregate ----------
-  const moduleResults = attempt.moduleResults.map((r) => ({
+  const moduleResults = liveResults.map((r) => ({
     sectionType: r.module.section.type,
     correctCount: r.correctCount,
     totalCount: r.totalCount,

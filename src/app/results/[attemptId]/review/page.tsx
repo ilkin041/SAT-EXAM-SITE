@@ -43,8 +43,12 @@ export default async function ReviewAnswersPage({
   const isAnonymousPublic = !attempt.userId && attempt.test.isPublic;
   if (!isOwner && !isAdmin && !isAnonymousPublic) notFound();
 
-  // Group module results by section in test order.
+  // Group module results by section in test order. Defensively skip any
+  // result whose module/section/questions can't be loaded — that can happen
+  // briefly during deletes/cascades and we'd rather render the rest of the
+  // page than 500.
   const grouped = attempt.moduleResults
+    .filter((mr) => mr.module && mr.module.section && Array.isArray(mr.module.moduleQuestions))
     .slice()
     .sort((a, b) => {
       const so = a.module.section.order - b.module.section.order;
