@@ -36,15 +36,17 @@ export function renderRichToHtml(input: string | null | undefined): string {
 
 function safeKatex(expr: string, displayMode: boolean): string {
   try {
-    return katex.renderToString(expr, {
+    // In inline mode KaTeX renders \frac, \sum, \int, etc. in compressed
+    // "textstyle" to fit the line height. Prepending \displaystyle promotes
+    // the whole expression to full display size, matching what students see
+    // on the real Bluebook UI. \displaystyle is a TeX primitive (not a
+    // macro), so this always works regardless of the input expression.
+    const finalExpr = displayMode ? expr : `\\displaystyle ${expr}`;
+    return katex.renderToString(finalExpr, {
       displayMode,
       throwOnError: false,
       output: "html",
       strict: "ignore",
-      // In inline mode KaTeX uses "textstyle" which renders \frac as a
-      // small compressed fraction. Override so inline fractions always
-      // render at full display size (same as \dfrac).
-      macros: displayMode ? {} : { "\\frac": "\\dfrac{#1}{#2}" },
     });
   } catch {
     return `<code class="text-destructive">[math error: ${escapeHtml(expr)}]</code>`;
