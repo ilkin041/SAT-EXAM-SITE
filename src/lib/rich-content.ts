@@ -41,6 +41,10 @@ function safeKatex(expr: string, displayMode: boolean): string {
       throwOnError: false,
       output: "html",
       strict: "ignore",
+      // In inline mode KaTeX uses "textstyle" which renders \frac as a
+      // small compressed fraction. Override so inline fractions always
+      // render at full display size (same as \dfrac).
+      macros: displayMode ? {} : { "\\frac": "\\dfrac{#1}{#2}" },
     });
   } catch {
     return `<code class="text-destructive">[math error: ${escapeHtml(expr)}]</code>`;
