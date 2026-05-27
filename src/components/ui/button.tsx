@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
  *
  *  - `variant`: visual treatment
  *  - `size`: vertical rhythm (h-9 / h-10 / h-11 / icon)
- *  - `loading`: shows spinner and disables the button
+ *  - `loading`: shows spinner and disables the button (button mode only —
+ *    ignored with `asChild`, since wrapping a Link in a spinner doesn't make
+ *    semantic sense and Slot requires exactly one child)
  *  - `asChild`: render the next child as the root (e.g. wrap a <Link>)
- *
- * Server component — safe to import in any layout.
  */
 const buttonVariants = cva(
   [
@@ -31,10 +31,8 @@ const buttonVariants = cva(
           "border border-input bg-card text-foreground hover:bg-accent hover:text-accent-foreground",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground",
-        link:
-          "text-primary underline-offset-4 hover:underline",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         sm: "h-9 px-3 text-sm",
@@ -56,20 +54,40 @@ export interface ButtonProps
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant, size, asChild = false, loading = false, disabled, children, ...props },
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      loading = false,
+      disabled,
+      children,
+      ...props
+    },
     ref,
   ) => {
-    const Comp = asChild ? Slot : "button";
+    const classes = cn(buttonVariants({ variant, size }), className);
+
+    // When wrapping another element (e.g. <Link>) we MUST pass a single child
+    // to Slot. Skip the spinner in this branch — `loading` is button-only.
+    if (asChild) {
+      return (
+        <Slot ref={ref} className={classes} {...props}>
+          {children}
+        </Slot>
+      );
+    }
+
     return (
-      <Comp
+      <button
         ref={ref}
-        className={cn(buttonVariants({ variant, size }), className)}
+        className={classes}
         disabled={disabled || loading}
         {...props}
       >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
         {children}
-      </Comp>
+      </button>
     );
   },
 );
