@@ -64,3 +64,26 @@
 .rich-content code { background: hsl(var(--muted)); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.9em; }
 .rich-content blockquote { border-left: 3px solid hsl(var(--border)); padding-left: 1em; color: hsl(var(--muted-foreground)); margin: 0.75em 0; }
 .rich-content .katex-display { margin: 0.75em 0; }
+
+/*
+ * KaTeX uses `border-bottom` to draw fraction bars, sqrt vincula, overlines,
+ * etc. Tailwind's preflight + our base layer apply `border-color: hsl(var(--border))`
+ * (light gray) to every element via `*`, which makes those lines almost
+ * invisible against a white background. Force currentColor inside KaTeX so
+ * lines render in the same color as the surrounding text.
+ */
+.katex .frac-line,
+.katex .overline-line,
+.katex .underline-line,
+.katex .hline,
+.katex .hdashline,
+.katex .rule,
+.katex .sqrt > .vlist-t .vlist-r .vlist > span > .pstrut + span,
+.katex .sqrt .hide-tail {
+  border-color: currentColor !important;
+}
+/* Catch-all: any bordered element inside a KaTeX render should use text color. */
+.katex,
+.katex * {
+  border-color: currentColor;
+}
