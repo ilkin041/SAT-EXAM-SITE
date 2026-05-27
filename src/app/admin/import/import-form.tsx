@@ -267,11 +267,11 @@ export function ImportForm() {
         >
           {pending && phase === "idle" ? "Validating…" : "Validate"}
         </Button>
-        {phase === "validated" && (
+        {(phase === "validated" || phase === "committing") && (
           <Button
             type="button"
             onClick={commit}
-            loading={phase === "committing" || (pending && phase !== "idle")}
+            loading={phase === "committing"}
             disabled={pending || phase !== "validated"}
           >
             {phase === "committing"

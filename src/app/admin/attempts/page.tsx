@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Activity, Search } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   computeRawScores,
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
-import { Activity } from "lucide-react";
 
 export const metadata = { title: "Attempts — Admin" };
 
