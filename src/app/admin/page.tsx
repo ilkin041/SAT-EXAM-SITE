@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 export const metadata = { title: "Admin — SAT Practice" };
@@ -9,8 +10,11 @@ export default async function AdminDashboard() {
     prisma.testAttempt.count(),
     prisma.testAttempt.findMany({
       orderBy: { startedAt: "desc" },
-      take: 5,
-      include: { user: { select: { email: true } }, test: { select: { title: true } } },
+      take: 8,
+      include: {
+        user: { select: { email: true, name: true } },
+        test: { select: { title: true } },
+      },
     }),
   ]);
 
@@ -25,22 +29,37 @@ export default async function AdminDashboard() {
       </div>
 
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-medium">Recent attempts</h2>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-lg font-medium">Recent attempts</h2>
+          <Link
+            href="/admin/attempts"
+            className="text-xs text-muted-foreground hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
         {recentAttempts.length === 0 ? (
           <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
             No attempts yet.
           </p>
         ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
             {recentAttempts.map((a) => (
-              <li key={a.id} className="flex items-center justify-between p-4 text-sm">
-                <div>
-                  <div className="font-medium">{a.test.title}</div>
-                  <div className="text-muted-foreground">
-                    {a.user?.email ?? "anonymous"} · {a.status}
+              <li key={a.id}>
+                <Link
+                  href={`/admin/attempts/${a.id}`}
+                  className="flex items-center justify-between p-4 text-sm hover:bg-accent"
+                >
+                  <div>
+                    <div className="font-medium">{a.test.title}</div>
+                    <div className="text-muted-foreground">
+                      {a.user?.name ?? a.user?.email ?? "anonymous"} · {a.status}
+                    </div>
                   </div>
-                </div>
-                <div className="text-muted-foreground">{a.startedAt.toLocaleString()}</div>
+                  <div className="text-right text-muted-foreground">
+                    {a.startedAt.toLocaleString()}
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
