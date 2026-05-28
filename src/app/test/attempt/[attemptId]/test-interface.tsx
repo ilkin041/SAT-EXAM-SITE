@@ -19,6 +19,13 @@ import { ResizableSplit } from "@/components/resizable-split";
 import { AnnotatedPassage } from "@/components/annotated-passage";
 import { cn } from "@/lib/utils";
 import type { AttemptState, ClientAnswer, ClientQuestion } from "@/lib/attempt-engine";
+import {
+  ConnectivityBanner,
+  DuplicateTabOverlay,
+  ResumingSplash,
+  useNetworkStatus,
+  useTabConflictGuard,
+} from "./connectivity-overlays";
 
 interface Props {
   initialState: AttemptState;
@@ -61,6 +68,24 @@ export function TestInterface({ initialState, studentName }: Props) {
   const [calcOpen, setCalcOpen] = useState(false);
   const [refOpen, setRefOpen] = useState(false);
   const [showFullscreenWarning, setShowFullscreenWarning] = useState(false);
+
+  // ---------- Connectivity & multi-tab guards ----------
+  const { isOffline, justReconnected } = useNetworkStatus();
+  const isDuplicateTab = useTabConflictGuard(initialState.attempt.id);
+
+  // ---------- Resume splash ----------
+  // Show for ~1s when the student lands on the attempt page mid-progress
+  // (they had a saved index or saved answers). Brand-new starts of a module
+  // skip the splash.
+  const isResuming =
+    (initialState.attempt.currentQuestionIndex || 0) > 0 ||
+    initialState.answers.length > 0;
+  const [showResumeSplash, setShowResumeSplash] = useState(isResuming);
+  useEffect(() => {
+    if (!showResumeSplash) return;
+    const id = setTimeout(() => setShowResumeSplash(false), 1000);
+    return () => clearTimeout(id);
+  }, [showResumeSplash]);
 
   // Clock skew so the timer is anchored to server time.
   const clockOffsetRef = useRef<number>(state.serverNow - Date.now());
@@ -380,8 +405,17 @@ export function TestInterface({ initialState, studentName }: Props) {
   // ---------- Render ----------
   const isMath = state.section.type === "MATH";
 
+  // Stale duplicate tab → lock everything down. The OTHER tab (the most
+  // recently opened one) is the live one; this overlay sits above the
+  // entire test UI to prevent any interaction.
+  if (isDuplicateTab) {
+    return <DuplicateTabOverlay />;
+  }
+
   return (
     <>
+      {showResumeSplash && <ResumingSplash />}
+      <ConnectivityBanner isOffline={isOffline} justReconnected={justReconnected} />
       {phase === "break" ? (
         <BreakScreen
           startedAt={state.breakStartedAt}

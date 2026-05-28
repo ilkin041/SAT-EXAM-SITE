@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, ClipboardList, ShieldCheck } from "lucide-react";
+import { BookOpen, ClipboardList, ShieldCheck } from "lucide-react";
 import { requireUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { StudentNav } from "@/components/student-nav";
+import { TestCard } from "@/components/test-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -17,7 +18,7 @@ export const metadata = { title: "Dashboard — SAT Practice" };
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const [tests, attempts] = await Promise.all([
+  const [tests, attempts, inProgress] = await Promise.all([
     prisma.test.findMany({
       where: { OR: [{ isPublic: true }, { createdById: user.id }] },
       orderBy: { createdAt: "desc" },
@@ -41,7 +42,19 @@ export default async function DashboardPage() {
         },
       },
     }),
+    // Map of testId → most-recent IN_PROGRESS attemptId for this user. Used
+    // by the dashboard test cards to switch from "Start test" → "Continue".
+    prisma.testAttempt.findMany({
+      where: { userId: user.id, status: "IN_PROGRESS" },
+      orderBy: { startedAt: "desc" },
+      select: { id: true, testId: true },
+    }),
   ]);
+
+  const inProgressByTest = new Map<string, string>();
+  for (const a of inProgress) {
+    if (!inProgressByTest.has(a.testId)) inProgressByTest.set(a.testId, a.id);
+  }
 
   const displayName = user.name?.trim() || user.email?.split("@")[0] || "there";
 
@@ -90,34 +103,16 @@ export default async function DashboardPage() {
                   .flatMap((s) => s.modules)
                   .reduce((sum, m) => sum + m._count.moduleQuestions, 0);
                 return (
-                  <div
+                  <TestCard
                     key={t.id}
-                    className="group flex flex-col rounded-xl border border-border bg-card p-5 shadow-card transition-shadow duration-150 hover:shadow-elevated"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-base font-semibold leading-tight">{t.title}</h3>
-                      <Badge variant={t.mode === "ADAPTIVE" ? "info" : "muted"}>
-                        {t.mode}
-                      </Badge>
-                    </div>
-                    {t.description && (
-                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                        {t.description}
-                      </p>
-                    )}
-                    <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>{t.sections.length} section{t.sections.length === 1 ? "" : "s"}</span>
-                      <span>·</span>
-                      <span>{totalQ} question{totalQ === 1 ? "" : "s"}</span>
-                    </div>
-                    <div className="mt-5 flex-1" />
-                    <Button asChild className="mt-4 w-full">
-                      <Link href={`/test/${t.id}/start`}>
-                        Start test
-                        <ArrowRight className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5" />
-                      </Link>
-                    </Button>
-                  </div>
+                    testId={t.id}
+                    title={t.title}
+                    description={t.description}
+                    mode={t.mode}
+                    sectionCount={t.sections.length}
+                    questionCount={totalQ}
+                    inProgressAttemptId={inProgressByTest.get(t.id) ?? null}
+                  />
                 );
               })}
             </div>
@@ -198,15 +193,25 @@ export default async function DashboardPage() {
                           {a.startedAt.toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Button asChild variant="secondary" size="sm">
-                            <Link
-                              href={
-                                isDone ? `/results/${a.id}` : `/test/attempt/${a.id}`
-                              }
+                          {isDone ? (
+                            <Button asChild variant="secondary" size="sm">
+                              <Link href={`/results/${a.id}`}>View results</Link>
+                            </Button>
+                          ) : a.status === "IN_PROGRESS" ? (
+                            <Button
+                              asChild
+                              size="sm"
+                              className="bg-amber-600 text-white hover:bg-amber-600/90"
                             >
-                              {isDone ? "View results" : "Resume"}
-                            </Link>
-                          </Button>
+                              <Link href={`/test/attempt/${a.id}`}>
+                                Continue test
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button asChild variant="secondary" size="sm" disabled>
+                              <Link href={`/results/${a.id}`}>Abandoned</Link>
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );
