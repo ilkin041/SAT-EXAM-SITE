@@ -2,12 +2,12 @@ import Link from "next/link";
 import { BookOpen, Plus, Search } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import type { Difficulty, QuestionType, SectionType } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
-import { RowDeleteButton } from "./_components/row-delete-button";
+import { listAssignableModules } from "./actions";
+import { QuestionsTable, type QuestionRow } from "./_components/questions-table";
 
 export const metadata = { title: "Questions — Admin" };
 
@@ -45,7 +45,7 @@ export default async function QuestionsPage({
 
   const hasFilter = !!(sp.q || sp.domain || sp.difficulty || sp.type || sp.section);
 
-  const [questions, domains] = await Promise.all([
+  const [questions, domains, assignableTests] = await Promise.all([
     prisma.question.findMany({
       where,
       orderBy: { id: "desc" },
@@ -57,7 +57,18 @@ export default async function QuestionsPage({
       select: { domain: true },
       orderBy: { domain: "asc" },
     }),
+    listAssignableModules(),
   ]);
+
+  const rows: QuestionRow[] = questions.map((q) => ({
+    id: q.id,
+    stemPreview: stripHtml(q.stem),
+    sectionType: q.sectionType,
+    type: q.type,
+    domain: q.domain,
+    difficulty: q.difficulty,
+    assignmentCount: q._count.moduleAssignments,
+  }));
 
   return (
     <>
@@ -146,76 +157,10 @@ export default async function QuestionsPage({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2.5 font-medium">Stem</th>
-                <th className="px-4 py-2.5 font-medium">Section</th>
-                <th className="px-4 py-2.5 font-medium">Type</th>
-                <th className="px-4 py-2.5 font-medium">Domain</th>
-                <th className="px-4 py-2.5 font-medium">Difficulty</th>
-                <th className="px-4 py-2.5 font-medium">Used in</th>
-                <th className="px-4 py-2.5 w-10" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {questions.map((q) => (
-                <tr key={q.id} className="transition-colors hover:bg-accent/40">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/questions/${q.id}`}
-                      className="line-clamp-2 max-w-md font-medium hover:underline"
-                    >
-                      {stripHtml(q.stem)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={q.sectionType === "MATH" ? "info" : "success"}>
-                      {q.sectionType === "MATH" ? "Math" : "R&W"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={q.type === "MULTIPLE_CHOICE" ? "outline" : "purple"}>
-                      {q.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{q.domain}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={difficultyVariant(q.difficulty)}>
-                      {q.difficulty}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    {q._count.moduleAssignments === 0 ? (
-                      <span className="text-xs text-muted-foreground">Unassigned</span>
-                    ) : (
-                      <Badge variant="muted">
-                        {q._count.moduleAssignments} module
-                        {q._count.moduleAssignments === 1 ? "" : "s"}
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <RowDeleteButton questionId={q.id} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <QuestionsTable rows={rows} assignableTests={assignableTests} />
       )}
     </>
   );
-}
-
-function difficultyVariant(
-  d: Difficulty,
-): "success" | "warning" | "destructive" | "muted" {
-  if (d === "EASY") return "success";
-  if (d === "MEDIUM") return "warning";
-  if (d === "HARD") return "destructive";
-  return "muted";
 }
 
 function stripHtml(s: string) {

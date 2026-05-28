@@ -214,3 +214,163 @@ export async function getQuestionAssignments(id: string) {
 }
 
 export type QuestionAssignment = Awaited<ReturnType<typeof getQuestionAssignments>>[number];
+
+// ---------- Bulk operations ----------
+
+const bulkIdsSchema = z
+  .array(z.string().min(1))
+  .min(1, "Select at least one question.")
+  .max(500, "Too many questions selected — please narrow your selection.");
+
+/**
+ * Delete every selected question. Cascades through `ModuleQuestion`, `Answer`,
+ * and `Annotation`. Returns the count actually deleted so the caller can
+ * surface "deleted N questions" feedback.
+ */
+export async function bulkDeleteQuestions(ids: string[]) {
+  await requireAdmin();
+  const parsed = bulkIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid selection" };
+  }
+  try {
+    const result = await prisma.question.deleteMany({
+      where: { id: { in: parsed.data } },
+    });
+    revalidatePath("/admin/questions");
+    return { ok: true as const, deleted: result.count };
+  } catch (err) {
+    return { ok: false as const, error: (err as Error).message || "Bulk delete failed" };
+  }
+}
+
+/**
+ * Update difficulty on a batch of questions. Difficulty is a free-form tag
+ * (the question payload validator doesn't constrain it cross-module), so this
+ * is safe to apply blindly to the selection.
+ */
+export async function bulkSetDifficulty(
+  ids: string[],
+  difficulty: "EASY" | "MEDIUM" | "HARD",
+) {
+  await requireAdmin();
+  const parsed = bulkIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid selection" };
+  }
+  if (!["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
+    return { ok: false as const, error: "Invalid difficulty" };
+  }
+  try {
+    const result = await prisma.question.updateMany({
+      where: { id: { in: parsed.data } },
+      data: { difficulty },
+    });
+    revalidatePath("/admin/questions");
+    return { ok: true as const, updated: result.count };
+  } catch (err) {
+    return { ok: false as const, error: (err as Error).message || "Bulk update failed" };
+  }
+}
+
+/**
+ * Assign a batch of questions to a single module. Skips:
+ *  - questions already in the module (idempotent),
+ *  - questions whose `sectionType` doesn't match the target module's section
+ *    (those would be invalid assignments).
+ *
+ * Returns counts for both `assigned` and `skipped` so the UI can show
+ * "Assigned 12, skipped 3 (already in module or wrong section type)".
+ */
+export async function bulkAssignToModule(ids: string[], moduleId: string) {
+  await requireAdmin();
+  const parsed = bulkIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid selection" };
+  }
+  if (!moduleId) {
+    return { ok: false as const, error: "Pick a module first." };
+  }
+
+  const targetModule = await prisma.module.findUnique({
+    where: { id: moduleId },
+    include: {
+      section: { select: { type: true, test: { select: { id: true, title: true } } } },
+      moduleQuestions: { select: { questionId: true } },
+    },
+  });
+  if (!targetModule) return { ok: false as const, error: "Module not found" };
+
+  const questions = await prisma.question.findMany({
+    where: { id: { in: parsed.data } },
+    select: { id: true, sectionType: true },
+  });
+
+  const alreadyIn = new Set(targetModule.moduleQuestions.map((mq) => mq.questionId));
+  const startingOrder = targetModule.moduleQuestions.length;
+
+  const eligible = questions.filter(
+    (q) => q.sectionType === targetModule.section.type && !alreadyIn.has(q.id),
+  );
+
+  if (eligible.length === 0) {
+    return {
+      ok: true as const,
+      assigned: 0,
+      skipped: questions.length,
+      testId: targetModule.section.test.id,
+      moduleSummary: `${targetModule.section.test.title} · Module ${targetModule.moduleNumber}`,
+    };
+  }
+
+  await prisma.moduleQuestion.createMany({
+    data: eligible.map((q, i) => ({
+      moduleId,
+      questionId: q.id,
+      order: startingOrder + i + 1,
+    })),
+    skipDuplicates: true,
+  });
+
+  revalidatePath("/admin/questions");
+  revalidatePath(`/admin/tests/${targetModule.section.test.id}`);
+  return {
+    ok: true as const,
+    assigned: eligible.length,
+    skipped: questions.length - eligible.length,
+    testId: targetModule.section.test.id,
+    moduleSummary: `${targetModule.section.test.title} · Module ${targetModule.moduleNumber}`,
+  };
+}
+
+/**
+ * List every module across every test for the bulk-assign dropdown. Grouped
+ * client-side by test name.
+ */
+export async function listAssignableModules() {
+  await requireAdmin();
+  const tests = await prisma.test.findMany({
+    orderBy: { title: "asc" },
+    include: {
+      sections: {
+        orderBy: { order: "asc" },
+        include: {
+          modules: { orderBy: { moduleNumber: "asc" } },
+        },
+      },
+    },
+  });
+  return tests.map((t) => ({
+    testId: t.id,
+    testTitle: t.title,
+    modules: t.sections.flatMap((s) =>
+      s.modules.map((m) => ({
+        id: m.id,
+        label: `${s.type === "READING_WRITING" ? "R&W" : "Math"} · Module ${m.moduleNumber}${m.difficulty === "MIXED" ? "" : ` (${m.difficulty})`}`,
+        sectionType: s.type as "READING_WRITING" | "MATH",
+      })),
+    ),
+  }));
+}
+
+export type AssignableTest = Awaited<ReturnType<typeof listAssignableModules>>[number];

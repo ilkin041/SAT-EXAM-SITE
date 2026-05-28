@@ -140,3 +140,98 @@ export async function deleteQuestionFromTest(questionId: string, testId: string)
   await prisma.question.delete({ where: { id: questionId } });
   revalidatePath(`/admin/tests/${testId}`);
 }
+
+// ---------- Duplicate ----------
+
+const duplicateSchema = z.object({
+  testId: z.string().min(1),
+  newTitle: z.string().trim().min(1, "Title is required").max(200),
+});
+
+/**
+ * Duplicates a Test along with its Sections, Modules, and ModuleQuestion
+ * rows. Question records are SHARED — the bank is global, so the copy just
+ * references the same Questions. Created as `isPublic: false` regardless of
+ * the source per spec.
+ */
+export async function duplicateTest(input: { testId: string; newTitle: string }) {
+  const admin = await requireAdmin();
+  const parsed = duplicateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { testId, newTitle } = parsed.data;
+
+  const source = await prisma.test.findUnique({
+    where: { id: testId },
+    include: {
+      sections: {
+        orderBy: { order: "asc" },
+        include: {
+          modules: {
+            orderBy: { moduleNumber: "asc" },
+            include: {
+              moduleQuestions: { orderBy: { order: "asc" } },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!source) return { ok: false as const, error: "Source test not found" };
+
+  try {
+    const created = await prisma.$transaction(async (tx) => {
+      const newTest = await tx.test.create({
+        data: {
+          title: newTitle,
+          description: source.description,
+          mode: source.mode,
+          isPublic: false,
+          adaptiveThreshold: source.adaptiveThreshold,
+          scoringTable: source.scoringTable ?? undefined,
+          createdById: admin.id,
+        },
+      });
+
+      for (const s of source.sections) {
+        const newSection = await tx.section.create({
+          data: {
+            testId: newTest.id,
+            type: s.type,
+            order: s.order,
+            module1TimeLimit: s.module1TimeLimit,
+            module2TimeLimit: s.module2TimeLimit,
+          },
+        });
+
+        for (const m of s.modules) {
+          const newModule = await tx.module.create({
+            data: {
+              sectionId: newSection.id,
+              moduleNumber: m.moduleNumber,
+              difficulty: m.difficulty,
+            },
+          });
+
+          if (m.moduleQuestions.length > 0) {
+            await tx.moduleQuestion.createMany({
+              data: m.moduleQuestions.map((mq) => ({
+                moduleId: newModule.id,
+                questionId: mq.questionId,
+                order: mq.order,
+              })),
+            });
+          }
+        }
+      }
+
+      return newTest;
+    });
+
+    revalidatePath("/admin/tests");
+    return { ok: true as const, testId: created.id };
+  } catch (err) {
+    return { ok: false as const, error: (err as Error).message || "Duplication failed" };
+  }
+}

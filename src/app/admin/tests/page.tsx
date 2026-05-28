@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { DuplicateTestButton } from "./_components/duplicate-test-button";
 
 export const metadata = { title: "Tests — Admin" };
 
@@ -99,9 +100,12 @@ export default async function TestsPage() {
                       {t.createdAt.toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button asChild variant="secondary" size="sm">
-                        <Link href={`/admin/tests/${t.id}`}>Open</Link>
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <DuplicateTestButton testId={t.id} originalTitle={t.title} />
+                        <Button asChild variant="secondary" size="sm">
+                          <Link href={`/admin/tests/${t.id}`}>Open</Link>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
