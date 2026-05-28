@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Calculator as CalculatorIcon,
   BookOpen,
-  MoreVertical,
   ChevronDown,
   ChevronUp,
   Flag,
@@ -27,6 +26,9 @@ import {
   useTabConflictGuard,
 } from "./connectivity-overlays";
 import { SaveIndicator, type SaveStatus } from "./save-indicator";
+import { KeyboardShortcutsModal } from "./keyboard-shortcuts-modal";
+import { MoreMenu } from "./more-menu";
+import { SprInput } from "./spr-input";
 import { playTimeUpBeep } from "@/lib/audio-beep";
 import { useToast } from "@/components/toast";
 
@@ -71,6 +73,7 @@ export function TestInterface({ initialState, studentName }: Props) {
   const [calcOpen, setCalcOpen] = useState(false);
   const [refOpen, setRefOpen] = useState(false);
   const [showFullscreenWarning, setShowFullscreenWarning] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // ---------- Connectivity & multi-tab guards ----------
   const { isOffline, justReconnected } = useNetworkStatus();
@@ -220,29 +223,47 @@ export function TestInterface({ initialState, studentName }: Props) {
       ? (answers[state.questions[currentIndex].id] ?? blankAnswer())
       : null,
     isModalOpen:
-      showNavigator || showDirections || showSubmitConfirm || showFullscreenWarning,
+      showNavigator || showDirections || showSubmitConfirm || showFullscreenWarning || showShortcuts,
     next: () => {},
     back: () => {},
     onAnswerChange: (_id: string, _patch: AnswerPatch) => {},
     toggleEliminator: () => {},
+    toggleTimer: () => {},
+    closeAllModals: () => {},
   });
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      const inInput =
+        tag === "INPUT" || tag === "TEXTAREA" || !!target?.isContentEditable;
 
       const ctx = shortcutRef.current;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+
+      // Escape fires regardless of input focus or open modals — it always
+      // means "get me out of whatever I just opened".
+      if (k === "escape") {
+        if (ctx.isModalOpen) {
+          e.preventDefault();
+          ctx.closeAllModals();
+        }
+        return;
+      }
+
+      // All other shortcuts are blocked while typing in an input or while
+      // a modal is open (otherwise A/B/C/D inside the SPR field would
+      // trigger choice selection).
+      if (inInput) return;
       if (ctx.isModalOpen) return;
       if (ctx.phase !== "in_module") return;
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      const k = e.key.toLowerCase();
-      if (k === "arrowright") {
+      if (k === "arrowright" || k === "n") {
         e.preventDefault();
         ctx.next();
-      } else if (k === "arrowleft") {
+      } else if (k === "arrowleft" || k === "p") {
         e.preventDefault();
         ctx.back();
       } else if (k === "m") {
@@ -257,6 +278,9 @@ export function TestInterface({ initialState, studentName }: Props) {
           e.preventDefault();
           ctx.toggleEliminator();
         }
+      } else if (k === "h") {
+        e.preventDefault();
+        ctx.toggleTimer();
       } else if (["a", "b", "c", "d"].includes(k)) {
         if (
           ctx.currentQuestion?.type === "MULTIPLE_CHOICE" &&
@@ -449,11 +473,25 @@ export function TestInterface({ initialState, studentName }: Props) {
       ? (answers[state.questions[currentIndex].id] ?? blankAnswer())
       : null,
     isModalOpen:
-      showNavigator || showDirections || showSubmitConfirm || showFullscreenWarning,
+      showNavigator ||
+      showDirections ||
+      showSubmitConfirm ||
+      showFullscreenWarning ||
+      showShortcuts,
     next,
     back,
     onAnswerChange,
     toggleEliminator: () => setEliminatorActive((v) => !v),
+    toggleTimer: () => setTimerHidden((v) => !v),
+    closeAllModals: () => {
+      setShowNavigator(false);
+      setShowDirections(false);
+      setShowSubmitConfirm(false);
+      setShowFullscreenWarning(false);
+      setShowShortcuts(false);
+      setCalcOpen(false);
+      setRefOpen(false);
+    },
   };
 
   // ---------- Render ----------
@@ -498,6 +536,7 @@ export function TestInterface({ initialState, studentName }: Props) {
             timerHidden={timerHidden}
             onToggleTimer={() => setTimerHidden((v) => !v)}
             onShowDirections={() => setShowDirections(true)}
+            onShowShortcuts={() => setShowShortcuts(true)}
             isMath={isMath}
             onOpenCalculator={() => setCalcOpen((v) => !v)}
             onOpenReference={() => setRefOpen((v) => !v)}
@@ -594,6 +633,11 @@ export function TestInterface({ initialState, studentName }: Props) {
               }}
             />
           )}
+
+          <KeyboardShortcutsModal
+            open={showShortcuts}
+            onOpenChange={setShowShortcuts}
+          />
         </div>
       )}
 
@@ -652,6 +696,7 @@ function TopBar({
   timerHidden,
   onToggleTimer,
   onShowDirections,
+  onShowShortcuts,
   isMath,
   onOpenCalculator,
   onOpenReference,
@@ -663,6 +708,7 @@ function TopBar({
   timerHidden: boolean;
   onToggleTimer: () => void;
   onShowDirections: () => void;
+  onShowShortcuts: () => void;
   isMath: boolean;
   onOpenCalculator: () => void;
   onOpenReference: () => void;
@@ -751,11 +797,9 @@ function TopBar({
             />
           </>
         )}
-        <IconLabel
-          icon={<MoreVertical className="h-5 w-5" />}
-          label="More"
-          onClick={onShowDirections}
-          title="More"
+        <MoreMenu
+          onShowDirections={onShowDirections}
+          onShowShortcuts={onShowShortcuts}
         />
         <div className="ml-3 flex items-center gap-1 text-xs text-neutral-600">
           <Battery className="h-4 w-5 rotate-90" />
@@ -1068,11 +1112,9 @@ function QuestionView({
         {question.type === "STUDENT_PRODUCED_RESPONSE" && (
           <div>
             <label className="block text-sm font-medium">Your answer</label>
-            <input
+            <SprInput
               value={answer.response}
-              onChange={(e) => onChangeWrapper({ response: e.target.value })}
-              inputMode="text"
-              className="mt-2 w-64 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700"
+              onChange={(next) => onChangeWrapper({ response: next })}
               placeholder="e.g. 4  or  1/2  or  0.5"
             />
             <p className="mt-2 text-xs text-neutral-500">
