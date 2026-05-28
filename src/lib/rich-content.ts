@@ -68,6 +68,16 @@ function escapeHtml(s: string) {
 const ANY_VALUE = [/^.+$/];
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  // SVG attributes are case-sensitive (`viewBox`, `preserveAspectRatio`,
+  // `xmlns:xlink`, etc.) but htmlparser2 — the parser under sanitize-html —
+  // lowercases attribute names by default. That turns `viewBox` into
+  // `viewbox` in the output, which the browser doesn't recognize, and the
+  // KaTeX sqrt radical's SVG renders as an empty container. Preserve case
+  // for both tags and attributes so SVG round-trips cleanly.
+  parser: {
+    lowerCaseTags: false,
+    lowerCaseAttributeNames: false,
+  },
   allowedTags: [
     // Standard rich-text tags
     "p",
