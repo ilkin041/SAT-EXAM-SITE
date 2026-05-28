@@ -14,7 +14,14 @@ import { getToken } from "next-auth/jwt";
  * because the JWT is signed with AUTH_SECRET.
  */
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/practice"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/signup",
+  "/practice",
+  "/forgot-password",
+  "/reset-password",
+];
 
 const PUBLIC_PREFIXES = [
   "/api/auth",
