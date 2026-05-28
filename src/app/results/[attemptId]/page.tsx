@@ -1,14 +1,29 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, Award, BookOpen, Calculator } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Award,
+  BookOpen,
+  Calculator,
+  Clock,
+  Hourglass,
+  TrendingDown,
+  Zap,
+} from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatCard } from "@/components/ui/stat-card";
 import {
+  computeDifficultyBreakdown,
   computeDomainBreakdown,
   computeRawScores,
   computeScaledScores,
+  computeTimeStats,
+  formatDuration,
+  type DifficultyKey,
   type ScoringTable,
 } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
@@ -37,7 +52,11 @@ export default async function ResultsPage({
           },
         },
       },
-      answers: { include: { question: { select: { domain: true, type: true } } } },
+      answers: {
+        include: {
+          question: { select: { domain: true, type: true, difficulty: true } },
+        },
+      },
     },
   });
   if (!attempt) notFound();
@@ -75,6 +94,17 @@ export default async function ResultsPage({
       if (!sectionType) return [];
       return [{ sectionType, domain: a.question.domain, isCorrect: a.isCorrect }];
     }),
+  );
+
+  const difficultyBreakdown = computeDifficultyBreakdown(
+    attempt.answers.map((a) => ({
+      difficulty: a.question.difficulty,
+      isCorrect: a.isCorrect,
+    })),
+  );
+
+  const timeStats = computeTimeStats(
+    attempt.answers.map((a) => ({ response: a.response, timeSpent: a.timeSpent })),
   );
 
   const isCompleted = attempt.status === "COMPLETED";
@@ -171,6 +201,50 @@ export default async function ResultsPage({
         </div>
       </section>
 
+      {/* ---------- Difficulty breakdown ---------- */}
+      <section className="mt-10">
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">
+          Performance by difficulty
+        </h2>
+        <DifficultyTable stats={difficultyBreakdown} />
+      </section>
+
+      {/* ---------- Time management ---------- */}
+      <section className="mt-10">
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">Time management</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatCard
+            label="Avg per question"
+            value={formatDuration(timeStats.averageSeconds)}
+            icon={Clock}
+            hint={`${timeStats.answeredCount} answered`}
+          />
+          <StatCard
+            label="Fastest"
+            value={formatDuration(timeStats.fastestSeconds)}
+            icon={Zap}
+          />
+          <StatCard
+            label="Slowest"
+            value={formatDuration(timeStats.slowestSeconds)}
+            icon={Hourglass}
+          />
+          <StatCard
+            label="Spent too long"
+            value={timeStats.overLimitCount}
+            icon={TrendingDown}
+            hint=">3 min"
+          />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          SAT tip: aim for under{" "}
+          <span className="font-medium text-foreground">1:10</span> per Reading
+          &amp; Writing question and under{" "}
+          <span className="font-medium text-foreground">1:35</span> per Math
+          question.
+        </p>
+      </section>
+
       {/* ---------- Actions ---------- */}
       <div className="mt-10 flex flex-wrap gap-3">
         <Button asChild size="lg">
@@ -231,6 +305,117 @@ function SectionScore({
       </div>
     </div>
   );
+}
+
+function DifficultyTable({
+  stats,
+}: {
+  stats: { difficulty: DifficultyKey; correct: number; total: number }[];
+}) {
+  // Drop empty buckets (some tests have no Easy or no Hard items).
+  const rows = stats.filter((s) => s.total > 0);
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-sm text-muted-foreground">
+        No data — questions on this attempt have no difficulty tagging.
+      </div>
+    );
+  }
+
+  const pctByLevel: Partial<Record<DifficultyKey, number>> = {};
+  for (const r of rows) {
+    pctByLevel[r.difficulty] = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0;
+  }
+
+  // Interpretation hint — pick the most actionable one in priority order.
+  let hint: string | null = null;
+  if ((pctByLevel.HARD ?? 100) < 50) {
+    hint = "Focus on hard questions — this is where your biggest score gains are.";
+  } else if ((pctByLevel.EASY ?? 100) < 80) {
+    hint =
+      "⚠️ You're missing easy questions — review fundamental concepts.";
+  } else if ((pctByLevel.MEDIUM ?? 100) < 60) {
+    hint =
+      "Medium difficulty questions make up most of the test — prioritize these.";
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <th className="pb-3 font-medium">Difficulty</th>
+            <th className="pb-3 text-right font-medium">Correct</th>
+            <th className="pb-3 text-right font-medium">Total</th>
+            <th className="pb-3 text-right font-medium">%</th>
+            <th className="pb-3 pl-6 font-medium">Progress</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {rows.map((r) => {
+            const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0;
+            const cfg = difficultyDisplay(r.difficulty);
+            return (
+              <tr key={r.difficulty}>
+                <td className="py-3">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      cfg.badge,
+                    )}
+                  >
+                    {cfg.label}
+                  </span>
+                </td>
+                <td className="py-3 text-right tabular-nums">{r.correct}</td>
+                <td className="py-3 text-right tabular-nums text-muted-foreground">
+                  {r.total}
+                </td>
+                <td className="py-3 text-right font-semibold tabular-nums">{pct}%</td>
+                <td className="py-3 pl-6">
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={cn("h-full rounded-full transition-all duration-500", cfg.bar)}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {hint && (
+        <p className="mt-4 rounded-md border border-amber-500/30 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function difficultyDisplay(d: DifficultyKey) {
+  if (d === "EASY") {
+    return {
+      label: "Easy",
+      badge:
+        "border border-green-500/30 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300",
+      bar: "bg-green-600",
+    };
+  }
+  if (d === "MEDIUM") {
+    return {
+      label: "Medium",
+      badge:
+        "border border-amber-500/30 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200",
+      bar: "bg-amber-500",
+    };
+  }
+  return {
+    label: "Hard",
+    badge: "border border-destructive/30 bg-destructive/10 text-destructive",
+    bar: "bg-destructive",
+  };
 }
 
 function DomainTable({

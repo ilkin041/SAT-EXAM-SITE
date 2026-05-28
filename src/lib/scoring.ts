@@ -156,6 +156,105 @@ export function computeScaledScores(
   return { readingWriting: rw, math, total: rw + math };
 }
 
+// ---------- Difficulty breakdown ----------
+
+export type DifficultyKey = "EASY" | "MEDIUM" | "HARD";
+
+export interface DifficultyStat {
+  difficulty: DifficultyKey;
+  correct: number;
+  total: number;
+}
+
+export type DifficultyBreakdown = DifficultyStat[];
+
+/**
+ * Bucket the student's answers by question difficulty. `MIXED` questions are
+ * skipped — that's an authoring-level tag, not an item-level difficulty.
+ */
+export function computeDifficultyBreakdown(
+  items: {
+    difficulty: "EASY" | "MEDIUM" | "HARD" | "MIXED";
+    isCorrect: boolean;
+  }[],
+): DifficultyBreakdown {
+  const buckets: Record<DifficultyKey, DifficultyStat> = {
+    EASY: { difficulty: "EASY", correct: 0, total: 0 },
+    MEDIUM: { difficulty: "MEDIUM", correct: 0, total: 0 },
+    HARD: { difficulty: "HARD", correct: 0, total: 0 },
+  };
+  for (const it of items) {
+    if (it.difficulty === "MIXED") continue;
+    const b = buckets[it.difficulty];
+    b.total += 1;
+    if (it.isCorrect) b.correct += 1;
+  }
+  return [buckets.EASY, buckets.MEDIUM, buckets.HARD];
+}
+
+// ---------- Time stats ----------
+
+export interface TimeStats {
+  /** Number of questions the student actually answered (response non-empty). */
+  answeredCount: number;
+  /** Average time across answered questions, in seconds. 0 when none answered. */
+  averageSeconds: number;
+  /** Fastest answered question, in seconds. null when none answered. */
+  fastestSeconds: number | null;
+  /** Slowest answered question, in seconds. null when none answered. */
+  slowestSeconds: number | null;
+  /** Questions where the student spent over 3 minutes. */
+  overLimitCount: number;
+}
+
+const SLOW_THRESHOLD = 180; // seconds — "spent too long" flag
+
+/**
+ * Compute simple time-management stats over the student's answered
+ * questions. Unanswered (response === "") items are excluded so that abandoned
+ * questions don't skew the slowest/average numbers.
+ */
+export function computeTimeStats(
+  items: { response: string; timeSpent: number }[],
+): TimeStats {
+  const answered = items.filter(
+    (i) => i.response.trim().length > 0 && i.timeSpent > 0,
+  );
+  if (answered.length === 0) {
+    return {
+      answeredCount: 0,
+      averageSeconds: 0,
+      fastestSeconds: null,
+      slowestSeconds: null,
+      overLimitCount: 0,
+    };
+  }
+  const total = answered.reduce((sum, a) => sum + a.timeSpent, 0);
+  let min = answered[0].timeSpent;
+  let max = answered[0].timeSpent;
+  let over = 0;
+  for (const a of answered) {
+    if (a.timeSpent < min) min = a.timeSpent;
+    if (a.timeSpent > max) max = a.timeSpent;
+    if (a.timeSpent > SLOW_THRESHOLD) over += 1;
+  }
+  return {
+    answeredCount: answered.length,
+    averageSeconds: Math.round(total / answered.length),
+    fastestSeconds: min,
+    slowestSeconds: max,
+    overLimitCount: over,
+  };
+}
+
+/** Format seconds as `m:ss`. 0/null safe. */
+export function formatDuration(seconds: number | null | undefined): string {
+  if (!seconds || seconds <= 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 /**
  * Compute per-domain correct/total per section from the student's answers and
  * the questions they were served.
