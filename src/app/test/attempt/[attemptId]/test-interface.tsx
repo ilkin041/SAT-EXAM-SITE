@@ -26,6 +26,9 @@ import {
   useNetworkStatus,
   useTabConflictGuard,
 } from "./connectivity-overlays";
+import { SaveIndicator, type SaveStatus } from "./save-indicator";
+import { playTimeUpBeep } from "@/lib/audio-beep";
+import { useToast } from "@/components/toast";
 
 interface Props {
   initialState: AttemptState;
@@ -73,6 +76,16 @@ export function TestInterface({ initialState, studentName }: Props) {
   const { isOffline, justReconnected } = useNetworkStatus();
   const isDuplicateTab = useTabConflictGuard(initialState.attempt.id);
 
+  // ---------- Save-indicator status & timer warnings ----------
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const saveClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toast = useToast();
+
+  // One-shot guards so the same warning doesn't fire on every tick.
+  const oneMinWarnedRef = useRef(false);
+  const beepedRef = useRef(false);
+  const [timeUp, setTimeUp] = useState(false);
+
   // ---------- Resume splash ----------
   // Show for ~1s when the student lands on the attempt page mid-progress
   // (they had a saved index or saved answers). Brand-new starts of a module
@@ -105,13 +118,33 @@ export function TestInterface({ initialState, studentName }: Props) {
     return Math.max(0, state.timeLimitSeconds - elapsed);
   }, [now, state.moduleStartedAt, state.timeLimitSeconds]);
 
-  // ---------- Auto-submit when timer hits zero ----------
+  // ---------- Auto-submit when timer hits zero + timer warnings ----------
   const submittingRef = useRef(false);
   useEffect(() => {
     if (phase !== "in_module" && phase !== "review") return;
+
+    // One-time toast the first time we drop under 1 minute.
+    if (
+      remainingSeconds <= 60 &&
+      remainingSeconds > 0 &&
+      !oneMinWarnedRef.current
+    ) {
+      oneMinWarnedRef.current = true;
+      toast("⏰ Less than 1 minute remaining!", "error");
+    }
+
     if (remainingSeconds <= 0 && !submittingRef.current) {
       submittingRef.current = true;
-      void submitModule(true);
+      if (!beepedRef.current) {
+        beepedRef.current = true;
+        playTimeUpBeep();
+      }
+      // Show the "Time's up!" overlay before the submission transitions
+      // away — gives the student 2 s to register what happened.
+      setTimeUp(true);
+      setTimeout(() => {
+        void submitModule(true);
+      }, 2000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingSeconds, phase]);
@@ -127,21 +160,37 @@ export function TestInterface({ initialState, studentName }: Props) {
       if (saveTimeoutRef.current[questionId]) {
         clearTimeout(saveTimeoutRef.current[questionId]);
       }
-      saveTimeoutRef.current[questionId] = setTimeout(() => {
-        fetch(`/api/attempts/${state.attempt.id}/answer`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            questionId,
-            response: value.response,
-            isMarkedForReview: value.isMarkedForReview,
-            eliminatedChoices: value.eliminatedChoices,
-            timeSpent: 0, // timeSpent is incremented on the server; client just tracks locally
-            currentQuestionIndex: qIndex,
-          }),
-        }).catch(() => {
-          /* network errors swallowed; will retry on next change */
-        });
+      saveTimeoutRef.current[questionId] = setTimeout(async () => {
+        // Surface a "Saving" pill briefly. With a 400 ms debounce the fetch
+        // usually finishes fast enough that the user only sees "Saved", but
+        // this keeps the indicator honest on slower connections.
+        setSaveStatus("saving");
+        if (saveClearRef.current) {
+          clearTimeout(saveClearRef.current);
+          saveClearRef.current = null;
+        }
+        try {
+          const res = await fetch(`/api/attempts/${state.attempt.id}/answer`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              questionId,
+              response: value.response,
+              isMarkedForReview: value.isMarkedForReview,
+              eliminatedChoices: value.eliminatedChoices,
+              timeSpent: 0, // server tracks; client just emits writes
+              currentQuestionIndex: qIndex,
+            }),
+          });
+          if (!res.ok) throw new Error(`status ${res.status}`);
+          setSaveStatus("saved");
+          // Wipe the "Saved" indicator back to idle after 1.5s so it stays
+          // a subtle confirmation, not a persistent badge.
+          saveClearRef.current = setTimeout(() => setSaveStatus("idle"), 1500);
+        } catch {
+          // Stay in error state until a subsequent save succeeds.
+          setSaveStatus("error");
+        }
       }, 400);
     },
     [state.attempt.id],
@@ -364,6 +413,11 @@ export function TestInterface({ initialState, studentName }: Props) {
     setShowNavigator(false);
     setShowDirections(false);
     submittingRef.current = false;
+    // Reset per-module timer warnings so the next module re-fires them
+    // when it crosses its own 1-minute / 0-second thresholds.
+    oneMinWarnedRef.current = false;
+    beepedRef.current = false;
+    setTimeUp(false);
     setPhase(next.isOnBreak ? "break" : "in_module");
   }
 
@@ -425,7 +479,17 @@ export function TestInterface({ initialState, studentName }: Props) {
           studentName={studentName}
         />
       ) : phase === "loading_next" || phase === "submitting" ? (
-        <Loader text="Loading next module…" />
+        <Loader
+          text={
+            timeUp
+              ? "Time's up! Submitting your answers…"
+              : "Loading next module…"
+          }
+        />
+      ) : timeUp ? (
+        // Brief 2-second overlay before submitModule runs — gives the
+        // student a clear "what just happened" before the screen changes.
+        <Loader text="Time's up! Submitting your answers…" />
       ) : (
         <div className="flex h-screen flex-col bg-white text-neutral-900">
           <TopBar
@@ -469,6 +533,7 @@ export function TestInterface({ initialState, studentName }: Props) {
 
           <BottomBar
             studentName={studentName}
+            saveStatus={saveStatus}
             questionNumber={currentIndex + 1}
             totalQuestions={state.questions.length}
             isReview={phase === "review"}
@@ -605,18 +670,38 @@ function TopBar({
   refOpen: boolean;
 }) {
   const low = remainingSeconds <= 5 * 60;
+  // "Critical" is the last minute — full-bar background pulse + larger
+  // seconds-only timer display per spec.
+  const critical = remainingSeconds <= 60 && remainingSeconds > 0;
   const mm = Math.floor(remainingSeconds / 60);
   const ss = String(remainingSeconds % 60).padStart(2, "0");
 
   return (
-    <header className="grid h-16 shrink-0 grid-cols-3 items-center border-b border-neutral-300 bg-[#f4f5f7] px-6">
+    <header
+      className={cn(
+        "grid h-16 shrink-0 grid-cols-3 items-center border-b border-neutral-300 bg-[#f4f5f7] px-6",
+        critical && !timerHidden && "animate-timer-critical",
+      )}
+    >
       {/* Left: section label + Directions dropdown */}
       <div className="flex flex-col">
-        <div className="text-sm font-semibold text-neutral-900">{title}</div>
+        <div
+          className={cn(
+            "text-sm font-semibold",
+            critical && !timerHidden ? "text-white" : "text-neutral-900",
+          )}
+        >
+          {title}
+        </div>
         <button
           type="button"
           onClick={onShowDirections}
-          className="-ml-0.5 mt-0.5 inline-flex w-fit items-center gap-0.5 rounded-sm px-0.5 text-xs text-neutral-700 hover:bg-neutral-200"
+          className={cn(
+            "-ml-0.5 mt-0.5 inline-flex w-fit items-center gap-0.5 rounded-sm px-0.5 text-xs",
+            critical && !timerHidden
+              ? "text-white/90 hover:bg-white/10"
+              : "text-neutral-700 hover:bg-neutral-200",
+          )}
         >
           Directions <ChevronDown className="h-3.5 w-3.5" />
         </button>
@@ -626,13 +711,16 @@ function TopBar({
       <div className="flex flex-col items-center">
         <div
           className={cn(
-            "font-mono text-2xl font-bold tabular-nums leading-none",
-            timerHidden ? "text-neutral-500" : "text-neutral-900",
-            low && !timerHidden && "text-red-600",
-            low && !timerHidden && remainingSeconds <= 60 && "animate-pulse",
+            "font-mono font-bold tabular-nums leading-none",
+            critical && !timerHidden
+              ? "text-4xl text-white"
+              : "text-2xl",
+            !critical && timerHidden && "text-neutral-500",
+            !critical && !timerHidden && low && "text-red-600",
+            !critical && !timerHidden && !low && "text-neutral-900",
           )}
         >
-          {timerHidden ? "Hidden" : `${mm}:${ss}`}
+          {timerHidden ? "Hidden" : critical ? `:${ss}` : `${mm}:${ss}`}
         </div>
         <button
           type="button"
@@ -741,6 +829,7 @@ function PracticeBanner() {
 
 function BottomBar({
   studentName,
+  saveStatus,
   questionNumber,
   totalQuestions,
   isReview,
@@ -751,6 +840,7 @@ function BottomBar({
   onGoToReview,
 }: {
   studentName: string;
+  saveStatus: SaveStatus;
   questionNumber: number;
   totalQuestions: number;
   isReview: boolean;
@@ -762,7 +852,10 @@ function BottomBar({
 }) {
   return (
     <footer className="grid h-16 shrink-0 grid-cols-3 items-center border-t border-neutral-300 bg-white px-6">
-      <div className="truncate text-sm font-medium text-neutral-800">{studentName}</div>
+      <div className="flex items-center truncate text-sm font-medium text-neutral-800">
+        <span className="truncate">{studentName}</span>
+        <SaveIndicator status={saveStatus} />
+      </div>
       <div className="flex justify-center">
         <button
           type="button"

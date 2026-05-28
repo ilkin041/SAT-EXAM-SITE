@@ -118,6 +118,19 @@
 .rich-content .katex-display { margin: 0.75em 0; }
 
 /*
+ * Top-bar pulse used in the last minute of a module. Pulses the background
+ * between the normal toolbar color and a saturated red so the timer is
+ * impossible to miss without resorting to a full overlay.
+ */
+@keyframes timer-critical-pulse {
+  0%, 100% { background-color: #f4f5f7; }
+  50%      { background-color: #dc2626; }
+}
+.animate-timer-critical {
+  animation: timer-critical-pulse 1s ease-in-out infinite;
+}
+
+/*
  * KaTeX uses `border-bottom` to draw fraction bars, sqrt vincula, overlines,
  * etc. Tailwind's preflight + our base layer apply `border-color: hsl(var(--border))`
  * (light gray) to every element via `*`, which makes those lines almost
