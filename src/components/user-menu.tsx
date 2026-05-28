@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { LogOut, ChevronDown } from "lucide-react";
+import { LogOut, ChevronDown, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -53,6 +54,19 @@ export function UserMenu({ name, email }: Props) {
               <div className="truncate text-muted-foreground">{email}</div>
             )}
           </div>
+          <DropdownMenu.Separator className="my-1 h-px bg-border" />
+          <DropdownMenu.Item asChild>
+            <Link
+              href="/account"
+              className={cn(
+                "flex cursor-pointer select-none items-center gap-2 rounded-sm px-3 py-1.5 text-sm outline-none",
+                "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
+              )}
+            >
+              <Settings className="h-4 w-4" aria-hidden />
+              Account settings
+            </Link>
+          </DropdownMenu.Item>
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
           <DropdownMenu.Item
             disabled={signing}

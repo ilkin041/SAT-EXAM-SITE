@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -57,7 +58,15 @@ export function LoginForm() {
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-foreground">Password</span>
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-foreground">Password</span>
+          <Link
+            href="/forgot-password"
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Forgot your password?
+          </Link>
+        </div>
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
