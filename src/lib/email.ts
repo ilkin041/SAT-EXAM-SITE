@@ -98,9 +98,36 @@ export async function sendPasswordResetEmail({
       subject,
       html,
     });
-    if (result.error) return { ok: false, error: result.error.message };
+    if (result.error) {
+      // Most common cause in the wild: sending from `onboarding@resend.dev`
+      // to an address that isn't the Resend account owner's. Surface enough
+      // detail in the logs that the admin can diagnose without re-tracing
+      // the code path.
+      console.error("[email] Resend rejected send", {
+        from: FROM_ADDRESS,
+        to,
+        subject,
+        errorName: result.error.name,
+        errorMessage: result.error.message,
+        hint:
+          FROM_ADDRESS.includes("onboarding@resend.dev")
+            ? "Sandbox sender — Resend only delivers to the Resend account owner's email until a custom domain is verified."
+            : undefined,
+      });
+      return { ok: false, error: result.error.message };
+    }
+    console.log("[email] Resend accepted", {
+      to,
+      subject,
+      id: result.data?.id,
+    });
     return { ok: true };
   } catch (err) {
+    console.error("[email] Resend threw", {
+      to,
+      subject,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Email send failed",
