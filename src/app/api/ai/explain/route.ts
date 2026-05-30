@@ -51,9 +51,14 @@ Student's Answer: ${studentResponse}
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Gemini API Error:", errorText);
+      let errorMessage = "Failed to fetch response from Gemini API";
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.error?.message || errorMessage;
+      } catch {}
       return new NextResponse(
-        JSON.stringify({ error: "Failed to fetch response from Gemini API" }),
-        { status: 502, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: `Gemini API Error: ${errorMessage}` }),
+        { status: response.status, headers: { "Content-Type": "application/json" } }
       );
     }
 
