@@ -20,7 +20,13 @@ export default async function DashboardPage() {
 
   const [tests, attempts, inProgress] = await Promise.all([
     prisma.test.findMany({
-      where: { OR: [{ isPublic: true }, { createdById: user.id }] },
+      where: {
+        OR: [
+          { isPublic: true },
+          { createdById: user.id },
+          { groups: { some: { users: { some: { id: user.id } } } } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       take: 20,
       include: {

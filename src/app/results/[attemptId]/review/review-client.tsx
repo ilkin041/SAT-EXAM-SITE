@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   XCircle,
   CircleSlash,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -303,6 +305,8 @@ function QuestionBody({ item }: { item: ReviewItem }) {
           </div>
         </div>
       )}
+
+      <AiExplanationBox item={item} />
     </>
   );
 }
@@ -469,4 +473,89 @@ function difficultyVariant(
   if (d === "MEDIUM") return "warning";
   if (d === "HARD") return "destructive";
   return "muted";
+}
+
+function AiExplanationBox({ item }: { item: ReviewItem }) {
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAiExplanation(null);
+    setError(null);
+    setLoading(false);
+  }, [item.questionId]);
+
+  // Only show the AI tutor option if the student answered incorrectly
+  if (!item.studentResponse || item.isCorrect) return null;
+
+  const askAi = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/ai/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionStem: item.stem,
+          choices: item.choices,
+          studentResponse: item.studentResponse,
+          correctAnswer: item.correctAnswer,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to get AI explanation.");
+      setAiExplanation(data.explanation);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!aiExplanation && !loading && !error) {
+    return (
+      <div className="mt-5 text-center">
+        <Button
+          onClick={askAi}
+          variant="secondary"
+          className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 hover:from-indigo-500/20 hover:to-purple-500/20 dark:from-indigo-500/20 dark:to-purple-500/20 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50"
+        >
+          <Sparkles className="mr-2 h-4 w-4" />
+          Ask AI Tutor Why You Missed This
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 rounded-xl border border-indigo-200 bg-indigo-50/50 p-5 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+      <div className="mb-3 flex items-center gap-2 font-semibold text-indigo-800 dark:text-indigo-300">
+        <Sparkles className="h-5 w-5" />
+        AI Tutor Explanation
+      </div>
+      
+      {loading && (
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
+          Analyzing your answer...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-sm text-destructive">
+          <span className="font-semibold">Error:</span> {error}
+          <div className="mt-2">
+            <Button size="sm" variant="outline" onClick={askAi}>Try again</Button>
+          </div>
+        </div>
+      )}
+
+      {aiExplanation && (
+        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-indigo-950/50 text-indigo-950 dark:text-indigo-100">
+          <RichContent html={aiExplanation.replace(/\n/g, "<br />")} />
+        </div>
+      )}
+    </div>
+  );
 }

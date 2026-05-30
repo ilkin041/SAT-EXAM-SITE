@@ -67,6 +67,7 @@ model User {
   testsCreated Test[]                @relation("TestCreatedBy")
   attempts     TestAttempt[]
   resetTokens  PasswordResetToken[]
+  groups       Group[]
 }
 
 model PasswordResetToken {
@@ -98,6 +99,7 @@ model Test {
   createdBy User?         @relation("TestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   sections  Section[]
   attempts  TestAttempt[]
+  groups    Group[]
 
   @@index([createdById])
 }
@@ -267,4 +269,15 @@ model ModuleResult {
 
   @@unique([attemptId, moduleId])
   @@index([attemptId])
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+  tests Test[]
 }

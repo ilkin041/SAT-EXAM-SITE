@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Search } from "lucide-react";
+import { Activity, Search, Download } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   computeRawScores,
@@ -113,6 +113,14 @@ return (
     <PageHeader
       title="Attempts"
       description="Every test attempt across your platform, with computed scaled scores."
+      actions={
+        <Button asChild variant="secondary" size="sm" className="hover-lift active-press">
+          <a href="/api/admin/export/attempts" download>
+            <Download className="mr-1.5 h-4 w-4" />
+            Export CSV
+          </a>
+        </Button>
+      }
     />
 
     <form
