@@ -546,7 +546,7 @@ function AiExplanationBox({ item }: { item: ReviewItem }) {
         <div className="text-sm text-destructive">
           <span className="font-semibold">Error:</span> {error}
           <div className="mt-2">
-            <Button size="sm" variant="outline" onClick={askAi}>Try again</Button>
+            <Button size="sm" variant="secondary" onClick={askAi}>Try again</Button>
           </div>
         </div>
       )}
