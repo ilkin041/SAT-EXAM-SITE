@@ -553,7 +553,7 @@ function AiExplanationBox({ item }: { item: ReviewItem }) {
 
       {aiExplanation && (
         <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-indigo-950/50 text-indigo-950 dark:text-indigo-100">
-          <RichContent html={aiExplanation.replace(/\n/g, "<br />")} />
+          <RichContent html={aiExplanation} />
         </div>
       )}
     </div>

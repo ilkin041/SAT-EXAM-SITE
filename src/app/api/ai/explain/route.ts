@@ -22,7 +22,8 @@ export async function POST(req: Request) {
 
     const prompt = `
 You are an expert SAT tutor. A student got a question incorrect and needs an explanation.
-Be encouraging, concise, and explain EXACTLY why their answer is wrong and why the correct answer is right. Use simple markdown formatting.
+Be encouraging, concise, and explain EXACTLY why their answer is wrong and why the correct answer is right. 
+IMPORTANT: Format your response using basic HTML tags (e.g., <p>, <b>, <i>, <ul>, <li>). Do NOT use Markdown. For any math expressions, use $...$ for inline math and $$...$$ for display math.
 
 Question Context:
 Stem: ${questionStem}
