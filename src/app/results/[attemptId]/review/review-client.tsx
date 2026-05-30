@@ -505,6 +505,7 @@ function AiExplanationBox({ item }: { item: ReviewItem }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to get AI explanation.");
+      console.log("DEBUG: Raw AI explanation response:", data.explanation);
       setAiExplanation(data.explanation);
     } catch (err: any) {
       setError(err.message);

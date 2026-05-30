@@ -36,7 +36,7 @@ export function renderRichToHtml(input: string | null | undefined): string {
 }
 
 function escapeUnsafeHtml(html: string): string {
-  const allowedTags = SANITIZE_OPTIONS.allowedTags || [];
+  const allowedTags = (SANITIZE_OPTIONS.allowedTags as string[]) || [];
   const allowedSet = new Set(allowedTags);
 
   // Regex matching any tag-like construct:
