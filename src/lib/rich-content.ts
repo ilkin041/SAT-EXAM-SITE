@@ -31,8 +31,40 @@ export function renderRichToHtml(input: string | null | undefined): string {
   // Unescape \$ -> $
   out = out.replace(/\\\$/g, "$");
 
-  return sanitizeHtml(out, SANITIZE_OPTIONS);
+  const safeOut = escapeUnsafeHtml(out);
+  return sanitizeHtml(safeOut, SANITIZE_OPTIONS);
 }
+
+function escapeUnsafeHtml(html: string): string {
+  const allowedTags = SANITIZE_OPTIONS.allowedTags || [];
+  const allowedSet = new Set(allowedTags);
+
+  // Regex matching any tag-like construct:
+  // Starts with <, optional /, then tag name (alphanumeric/colon/dash),
+  // then optional attributes, and optional / ending with >
+  const tagRegex = /(<\/?[a-zA-Z0-9:-]+(?:\s+[a-zA-Z_:][a-zA-Z0-9_.:-]*\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))*\s*\/?>|<!--[\s\S]*?-->|<!DOCTYPE\s+[^>]+>)/g;
+
+  const parts = html.split(tagRegex);
+  for (let i = 0; i < parts.length; i++) {
+    // Odd index: matched the tag regex
+    if (i % 2 === 1) {
+      const tag = parts[i];
+      const match = tag.match(/^<\/?([a-zA-Z0-9:-]+)/);
+      const tagName = match ? match[1] : "";
+      
+      // If it is NOT a whitelisted tag (case-sensitive), escape it
+      if (!allowedSet.has(tagName)) {
+        parts[i] = tag.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+    } else {
+      // Even index: plain text. Escape all < and >
+      parts[i] = parts[i].replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  }
+
+  return parts.join("");
+}
+
 
 function safeKatex(expr: string, displayMode: boolean): string {
   try {

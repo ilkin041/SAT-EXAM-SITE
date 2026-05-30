@@ -13,9 +13,10 @@ export async function POST(req: Request) {
     } = await req.json();
 
     const apiKey = process.env.GEMINI_API_KEY;
+    console.log("[AI Explain] GEMINI_API_KEY status:", apiKey ? "Configured (length: " + apiKey.length + ")" : "Not configured");
     if (!apiKey) {
       return new NextResponse(
-        JSON.stringify({ error: "GEMINI_API_KEY is not configured on the server." }),
+        JSON.stringify({ error: "GEMINI_API_KEY is not configured on the server. Please check your environment variables in Vercel or your local .env file." }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
