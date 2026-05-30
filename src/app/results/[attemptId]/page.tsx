@@ -109,19 +109,26 @@ export default async function ResultsPage({
 
   const isCompleted = attempt.status === "COMPLETED";
 
+  const scorePct = Math.max(0, Math.min(100, Math.round(((scaled.total - 400) / 1200) * 100)));
+
   return (
-    <main className="container mx-auto max-w-4xl px-4 py-10">
+    <main className="container mx-auto max-w-4xl px-4 py-10 animate-fade-in">
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-all duration-150 hover:text-primary active-press mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to dashboard
       </Link>
 
-      <header className="mt-4">
-        <h1 className="text-3xl font-semibold tracking-tight">{attempt.test.title}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+      <header className="mb-8 flex flex-col gap-2 md:flex-row md:items-center md:justify-between border-b border-border/40 pb-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{attempt.test.title}</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Practice Test Score Report
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
           <Badge
             variant={
               isCompleted
@@ -130,6 +137,7 @@ export default async function ResultsPage({
                   ? "warning"
                   : "muted"
             }
+            className={attempt.status === "IN_PROGRESS" ? "animate-pulse" : undefined}
           >
             {attempt.status === "IN_PROGRESS"
               ? "In progress"
@@ -138,123 +146,164 @@ export default async function ResultsPage({
                 : "Abandoned"}
           </Badge>
           {attempt.completedAt && (
-            <span>completed {attempt.completedAt.toLocaleString()}</span>
+            <span className="text-xs text-muted-foreground font-medium">
+              Completed on {attempt.completedAt.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })}
+            </span>
           )}
         </div>
       </header>
 
       {!isCompleted && (
-        <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-          This attempt isn&apos;t complete yet — the scores below reflect only the modules
-          that have been submitted.
+        <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-50/50 p-4.5 text-sm text-amber-850 dark:bg-amber-950/20 dark:text-amber-250">
+          ⚠️ This attempt isn&apos;t complete yet. The scores below reflect only the modules submitted so far.
         </div>
       )}
 
-      {/* ---------- Score hero ---------- */}
-      <section className="mt-8 rounded-2xl border border-border bg-card p-8 shadow-card">
-        <div className="flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <Award className="h-3.5 w-3.5" />
-            Total Score
-          </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-7xl font-semibold tracking-tight tabular-nums">
+      {/* ---------- Score Hero Section ---------- */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-hero border border-border/50 p-8 mb-10 shadow-sm flex flex-col items-center">
+        {/* Blurred ambient background spots */}
+        <div className="absolute -left-16 -top-16 h-36 w-36 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="absolute -right-16 -bottom-16 h-36 w-36 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
+
+        <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold bg-primary/10 text-primary mb-6">
+          <Award className="h-4 w-4" />
+          Overall Performance
+        </span>
+
+        {/* Dynamic Pure SVG Circle Gauge */}
+        <div className="relative flex h-48 w-48 items-center justify-center">
+          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 120 120">
+            <circle
+              cx="60"
+              cy="60"
+              r="50"
+              className="stroke-muted/50 fill-none"
+              strokeWidth="9"
+            />
+            <circle
+              cx="60"
+              cy="60"
+              r="50"
+              className="stroke-primary fill-none transition-all duration-1000 ease-out"
+              strokeWidth="9"
+              strokeDasharray={314.16}
+              strokeDashoffset={314.16 - (scorePct / 100) * 314.16}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="text-center z-10">
+            <span className="block text-5xl font-black tracking-tight text-foreground tabular-nums">
               {scaled.total}
             </span>
-            <span className="text-2xl text-muted-foreground">/1600</span>
-          </div>
-          <div
-            className={cn(
-              "mt-2 text-sm font-medium",
-              tierColor(scaled.total / 1600),
-            )}
-          >
-            {tierLabel(scaled.total / 1600)}
+            <span className="text-sm font-bold text-muted-foreground mt-0.5 block">/ 1600</span>
           </div>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <div className="mt-6 flex flex-col items-center">
+          <span className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-4 py-1 text-xs font-bold border shadow-xs transition-colors",
+            tierPillStyle(scaled.total / 1600)
+          )}>
+            {tierLabel(scaled.total / 1600)}
+          </span>
+        </div>
+
+        <div className="mt-8 grid gap-4 w-full sm:grid-cols-2">
           <SectionScore
             label="Reading & Writing"
             icon={BookOpen}
             value={scaled.readingWriting}
-            raw={`${raw.readingWriting.correct} / ${raw.readingWriting.total} correct`}
+            raw={`${raw.readingWriting.correct} / ${raw.readingWriting.total} Correct`}
+            progressColor="bg-gradient-primary"
           />
           <SectionScore
             label="Math"
             icon={Calculator}
             value={scaled.math}
-            raw={`${raw.math.correct} / ${raw.math.total} correct`}
+            raw={`${raw.math.correct} / ${raw.math.total} Correct`}
+            progressColor="bg-gradient-accent"
           />
         </div>
       </section>
 
       {/* ---------- Domain breakdown ---------- */}
-      <section className="mt-10">
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">Performance by domain</h2>
+      <section className="mb-10">
+        <div className="mb-4 border-b border-border/40 pb-2">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Performance by Domain</h2>
+        </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <DomainTable
-            title="Reading & Writing"
+            title="Reading & Writing Breakdown"
             stats={domainBreakdown.readingWriting}
           />
-          <DomainTable title="Math" stats={domainBreakdown.math} />
+          <DomainTable title="Math Breakdown" stats={domainBreakdown.math} />
         </div>
       </section>
 
       {/* ---------- Difficulty breakdown ---------- */}
-      <section className="mt-10">
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">
-          Performance by difficulty
-        </h2>
+      <section className="mb-10">
+        <div className="mb-4 border-b border-border/40 pb-2">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Performance by Difficulty
+          </h2>
+        </div>
         <DifficultyTable stats={difficultyBreakdown} />
       </section>
 
       {/* ---------- Time management ---------- */}
-      <section className="mt-10">
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">Time management</h2>
+      <section className="mb-12">
+        <div className="mb-4 border-b border-border/40 pb-2">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Time Analysis</h2>
+        </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
-            label="Avg per question"
+            label="Avg per Question"
             value={formatDuration(timeStats.averageSeconds)}
             icon={Clock}
             hint={`${timeStats.answeredCount} answered`}
+            accentColor="blue"
           />
           <StatCard
-            label="Fastest"
+            label="Fastest Question"
             value={formatDuration(timeStats.fastestSeconds)}
             icon={Zap}
+            accentColor="emerald"
           />
           <StatCard
-            label="Slowest"
+            label="Slowest Question"
             value={formatDuration(timeStats.slowestSeconds)}
             icon={Hourglass}
+            accentColor="violet"
           />
           <StatCard
-            label="Spent too long"
+            label="Paced Too Long"
             value={timeStats.overLimitCount}
             icon={TrendingDown}
-            hint=">3 min"
+            hint=">3 min spent"
+            accentColor="amber"
           />
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          SAT tip: aim for under{" "}
-          <span className="font-medium text-foreground">1:10</span> per Reading
-          &amp; Writing question and under{" "}
-          <span className="font-medium text-foreground">1:35</span> per Math
-          question.
-        </p>
+        <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-4 text-xs text-muted-foreground leading-relaxed">
+          💡 <span className="font-semibold text-foreground">SAT pacing strategy:</span> Try to average under{" "}
+          <span className="font-semibold text-foreground">1:10</span> per Reading &amp; Writing question and under{" "}
+          <span className="font-semibold text-foreground">1:35</span> per Math question.
+        </div>
       </section>
 
-      {/* ---------- Actions ---------- */}
-      <div className="mt-10 flex flex-wrap gap-3">
-        <Button asChild size="lg">
-          <Link href={`/results/${attempt.id}/review`}>
-            Review answers
-            <ArrowRight className="h-4 w-4" />
+      {/* ---------- Action Buttons ---------- */}
+      <div className="mt-8 flex flex-wrap gap-4 justify-center sm:justify-start">
+        <Button asChild size="lg" className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary hover-lift active-press transition-all duration-200">
+          <Link href={`/results/${attempt.id}/review`} className="flex items-center gap-1.5">
+            Review all answers
+            <ArrowRight className="h-4.5 w-4.5" />
           </Link>
         </Button>
-        <Button asChild variant="secondary" size="lg">
-          <Link href="/dashboard">Back to dashboard</Link>
+        <Button asChild variant="secondary" size="lg" className="hover-lift active-press shadow-xs">
+          <Link href="/dashboard">Return to dashboard</Link>
         </Button>
       </div>
     </main>
@@ -262,17 +311,17 @@ export default async function ResultsPage({
 }
 
 function tierLabel(pct: number): string {
-  if (pct >= 0.75) return "Above average";
-  if (pct >= 0.5) return "Solid performance";
-  if (pct >= 0.25) return "Room to grow";
-  return "Keep practicing";
+  if (pct >= 0.75) return "Above Average Score";
+  if (pct >= 0.5) return "Solid Performance";
+  if (pct >= 0.25) return "Room to Grow";
+  return "Keep Practicing";
 }
 
-function tierColor(pct: number): string {
-  if (pct >= 0.75) return "text-green-700 dark:text-green-400";
-  if (pct >= 0.5) return "text-blue-700 dark:text-blue-400";
-  if (pct >= 0.25) return "text-amber-700 dark:text-amber-400";
-  return "text-muted-foreground";
+function tierPillStyle(pct: number): string {
+  if (pct >= 0.75) return "bg-emerald-50 text-emerald-700 border-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-350";
+  if (pct >= 0.5) return "bg-blue-50 text-blue-700 border-blue-500/20 dark:bg-blue-950/40 dark:text-blue-350";
+  if (pct >= 0.25) return "bg-amber-50 text-amber-700 border-amber-500/20 dark:bg-amber-950/40 dark:text-amber-300";
+  return "bg-muted text-muted-foreground border-border/80";
 }
 
 function SectionScore({
@@ -280,27 +329,34 @@ function SectionScore({
   icon: Icon,
   value,
   raw,
+  progressColor = "bg-primary",
 }: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   value: number;
   raw: string;
+  progressColor?: string;
 }) {
+  const pct = Math.max(0, Math.min(100, Math.round(((value - 200) / 600) * 100)));
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-        <Icon className="h-4 w-4 text-primary" aria-hidden />
-        {label}
+    <div className="rounded-2xl border border-border/80 bg-card p-5.5 shadow-xs hover:border-primary/20 hover:shadow-sm transition-all duration-200">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+          <Icon className="h-4 w-4 text-primary" aria-hidden />
+          {label}
+        </div>
+        <span className="text-[11px] font-bold text-muted-foreground bg-secondary px-2.5 py-0.5 rounded-full border border-border/20">
+          {raw}
+        </span>
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-4xl font-semibold tabular-nums">{value}</span>
-        <span className="text-sm text-muted-foreground">/800</span>
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="text-4xl font-extrabold tabular-nums tracking-tight text-foreground">{value}</span>
+        <span className="text-sm font-semibold text-muted-foreground">/ 800</span>
       </div>
-      <div className="mt-1.5 text-xs text-muted-foreground">{raw}</div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted/60">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
-          style={{ width: `${((value - 200) / 600) * 100}%` }}
+          className={cn("h-full rounded-full transition-all duration-500", progressColor)}
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>
@@ -312,12 +368,11 @@ function DifficultyTable({
 }: {
   stats: { difficulty: DifficultyKey; correct: number; total: number }[];
 }) {
-  // Drop empty buckets (some tests have no Easy or no Hard items).
   const rows = stats.filter((s) => s.total > 0);
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-sm text-muted-foreground">
-        No data — questions on this attempt have no difficulty tagging.
+      <div className="rounded-2xl border border-dashed border-border bg-card/40 p-6 text-sm text-center text-muted-foreground">
+        No question difficulties mapped for this attempt.
       </div>
     );
   }
@@ -327,66 +382,65 @@ function DifficultyTable({
     pctByLevel[r.difficulty] = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0;
   }
 
-  // Interpretation hint — pick the most actionable one in priority order.
   let hint: string | null = null;
   if ((pctByLevel.HARD ?? 100) < 50) {
-    hint = "Focus on hard questions — this is where your biggest score gains are.";
-  } else if ((pctByLevel.EASY ?? 100) < 80) {
-    hint =
-      "⚠️ You're missing easy questions — review fundamental concepts.";
-  } else if ((pctByLevel.MEDIUM ?? 100) < 60) {
-    hint =
-      "Medium difficulty questions make up most of the test — prioritize these.";
+    hint = "💡 Hard questions seem to be challenging. Try allocating extra review cycles to advanced problem stems.";
+  } else if ((pctByLevel.EASY ?? 100) < 85) {
+    hint = "⚠️ You're missing easy questions. Double-check your arithmetic and read question prompts carefully to avoid silly mistakes.";
+  } else if ((pctByLevel.MEDIUM ?? 100) < 65) {
+    hint = "💡 Medium-difficulty questions compose the majority of items. Aim to secure these points during practice.";
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-card">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="pb-3 font-medium">Difficulty</th>
-            <th className="pb-3 text-right font-medium">Correct</th>
-            <th className="pb-3 text-right font-medium">Total</th>
-            <th className="pb-3 text-right font-medium">%</th>
-            <th className="pb-3 pl-6 font-medium">Progress</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {rows.map((r) => {
-            const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0;
-            const cfg = difficultyDisplay(r.difficulty);
-            return (
-              <tr key={r.difficulty}>
-                <td className="py-3">
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                      cfg.badge,
-                    )}
-                  >
-                    {cfg.label}
-                  </span>
-                </td>
-                <td className="py-3 text-right tabular-nums">{r.correct}</td>
-                <td className="py-3 text-right tabular-nums text-muted-foreground">
-                  {r.total}
-                </td>
-                <td className="py-3 text-right font-semibold tabular-nums">{pct}%</td>
-                <td className="py-3 pl-6">
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn("h-full rounded-full transition-all duration-500", cfg.bar)}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="rounded-2xl border border-border/80 bg-card p-5 md:p-6 shadow-xs hover:shadow-sm transition-all duration-200">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="pb-3.5 font-semibold">Difficulty</th>
+              <th className="pb-3.5 text-center font-semibold">Correct</th>
+              <th className="pb-3.5 text-center font-semibold">Total</th>
+              <th className="pb-3.5 text-center font-semibold">Accuracy</th>
+              <th className="pb-3.5 pl-6 font-semibold">Visual Accuracy</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {rows.map((r) => {
+              const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0;
+              const cfg = difficultyDisplay(r.difficulty);
+              return (
+                <tr key={r.difficulty} className="transition-colors hover:bg-muted/10">
+                  <td className="py-4">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border",
+                        cfg.badge,
+                      )}
+                    >
+                      {cfg.label}
+                    </span>
+                  </td>
+                  <td className="py-4 text-center tabular-nums font-medium text-foreground">{r.correct}</td>
+                  <td className="py-4 text-center tabular-nums text-muted-foreground font-medium">
+                    {r.total}
+                  </td>
+                  <td className="py-4 text-center font-bold tabular-nums text-foreground">{pct}%</td>
+                  <td className="py-4 pl-6 min-w-[120px]">
+                    <div className="h-2 overflow-hidden rounded-full bg-muted/65">
+                      <div
+                        className={cn("h-full rounded-full transition-all duration-500", cfg.bar)}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {hint && (
-        <p className="mt-4 rounded-md border border-amber-500/30 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+        <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50/50 px-4 py-3 text-xs text-amber-850 dark:bg-amber-950/20 dark:text-amber-250 leading-relaxed">
           {hint}
         </p>
       )}
@@ -399,21 +453,21 @@ function difficultyDisplay(d: DifficultyKey) {
     return {
       label: "Easy",
       badge:
-        "border border-green-500/30 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300",
-      bar: "bg-green-600",
+        "border-green-500/25 bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300",
+      bar: "bg-emerald-500",
     };
   }
   if (d === "MEDIUM") {
     return {
       label: "Medium",
       badge:
-        "border border-amber-500/30 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200",
+        "border-amber-500/25 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-200",
       bar: "bg-amber-500",
     };
   }
   return {
     label: "Hard",
-    badge: "border border-destructive/30 bg-destructive/10 text-destructive",
+    badge: "border-red-500/20 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300",
     bar: "bg-destructive",
   };
 }
@@ -426,32 +480,32 @@ function DomainTable({
   stats: { domain: string; correct: number; total: number }[];
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-card">
-      <h3 className="mb-4 text-sm font-semibold">{title}</h3>
+    <div className="rounded-2xl border border-border/80 bg-card p-5 md:p-6 shadow-xs hover:shadow-sm transition-all duration-200">
+      <h3 className="mb-4 text-sm font-bold text-foreground">{title}</h3>
       {stats.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No data.</p>
+        <p className="text-xs text-muted-foreground py-2">No domain data logged for this attempt.</p>
       ) : (
-        <ul className="space-y-3.5">
+        <ul className="space-y-4">
           {stats.map((s) => {
             const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0;
             const barColor =
               pct >= 75
-                ? "bg-green-600"
+                ? "bg-emerald-500"
                 : pct >= 50
-                  ? "bg-blue-600"
+                  ? "bg-blue-500"
                   : pct >= 25
                     ? "bg-amber-500"
                     : "bg-destructive";
             return (
               <li key={s.domain} className="text-sm">
-                <div className="mb-1.5 flex items-center justify-between gap-3">
-                  <span className="truncate font-medium">{s.domain}</span>
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <span className="truncate font-medium text-foreground">{s.domain}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground font-semibold">
                     {s.correct} / {s.total}{" "}
-                    <span className="ml-1 font-semibold">{pct}%</span>
+                    <span className="ml-1 font-bold text-foreground">{pct}%</span>
                   </span>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className="h-2 overflow-hidden rounded-full bg-muted/65">
                   <div
                     className={cn(
                       "h-full rounded-full transition-all duration-500",

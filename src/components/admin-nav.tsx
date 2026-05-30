@@ -17,26 +17,26 @@ interface Props {
  */
 export function AdminNav({ email }: Props) {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/5 bg-brand-navy text-white shadow-sm">
+    <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-gradient-to-r from-brand-navy via-[#1e305e] to-brand-navy text-white shadow-md">
       <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-6">
           <Link
             href="/admin"
-            className="flex items-center gap-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="flex items-center gap-2.5 text-sm font-bold text-white transition-all duration-150 active:scale-[0.98]"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-white/10">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md">
               <Shield className="h-4 w-4" aria-hidden />
             </span>
-            SAT Admin
+            <span className="tracking-tight">SAT Admin</span>
           </Link>
           <AdminNavLinks />
         </div>
         <div className="flex items-center gap-3 text-sm">
           <div className="hidden items-center gap-2 sm:flex">
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+            <span className="rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs">
               Admin
             </span>
-            <span className="text-xs text-white/70">{email}</span>
+            <span className="text-xs text-white/70 font-medium">{email}</span>
           </div>
           <DarkModeToggle />
           <form
@@ -47,7 +47,7 @@ export function AdminNav({ email }: Props) {
           >
             <button
               type="submit"
-              className="rounded-md border border-white/20 bg-white/5 px-3 py-1.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-white/10"
+              className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/90 transition-all duration-150 hover:bg-white/10 hover:text-white active:scale-95"
             >
               Sign out
             </button>

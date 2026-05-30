@@ -20,7 +20,7 @@ interface SearchParams {
 }
 
 const SELECT_CLS =
-  "h-10 rounded-md border border-input bg-card px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "h-10 rounded-xl border border-input/80 bg-card px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
 
 export default async function QuestionsPage({
   searchParams,
@@ -38,12 +38,17 @@ export default async function QuestionsPage({
       { skill: { contains: sp.q, mode: "insensitive" } },
     ];
   }
-  if (sp.domain) where.domain = sp.domain;
-  if (sp.difficulty) where.difficulty = sp.difficulty as Difficulty;
-  if (sp.type) where.type = sp.type as QuestionType;
-  if (sp.section) where.sectionType = sp.section as SectionType;
+  const section = sp.section;
+  const type = sp.type;
+  const difficulty = sp.difficulty;
+  const domain = sp.domain;
 
-  const hasFilter = !!(sp.q || sp.domain || sp.difficulty || sp.type || sp.section);
+  if (domain) where.domain = domain;
+  if (difficulty) where.difficulty = difficulty as Difficulty;
+  if (type) where.type = type as QuestionType;
+  if (section) where.sectionType = section as SectionType;
+
+  const hasFilter = !!(sp.q || domain || difficulty || type || section);
 
   const [questions, domains, assignableTests] = await Promise.all([
     prisma.question.findMany({
@@ -73,10 +78,10 @@ export default async function QuestionsPage({
   return (
     <>
       <PageHeader
-        title="Question bank"
+        title="Question Bank"
         description="Questions live in the global bank and are assigned to test modules from each test's detail page."
         actions={
-          <Button asChild>
+          <Button asChild className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary active-press transition-all duration-200">
             <Link href="/admin/questions/new">
               <Plus className="h-4 w-4" />
               New question
@@ -85,7 +90,7 @@ export default async function QuestionsPage({
         }
       />
 
-      <form className="mb-6 rounded-xl border border-border bg-card p-4 shadow-card">
+      <form className="mb-6 rounded-2xl border border-border/80 bg-card p-5 shadow-sm animate-fade-in">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_repeat(4,minmax(0,160px))_auto]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -93,27 +98,27 @@ export default async function QuestionsPage({
               name="q"
               defaultValue={sp.q ?? ""}
               placeholder="Search stem, passage, domain…"
-              className="pl-9"
+              className="pl-9 rounded-xl border-input/80 focus:border-ring"
             />
           </div>
-          <select name="section" defaultValue={sp.section ?? ""} className={SELECT_CLS}>
+          <select name="section" defaultValue={section ?? ""} className={SELECT_CLS}>
             <option value="">All sections</option>
             <option value="READING_WRITING">English (R&amp;W)</option>
             <option value="MATH">Math</option>
           </select>
-          <select name="type" defaultValue={sp.type ?? ""} className={SELECT_CLS}>
+          <select name="type" defaultValue={type ?? ""} className={SELECT_CLS}>
             <option value="">All types</option>
             <option value="MULTIPLE_CHOICE">Multiple choice</option>
             <option value="STUDENT_PRODUCED_RESPONSE">Student-produced</option>
           </select>
-          <select name="difficulty" defaultValue={sp.difficulty ?? ""} className={SELECT_CLS}>
+          <select name="difficulty" defaultValue={difficulty ?? ""} className={SELECT_CLS}>
             <option value="">All difficulties</option>
             <option value="EASY">Easy</option>
             <option value="MEDIUM">Medium</option>
             <option value="HARD">Hard</option>
             <option value="MIXED">Mixed</option>
           </select>
-          <select name="domain" defaultValue={sp.domain ?? ""} className={SELECT_CLS}>
+          <select name="domain" defaultValue={domain ?? ""} className={SELECT_CLS}>
             <option value="">All domains</option>
             {domains.map((d) => (
               <option key={d.domain} value={d.domain}>
@@ -122,9 +127,9 @@ export default async function QuestionsPage({
             ))}
           </select>
           <div className="flex items-center gap-2">
-            <Button type="submit" size="default">Filter</Button>
+            <Button type="submit" size="default" className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary hover-lift active-press transition-all duration-200">Filter</Button>
             {hasFilter && (
-              <Button asChild variant="ghost" size="default">
+              <Button asChild variant="ghost" size="default" className="hover-lift active-press rounded-xl">
                 <Link href="/admin/questions">Clear</Link>
               </Button>
             )}

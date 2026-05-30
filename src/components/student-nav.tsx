@@ -14,16 +14,16 @@ export async function StudentNav() {
   const user = session?.user;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border/50 glass shadow-sm">
       <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 text-sm font-semibold text-foreground transition-colors hover:text-primary"
+          className="flex items-center gap-2.5 text-sm font-bold text-foreground transition-all duration-150 hover:text-primary active:scale-[0.98]"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <GraduationCap className="h-4 w-4" aria-hidden />
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
+            <GraduationCap className="h-4.5 w-4.5" aria-hidden />
           </span>
-          SAT Practice
+          <span className="tracking-tight animate-fade-in">SAT Practice</span>
         </Link>
         <div className="flex items-center gap-2">
           <DarkModeToggle />

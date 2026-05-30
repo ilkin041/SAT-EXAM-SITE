@@ -9,8 +9,9 @@ interface PageHeaderProps {
 }
 
 /**
- * Standard page header — title on the left, optional action buttons on the
- * right. Stacks vertically on mobile.
+ * Standard page header — title on the left with a decorative gradient
+ * accent line, optional action buttons on the right. Stacks vertically
+ * on mobile.
  */
 export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
   return (
@@ -21,12 +22,21 @@ export function PageHeader({ title, description, actions, className }: PageHeade
       )}
     >
       <div className="min-w-0">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          {title}
+        </h1>
         {description && (
-          <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{description}</p>
         )}
+        {/* Decorative gradient accent line */}
+        <div
+          className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-primary to-primary/40"
+          aria-hidden
+        />
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex flex-wrap items-center gap-2">{actions}</div>
+      )}
     </div>
   );
 }

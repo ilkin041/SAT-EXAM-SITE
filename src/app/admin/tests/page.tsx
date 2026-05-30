@@ -43,7 +43,7 @@ export default async function TestsPage() {
           title="No tests yet"
           description="Create your first practice test to get started."
           action={
-            <Button asChild>
+            <Button asChild className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary active-press transition-all duration-200">
               <Link href="/admin/tests/new">
                 <Plus className="h-4 w-4" />
                 Create test
@@ -52,66 +52,72 @@ export default async function TestsPage() {
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2.5 font-medium">Title</th>
-                <th className="px-4 py-2.5 font-medium">Mode</th>
-                <th className="px-4 py-2.5 font-medium">Visibility</th>
-                <th className="px-4 py-2.5 text-right font-medium">Questions</th>
-                <th className="px-4 py-2.5 text-right font-medium">Attempts</th>
-                <th className="px-4 py-2.5 font-medium">Created</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {tests.map((t) => {
-                const totalQ = t.sections
-                  .flatMap((s) => s.modules)
-                  .reduce((sum, m) => sum + m._count.moduleQuestions, 0);
-                return (
-                  <tr key={t.id} className="transition-colors hover:bg-accent/40">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/tests/${t.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {t.title}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={t.mode === "ADAPTIVE" ? "info" : "muted"}>
-                        {t.mode}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={t.isPublic ? "success" : "outline"}>
-                        {t.isPublic ? "Public" : "Private"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                      {totalQ}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                      {t._count.attempts}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {t.createdAt.toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <DuplicateTestButton testId={t.id} originalTitle={t.title} />
-                        <Button asChild variant="secondary" size="sm">
-                          <Link href={`/admin/tests/${t.id}`}>Open</Link>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm animate-fade-in">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-6 py-4 font-semibold">Title</th>
+                  <th className="px-6 py-4 font-semibold">Mode</th>
+                  <th className="px-6 py-4 font-semibold">Visibility</th>
+                  <th className="px-6 py-4 text-center font-semibold">Questions</th>
+                  <th className="px-6 py-4 text-center font-semibold">Attempts</th>
+                  <th className="px-6 py-4 font-semibold">Created</th>
+                  <th className="px-6 py-4" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {tests.map((t) => {
+                  const totalQ = t.sections
+                    .flatMap((s) => s.modules)
+                    .reduce((sum, m) => sum + m._count.moduleQuestions, 0);
+                  return (
+                    <tr key={t.id} className="transition-colors hover:bg-muted/30">
+                      <td className="px-6 py-4 font-semibold text-foreground">
+                        <Link
+                          href={`/admin/tests/${t.id}`}
+                          className="hover:text-primary transition-colors"
+                        >
+                          {t.title}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant={t.mode === "ADAPTIVE" ? "purple" : "info"}>
+                          {t.mode}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant={t.isPublic ? "success" : "outline"}>
+                          {t.isPublic ? "Public" : "Private"}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-center tabular-nums text-muted-foreground font-medium">
+                        {totalQ}
+                      </td>
+                      <td className="px-6 py-4 text-center tabular-nums text-muted-foreground font-medium">
+                        {t._count.attempts}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                        {t.createdAt.toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <DuplicateTestButton testId={t.id} originalTitle={t.title} />
+                          <Button asChild variant="secondary" size="sm" className="hover-lift active-press shadow-xs">
+                            <Link href={`/admin/tests/${t.id}`}>Open</Link>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </>

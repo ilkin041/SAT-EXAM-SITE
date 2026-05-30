@@ -8,22 +8,28 @@ import { cn } from "@/lib/utils";
  * or `muted` when you want a neutral chip.
  */
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors",
+  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
-        outline: "border-border bg-card text-foreground",
-        muted: "border-border bg-muted text-muted-foreground",
+        default:
+          "border-transparent bg-primary text-primary-foreground shadow-sm",
+        secondary:
+          "border-transparent bg-secondary text-secondary-foreground",
+        outline:
+          "border-border bg-card text-foreground shadow-sm",
+        muted:
+          "border-border/60 bg-muted/80 text-muted-foreground",
         success:
-          "border-green-500/30 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300",
+          "border-emerald-500/20 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-950/40 dark:text-emerald-300",
         warning:
-          "border-amber-500/30 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200",
-        info: "border-blue-500/30 bg-blue-50 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300",
+          "border-amber-500/20 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-950/40 dark:text-amber-200",
+        info:
+          "border-blue-500/20 bg-blue-50 text-blue-700 dark:border-blue-400/20 dark:bg-blue-950/40 dark:text-blue-300",
         purple:
-          "border-purple-500/30 bg-purple-50 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300",
-        destructive: "border-destructive/30 bg-destructive/10 text-destructive",
+          "border-violet-500/20 bg-violet-50 text-violet-700 dark:border-violet-400/20 dark:bg-violet-950/40 dark:text-violet-300",
+        destructive:
+          "border-red-500/20 bg-red-50 text-red-700 dark:border-red-400/20 dark:bg-red-950/40 dark:text-red-300",
       },
     },
     defaultVariants: { variant: "default" },

@@ -11,27 +11,44 @@ interface EmptyStateProps {
 }
 
 /**
- * Used wherever a list/table can be empty. Friendly, focused, and gives the
- * user a single next action via the `action` slot.
+ * Used wherever a list/table can be empty. Friendly illustration-style
+ * icon with a soft gradient background ring, focused messaging, and
+ * an optional CTA action slot.
  */
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/60 px-6 py-14 text-center",
+        "relative flex flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-border/70 bg-gradient-to-br from-card/80 to-muted/30 px-6 py-16 text-center",
         className,
       )}
     >
+      {/* Decorative background pattern */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `radial-gradient(circle, hsl(var(--primary)) 1px, transparent 1px)`,
+          backgroundSize: "24px 24px",
+        }}
+        aria-hidden
+      />
+
       {Icon && (
-        <div className="mb-4 rounded-full bg-muted p-3 text-muted-foreground">
-          <Icon className="h-7 w-7" aria-hidden />
+        <div className="relative mb-5">
+          {/* Soft glow behind icon */}
+          <div className="absolute inset-0 scale-150 rounded-full bg-primary/5 blur-xl" aria-hidden />
+          <div className="relative rounded-2xl bg-muted/80 p-4 text-muted-foreground shadow-sm">
+            <Icon className="h-7 w-7" aria-hidden />
+          </div>
         </div>
       )}
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
       {description && (
-        <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">{description}</p>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
       )}
-      {action && <div className="mt-5">{action}</div>}
+      {action && <div className="mt-6">{action}</div>}
     </div>
   );
 }

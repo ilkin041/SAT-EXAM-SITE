@@ -7,7 +7,7 @@ const config: Config = {
     container: { center: true, padding: "1rem", screens: { "2xl": "1400px" } },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", '"Plus Jakarta Sans"', "Inter", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -60,27 +60,80 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        // Soft elevation tuned for white-card-on-grey-page composition.
-        card: "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.04)",
-        elevated: "0 4px 12px -2px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04)",
-        focus: "0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring))",
+        // Layered shadows for natural depth
+        card: "0 1px 3px 0 rgb(0 0 0 / 0.04), 0 2px 8px -1px rgb(0 0 0 / 0.04)",
+        elevated:
+          "0 4px 16px -3px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.05)",
+        "elevated-lg":
+          "0 8px 30px -5px rgb(0 0 0 / 0.1), 0 4px 12px -4px rgb(0 0 0 / 0.06)",
+        focus:
+          "0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring))",
+        // Glow shadows — mapped from CSS vars for convenience
+        glow: "var(--glow-primary)",
+        "glow-accent": "var(--glow-accent)",
+        "glow-warm": "var(--glow-warm)",
+        "glow-success": "var(--glow-success)",
+        // Inner shadow for inputs
+        "inner-sm": "inset 0 1px 2px 0 rgb(0 0 0 / 0.04)",
       },
       transitionDuration: {
-        DEFAULT: "150ms",
+        DEFAULT: "200ms",
+        fast: "150ms",
+        slow: "350ms",
       },
       transitionTimingFunction: {
         DEFAULT: "cubic-bezier(0.4, 0, 0.2, 1)",
+        spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        smooth: "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       keyframes: {
-        "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
         "slide-up": {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "slide-up-fade": {
+          from: { opacity: "0", transform: "translateY(12px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "scale-in": {
+          from: { opacity: "0", transform: "scale(0.95)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        "pulse-glow": {
+          "0%, 100%": {
+            boxShadow: "0 0 8px 0 hsla(228, 60%, 50%, 0.15)",
+          },
+          "50%": {
+            boxShadow: "0 0 20px 4px hsla(228, 60%, 50%, 0.3)",
+          },
+        },
+        "gradient-shift": {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
+        shimmer: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
         },
       },
       animation: {
         "fade-in": "fade-in 200ms ease-out",
         "slide-up": "slide-up 250ms ease-out",
+        "slide-up-fade": "slide-up-fade 350ms ease-out",
+        "scale-in": "scale-in 250ms ease-out",
+        float: "float 4s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 2.5s ease-in-out infinite",
+        "gradient-shift": "gradient-shift 15s ease infinite",
+        shimmer: "shimmer 2s ease-in-out infinite",
       },
     },
   },

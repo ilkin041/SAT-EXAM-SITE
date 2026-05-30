@@ -31,7 +31,7 @@ export function UserMenu({ name, email }: Props) {
         )}
         aria-label="Open account menu"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-primary text-xs font-semibold text-white shadow-sm">
           {initial}
         </span>
         <span className="hidden max-w-[160px] truncate text-xs font-medium text-foreground sm:inline">

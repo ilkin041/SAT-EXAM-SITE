@@ -27,7 +27,7 @@ export function AdminNavLinks() {
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
   return (
-    <nav className="flex items-center gap-1 text-sm">
+    <nav className="flex items-center gap-1 text-xs">
       {NAV.map((item) => {
         const active = isActive(item.href);
         return (
@@ -36,10 +36,10 @@ export function AdminNavLinks() {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "rounded-full px-3 py-1.5 transition-colors duration-150",
+              "rounded-full px-3 py-1.5 font-semibold transition-all duration-150 active-press hover-lift",
               active
-                ? "bg-white font-medium text-brand-navy shadow-sm"
-                : "text-white/70 hover:bg-white/10 hover:text-white",
+                ? "bg-white text-brand-navy shadow-sm font-bold"
+                : "text-white/80 hover:bg-white/10 hover:text-white",
             )}
           >
             {item.label}

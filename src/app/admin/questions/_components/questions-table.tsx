@@ -191,107 +191,109 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="w-10 px-4 py-2.5">
-                <input
-                  type="checkbox"
-                  aria-label="Select all"
-                  checked={
-                    rows.length > 0 &&
-                    rows.every((r) => selected.has(r.id))
-                  }
-                  ref={(el) => {
-                    if (!el) return;
-                    const anySelected = rows.some((r) => selected.has(r.id));
-                    const allSelected = rows.every((r) => selected.has(r.id));
-                    el.indeterminate = anySelected && !allSelected;
-                  }}
-                  onChange={selectAll}
-                  className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
-                />
-              </th>
-              <th className="px-4 py-2.5 font-medium">Stem</th>
-              <th className="px-4 py-2.5 font-medium">Section</th>
-              <th className="px-4 py-2.5 font-medium">Type</th>
-              <th className="px-4 py-2.5 font-medium">Domain</th>
-              <th className="px-4 py-2.5 font-medium">Difficulty</th>
-              <th className="px-4 py-2.5 font-medium">Used in</th>
-              <th className="px-4 py-2.5 w-10" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rows.map((r) => {
-              const isSelected = selected.has(r.id);
-              return (
-                <tr
-                  key={r.id}
-                  className={cn(
-                    "transition-colors hover:bg-accent/40",
-                    isSelected && "bg-primary/5",
-                  )}
-                >
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      aria-label="Select question"
-                      checked={isSelected}
-                      onChange={() => toggleOne(r.id)}
-                      className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/questions/${r.id}`}
-                      className="line-clamp-2 max-w-md font-medium hover:underline"
-                    >
-                      {r.stemPreview}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={r.sectionType === "MATH" ? "info" : "success"}>
-                      {r.sectionType === "MATH" ? "Math" : "R&W"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={r.type === "MULTIPLE_CHOICE" ? "outline" : "purple"}>
-                      {r.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.domain}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={difficultyVariant(r.difficulty)}>
-                      {r.difficulty}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    {r.assignmentCount === 0 ? (
-                      <span className="text-xs text-muted-foreground">Unassigned</span>
-                    ) : (
-                      <Badge variant="muted">
-                        {r.assignmentCount} module{r.assignmentCount === 1 ? "" : "s"}
-                      </Badge>
+      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="w-12 px-6 py-4">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={
+                      rows.length > 0 &&
+                      rows.every((r) => selected.has(r.id))
+                    }
+                    ref={(el) => {
+                      if (!el) return;
+                      const anySelected = rows.some((r) => selected.has(r.id));
+                      const allSelected = rows.every((r) => selected.has(r.id));
+                      el.indeterminate = anySelected && !allSelected;
+                    }}
+                    onChange={selectAll}
+                    className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
+                  />
+                </th>
+                <th className="px-6 py-4 font-semibold">Stem</th>
+                <th className="px-6 py-4 font-semibold">Section</th>
+                <th className="px-6 py-4 font-semibold">Type</th>
+                <th className="px-6 py-4 font-semibold">Domain</th>
+                <th className="px-6 py-4 font-semibold">Difficulty</th>
+                <th className="px-6 py-4 font-semibold">Used in</th>
+                <th className="px-6 py-4 w-12" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {rows.map((r) => {
+                const isSelected = selected.has(r.id);
+                return (
+                  <tr
+                    key={r.id}
+                    className={cn(
+                      "transition-colors hover:bg-muted/30",
+                      isSelected && "bg-primary/5",
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
+                  >
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        aria-label="Select question"
+                        checked={isSelected}
+                        onChange={() => toggleOne(r.id)}
+                        className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
+                      />
+                    </td>
+                    <td className="px-6 py-4">
                       <Link
                         href={`/admin/questions/${r.id}`}
-                        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                        aria-label="Edit"
+                        className="line-clamp-2 max-w-md font-semibold text-foreground hover:text-primary transition-colors"
                       >
-                        <Pencil className="h-4 w-4" />
+                        {r.stemPreview}
                       </Link>
-                      <RowDeleteButton questionId={r.id} />
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant={r.sectionType === "MATH" ? "purple" : "success"}>
+                        {r.sectionType === "MATH" ? "Math" : "R&W"}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant={r.type === "MULTIPLE_CHOICE" ? "outline" : "info"}>
+                        {r.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground font-medium">{r.domain}</td>
+                    <td className="px-6 py-4">
+                      <Badge variant={difficultyVariant(r.difficulty)}>
+                        {r.difficulty}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      {r.assignmentCount === 0 ? (
+                        <span className="text-xs text-muted-foreground font-medium">Unassigned</span>
+                      ) : (
+                        <Badge variant="secondary">
+                          {r.assignmentCount} module{r.assignmentCount === 1 ? "" : "s"}
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/admin/questions/${r.id}`}
+                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
+                          aria-label="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                        <RowDeleteButton questionId={r.id} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* ----- Delete confirm modal ----- */}
