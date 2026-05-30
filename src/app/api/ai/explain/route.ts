@@ -33,7 +33,7 @@ Correct Answer: ${correctAnswer}
 Student's Answer: ${studentResponse}
     `.trim();
 
-    const modelName = "gemini-1.5-flash";
+    const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
       {
