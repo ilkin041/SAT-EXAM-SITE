@@ -34,7 +34,7 @@ Student's Answer: ${studentResponse}
     `.trim();
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -42,7 +42,7 @@ Student's Answer: ${studentResponse}
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 500,
+            maxOutputTokens: 1500,
           },
         }),
       }
@@ -58,7 +58,10 @@ Student's Answer: ${studentResponse}
     }
 
     const data = await response.json();
-    const explanation = data.candidates?.[0]?.content?.parts?.[0]?.text || "No explanation generated.";
+    console.log("[AI Explain] Raw Gemini API Response:", JSON.stringify(data));
+    const firstCandidate = data.candidates?.[0];
+    console.log("[AI Explain] Finish Reason:", firstCandidate?.finishReason);
+    const explanation = firstCandidate?.content?.parts?.[0]?.text || "No explanation generated.";
 
     return NextResponse.json({ explanation });
   } catch (error: any) {
