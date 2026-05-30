@@ -43,7 +43,10 @@ Student's Answer: ${studentResponse}
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 1500,
+            maxOutputTokens: 4096,
+            thinkingConfig: {
+              thinkingBudget: 0,
+            },
           },
         }),
       }
@@ -67,7 +70,12 @@ Student's Answer: ${studentResponse}
     console.log("[AI Explain] Raw Gemini API Response:", JSON.stringify(data));
     const firstCandidate = data.candidates?.[0];
     console.log("[AI Explain] Finish Reason:", firstCandidate?.finishReason);
-    const explanation = firstCandidate?.content?.parts?.[0]?.text || "No explanation generated.";
+    const parts = firstCandidate?.content?.parts ?? [];
+    const explanation =
+      parts
+        .filter((part: { thought?: boolean; text?: string }) => !part.thought && part.text)
+        .map((part: { text?: string }) => part.text)
+        .join("") || "No explanation generated.";
 
     return NextResponse.json({ explanation });
   } catch (error: any) {
