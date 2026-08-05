@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -77,6 +77,13 @@ export default async function ResultsPage({
   const isAdmin = session?.user?.role === "ADMIN";
   const isAnonymousPublic = !attempt.userId && attempt.test.isPublic;
   if (!isOwner && !isAdmin && !isAnonymousPublic) notFound();
+  if (attempt.status !== "COMPLETED") {
+    redirect(
+      attempt.status === "IN_PROGRESS"
+        ? `/test/attempt/${attempt.id}`
+        : "/dashboard",
+    );
+  }
 
   const moduleResults = liveResults.map((r) => ({
     sectionType: r.module.section.type,
@@ -107,8 +114,6 @@ export default async function ResultsPage({
     attempt.answers.map((a) => ({ response: a.response, timeSpent: a.timeSpent })),
   );
 
-  const isCompleted = attempt.status === "COMPLETED";
-
   const scorePct = Math.max(0, Math.min(100, Math.round(((scaled.total - 400) / 1200) * 100)));
 
   return (
@@ -129,22 +134,7 @@ export default async function ResultsPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge
-            variant={
-              isCompleted
-                ? "success"
-                : attempt.status === "IN_PROGRESS"
-                  ? "warning"
-                  : "muted"
-            }
-            className={attempt.status === "IN_PROGRESS" ? "animate-pulse" : undefined}
-          >
-            {attempt.status === "IN_PROGRESS"
-              ? "In progress"
-              : isCompleted
-                ? "Completed"
-                : "Abandoned"}
-          </Badge>
+          <Badge variant="success">Completed</Badge>
           {attempt.completedAt && (
             <span className="text-xs text-muted-foreground font-medium">
               Completed on {attempt.completedAt.toLocaleDateString(undefined, {
@@ -156,12 +146,6 @@ export default async function ResultsPage({
           )}
         </div>
       </header>
-
-      {!isCompleted && (
-        <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-50/50 p-4.5 text-sm text-amber-850 dark:bg-amber-950/20 dark:text-amber-250">
-          ⚠️ This attempt isn&apos;t complete yet. The scores below reflect only the modules submitted so far.
-        </div>
-      )}
 
       {/* ---------- Score Hero Section ---------- */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-hero border border-border/50 p-8 mb-10 shadow-sm flex flex-col items-center">

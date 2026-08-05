@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
@@ -347,8 +347,7 @@ export async function bulkAssignToModule(ids: string[], moduleId: string) {
  * List every module across every test for the bulk-assign dropdown. Grouped
  * client-side by test name.
  */
-export async function listAssignableModules() {
-  await requireAdmin();
+const getCachedAssignableModules = unstable_cache(async () => {
   const tests = await prisma.test.findMany({
     orderBy: { title: "asc" },
     include: {
@@ -371,6 +370,11 @@ export async function listAssignableModules() {
       })),
     ),
   }));
+}, ["admin-assignable-modules"], { revalidate: 60 });
+
+export async function listAssignableModules() {
+  await requireAdmin();
+  return getCachedAssignableModules();
 }
 
 export type AssignableTest = Awaited<ReturnType<typeof listAssignableModules>>[number];

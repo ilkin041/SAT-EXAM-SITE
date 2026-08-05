@@ -21,7 +21,7 @@ const ALLOWED_MIME = new Set([
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Fail loudly if the deploy is missing Cloudinary creds — otherwise the SDK

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { submitCurrentModule } from "@/lib/attempt-engine";
+import { AttemptMutationError, submitCurrentModule } from "@/lib/attempt-engine";
 import { authorizeAttemptMutation } from "@/lib/attempt-auth";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -11,6 +11,12 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     const result = await submitCurrentModule(id);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
+    if (err instanceof AttemptMutationError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
 }

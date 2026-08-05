@@ -27,7 +27,6 @@ const PUBLIC_PREFIXES = [
   "/api/auth",
   "/_next",
   "/favicon",
-  "/uploads",
   "/practice/", // public test taking
   // The test, attempt, and results pages handle public/anonymous access in
   // the route handler itself (anonymous attempts on public tests).

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.string().email() });
 
@@ -13,6 +14,16 @@ const schema = z.object({ email: z.string().email() });
  * real users.
  */
 export async function POST(req: Request) {
+  const rateLimit = checkRateLimit(req, "forgot-password", {
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later.", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
   let body: unknown;
   try {
     body = await req.json();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   token: z.string().min(1),
@@ -16,6 +17,16 @@ const schema = z.object({
  * both pieces).
  */
 export async function POST(req: Request) {
+  const rateLimit = checkRateLimit(req, "reset-password", {
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later.", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
   let body: unknown;
   try {
     body = await req.json();

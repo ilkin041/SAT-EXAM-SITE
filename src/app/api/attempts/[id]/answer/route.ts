@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { saveAnswer } from "@/lib/attempt-engine";
+import { AttemptMutationError, saveAnswer } from "@/lib/attempt-engine";
 import { authorizeAttemptMutation } from "@/lib/attempt-auth";
 
 const schema = z.object({
@@ -35,6 +35,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await saveAnswer({ attemptId: id, ...parsed.data });
     return NextResponse.json({ ok: true });
   } catch (err) {
+    if (err instanceof AttemptMutationError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
 }

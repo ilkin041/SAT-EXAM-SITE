@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { loadAttemptState } from "@/lib/attempt-engine";
+import { canAccessTest } from "@/lib/test-access";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -20,12 +21,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!isOwner && !isAdmin && !isAnonymousPublic) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  if (!(await canAccessTest(session?.user, attempt.test))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   if (attempt.status === "COMPLETED") {
     return NextResponse.json({ ok: true, completed: true, attemptId: attempt.id });
   }
 
-  const state = await loadAttemptState(id);
+  const state = await loadAttemptState(id, session?.user);
   if (!state) return NextResponse.json({ ok: true, completed: true, attemptId: attempt.id });
   return NextResponse.json({ ok: true, state });
 }

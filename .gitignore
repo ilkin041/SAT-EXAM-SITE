@@ -8,12 +8,13 @@ dist
 .env*.local
 *.log
 .DS_Store
-/public/uploads
 /prisma/*.db
 /prisma/*.db-journal
 .vercel
 .turbo
 coverage
+/tsconfig.tsbuildinfo
+/.claude/settings.local.json
 
 .vercel
 .env*

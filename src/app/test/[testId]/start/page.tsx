@@ -16,6 +16,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import { BeginButton } from "./begin-button";
+import { canAccessTest } from "@/lib/test-access";
 
 export const metadata = { title: "Begin test" };
 
@@ -46,8 +47,10 @@ export default async function PreTestPage({
       </main>
     );
   }
-  if (!session?.user && !test.isPublic)
-    redirect(`/login?callbackUrl=/test/${testId}/start`);
+  if (!(await canAccessTest(session?.user, test))) {
+    if (!session?.user) redirect(`/login?callbackUrl=/test/${testId}/start`);
+    redirect("/dashboard");
+  }
 
   const totalQuestions = test.sections
     .flatMap((s) => s.modules)

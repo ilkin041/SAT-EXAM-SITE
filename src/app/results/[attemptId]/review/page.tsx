@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ReviewClient, type ReviewItem } from "./review-client";
@@ -40,6 +40,13 @@ export default async function ReviewAnswersPage({
   const isAdmin = session?.user?.role === "ADMIN";
   const isAnonymousPublic = !attempt.userId && attempt.test.isPublic;
   if (!isOwner && !isAdmin && !isAnonymousPublic) notFound();
+  if (attempt.status !== "COMPLETED") {
+    redirect(
+      attempt.status === "IN_PROGRESS"
+        ? `/test/attempt/${attempt.id}`
+        : "/dashboard",
+    );
+  }
 
   // Sort modules in test order, then flatten to a one-question-per-row list.
   // Each item carries everything the review client needs to render that

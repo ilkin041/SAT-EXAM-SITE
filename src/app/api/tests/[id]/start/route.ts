@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { startAttempt } from "@/lib/attempt-engine";
+import { canAccessTest } from "@/lib/test-access";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * Start (or resume) an attempt for a given test.
@@ -20,8 +22,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const session = await auth();
   const test = await prisma.test.findUnique({ where: { id } });
   if (!test) return NextResponse.json({ error: "Test not found" }, { status: 404 });
-  if (!session?.user && !test.isPublic) {
-    return NextResponse.json({ error: "Login required" }, { status: 401 });
+  if (!(await canAccessTest(session?.user, test))) {
+    return NextResponse.json(
+      { error: session?.user ? "Forbidden" : "Login required" },
+      { status: session?.user ? 403 : 401 },
+    );
   }
 
   // `fresh` may come from query string or JSON body — accept both so the
@@ -38,6 +43,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   const userId = session?.user?.id ?? null;
+  let existingToAbandon: string | null = null;
 
   // Look for an existing in-progress attempt for this exact user + test.
   if (userId) {
@@ -48,15 +54,31 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
     if (existing) {
       if (fresh) {
-        await prisma.testAttempt.update({
-          where: { id: existing.id },
-          data: { status: "ABANDONED", completedAt: new Date() },
-        });
+        existingToAbandon = existing.id;
       } else {
         // Resume.
         return NextResponse.json({ ok: true, attemptId: existing.id, resumed: true });
       }
     }
+  }
+
+  // Only creations consume the limit; ordinary resume requests do not.
+  const rateLimit = checkRateLimit(req, "attempt-start", {
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please try again later.", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
+  if (existingToAbandon) {
+    await prisma.testAttempt.update({
+      where: { id: existingToAbandon },
+      data: { status: "ABANDONED", completedAt: new Date() },
+    });
   }
 
   try {

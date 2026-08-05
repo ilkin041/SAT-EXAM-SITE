@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { BookOpen, Plus, Search } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import type { Difficulty, QuestionType, SectionType } from "@prisma/client";
+import type { Difficulty, Prisma, QuestionType, SectionType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,20 @@ interface SearchParams {
   difficulty?: string;
   type?: string;
   section?: string;
+  page?: string;
 }
+
+const PAGE_SIZE = 100;
+const getCachedDomains = unstable_cache(
+  () =>
+    prisma.question.findMany({
+      distinct: ["domain"],
+      select: { domain: true },
+      orderBy: { domain: "asc" },
+    }),
+  ["admin-question-domains"],
+  { revalidate: 60 },
+);
 
 const SELECT_CLS =
   "h-10 rounded-xl border border-input/80 bg-card px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
@@ -29,7 +43,7 @@ export default async function QuestionsPage({
 }) {
   const sp = await searchParams;
 
-  const where: Record<string, unknown> = {};
+  const where: Prisma.QuestionWhereInput = {};
   if (sp.q) {
     where.OR = [
       { stem: { contains: sp.q, mode: "insensitive" } },
@@ -50,20 +64,21 @@ export default async function QuestionsPage({
 
   const hasFilter = !!(sp.q || domain || difficulty || type || section);
 
-  const [questions, domains, assignableTests] = await Promise.all([
-    prisma.question.findMany({
-      where,
-      orderBy: { id: "desc" },
-      take: 100,
-      include: { _count: { select: { moduleAssignments: true } } },
-    }),
-    prisma.question.findMany({
-      distinct: ["domain"],
-      select: { domain: true },
-      orderBy: { domain: "asc" },
-    }),
+  const requestedPage = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const [questionCount, domains, assignableTests] = await Promise.all([
+    prisma.question.count({ where }),
+    getCachedDomains(),
     listAssignableModules(),
   ]);
+  const totalPages = Math.max(1, Math.ceil(questionCount / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const questions = await prisma.question.findMany({
+    where,
+    orderBy: { id: "desc" },
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+    include: { _count: { select: { moduleAssignments: true } } },
+  });
 
   const rows: QuestionRow[] = questions.map((q) => ({
     id: q.id,
@@ -162,7 +177,43 @@ export default async function QuestionsPage({
           }
         />
       ) : (
-        <QuestionsTable rows={rows} assignableTests={assignableTests} />
+        <>
+          <QuestionsTable rows={rows} assignableTests={assignableTests} />
+          <nav
+            className="mt-5 flex items-center justify-between gap-4 text-sm"
+            aria-label="Question bank pagination"
+          >
+            <p className="text-muted-foreground">
+              {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, questionCount)} of{" "}
+              {questionCount} questions
+            </p>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="secondary" size="sm" disabled={page <= 1}>
+                <Link
+                  href={questionPageHref(sp, page - 1)}
+                  aria-disabled={page <= 1}
+                  tabIndex={page <= 1 ? -1 : undefined}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Link>
+              </Button>
+              <span className="px-2 text-xs font-medium text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <Button asChild variant="secondary" size="sm" disabled={page >= totalPages}>
+                <Link
+                  href={questionPageHref(sp, page + 1)}
+                  aria-disabled={page >= totalPages}
+                  tabIndex={page >= totalPages ? -1 : undefined}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </nav>
+        </>
       )}
     </>
   );
@@ -170,4 +221,14 @@ export default async function QuestionsPage({
 
 function stripHtml(s: string) {
   return s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim().slice(0, 140);
+}
+
+function questionPageHref(sp: SearchParams, page: number): string {
+  const params = new URLSearchParams();
+  for (const key of ["q", "domain", "difficulty", "type", "section"] as const) {
+    const value = sp[key];
+    if (value) params.set(key, value);
+  }
+  params.set("page", String(Math.max(1, page)));
+  return `/admin/questions?${params.toString()}`;
 }

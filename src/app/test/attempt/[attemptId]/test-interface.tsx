@@ -185,7 +185,17 @@ export function TestInterface({ initialState, studentName }: Props) {
               currentQuestionIndex: qIndex,
             }),
           });
-          if (!res.ok) throw new Error(`status ${res.status}`);
+          if (!res.ok) {
+            const data = (await res.json().catch(() => ({}))) as {
+              code?: string;
+              error?: string;
+            };
+            if (data.code === "TIME_EXPIRED") {
+              setTimeUp(true);
+              toast("Time expired. No further answers can be saved.", "error");
+            }
+            throw new Error(data.error ?? `status ${res.status}`);
+          }
           setSaveStatus("saved");
           // Wipe the "Saved" indicator back to idle after 1.5s so it stays
           // a subtle confirmation, not a persistent badge.
@@ -397,7 +407,11 @@ export function TestInterface({ initialState, studentName }: Props) {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        alert(data.error ?? "Failed to submit module");
+        alert(
+          data.code === "TIME_EXPIRED"
+            ? "Time expired. This module can no longer be submitted from the browser."
+            : (data.error ?? "Failed to submit module"),
+        );
         setPhase(auto ? "review" : "in_module");
         submittingRef.current = false;
         return;

@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-helpers";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const rateLimit = checkRateLimit(req, "ai-explain", {
+      limit: 20,
+      windowMs: 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many explanation requests. Please try again shortly.", code: "RATE_LIMITED" },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      );
+    }
     await requireUser();
 
     const {
@@ -13,7 +24,6 @@ export async function POST(req: Request) {
     } = await req.json();
 
     const apiKey = process.env.GEMINI_API_KEY;
-    console.log("[AI Explain] GEMINI_API_KEY status:", apiKey ? "Configured (length: " + apiKey.length + ")" : "Not configured");
     if (!apiKey) {
       return new NextResponse(
         JSON.stringify({ error: "GEMINI_API_KEY is not configured on the server. Please check your environment variables in Vercel or your local .env file." }),
@@ -67,9 +77,7 @@ Student's Answer: ${studentResponse}
     }
 
     const data = await response.json();
-    console.log("[AI Explain] Raw Gemini API Response:", JSON.stringify(data));
     const firstCandidate = data.candidates?.[0];
-    console.log("[AI Explain] Finish Reason:", firstCandidate?.finishReason);
     const parts = firstCandidate?.content?.parts ?? [];
     const explanation =
       parts

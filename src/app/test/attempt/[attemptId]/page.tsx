@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { loadAttemptState } from "@/lib/attempt-engine";
 import { TestInterface } from "./test-interface";
+import { canAccessTest } from "@/lib/test-access";
 
 export const metadata = { title: "Test in progress" };
 
@@ -27,12 +28,13 @@ export default async function AttemptPage({
   if (!isOwner && !isAdmin && !isAnonymousPublic) {
     redirect("/login");
   }
+  if (!(await canAccessTest(session?.user, attempt.test))) redirect("/dashboard");
 
   if (attempt.status === "COMPLETED") {
     redirect(`/results/${attempt.id}`);
   }
 
-  const state = await loadAttemptState(attemptId);
+  const state = await loadAttemptState(attemptId, session?.user);
   if (!state) redirect(`/results/${attempt.id}`);
 
   const displayName =
