@@ -48,7 +48,8 @@ export default async function AdminAttemptsPage({
   if (
     statusFilter === "IN_PROGRESS" ||
     statusFilter === "COMPLETED" ||
-    statusFilter === "ABANDONED"
+    statusFilter === "ABANDONED" ||
+    statusFilter === "EXPIRED"
   ) {
     where.status = statusFilter;
   }
@@ -143,6 +144,7 @@ return (
           <option value="IN_PROGRESS">In progress</option>
           <option value="COMPLETED">Completed</option>
           <option value="ABANDONED">Abandoned</option>
+          <option value="EXPIRED">Expired</option>
         </select>
         <select name="testId" defaultValue={testIdFilter ?? ""} className={SELECT_CLS}>
           <option value="">All tests</option>
@@ -263,11 +265,13 @@ const styles: Record<AttemptStatus, string> = {
   IN_PROGRESS: "border-amber-500/20 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-950/40 dark:text-amber-200 animate-pulse",
   COMPLETED: "border-emerald-500/20 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-950/40 dark:text-emerald-300",
   ABANDONED: "border-border bg-muted text-muted-foreground",
+  EXPIRED: "border-red-500/20 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300",
 };
 const labels: Record<AttemptStatus, string> = {
   IN_PROGRESS: "In progress",
   COMPLETED: "Completed",
   ABANDONED: "Abandoned",
+  EXPIRED: "Expired",
 };
 return (
   <span

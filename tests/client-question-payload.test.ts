@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
-  testAttempt: { findUnique: vi.fn() },
+  $queryRaw: vi.fn(),
+  $transaction: vi.fn(),
+  testAttempt: { findUnique: vi.fn(), updateMany: vi.fn() },
   module: { findUnique: vi.fn() },
   section: { findMany: vi.fn() },
+  attemptQuestionSnapshot: { createMany: vi.fn() },
 }));
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
@@ -67,7 +70,8 @@ function arrangePhase({
     currentModuleId: moduleId,
     currentQuestionIndex: 0,
     moduleStartedAt: onBreak ? null : new Date("2026-08-06T10:00:00.000Z"),
-    breakStartedAt: onBreak ? new Date("2026-08-06T10:30:00.000Z") : null,
+    moduleDeadlineAt: onBreak ? null : new Date("2099-08-06T11:00:00.000Z"),
+    breakStartedAt: onBreak ? new Date("2099-08-06T10:30:00.000Z") : null,
     answers: [],
     test,
   });
@@ -101,7 +105,12 @@ function expectNoSecrets(value: unknown) {
 }
 
 describe("ClientQuestion payload security boundary", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.testAttempt.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.attemptQuestionSnapshot.createMany.mockResolvedValue({ count: 2 });
+  });
 
   it.each([
     { phase: "module 1", moduleNumber: 1 as const, onBreak: false },

@@ -261,7 +261,9 @@ export default async function DashboardPage() {
                                 ? "In progress"
                                 : a.status === "COMPLETED"
                                   ? "Completed"
-                                  : "Abandoned"}
+                                  : a.status === "EXPIRED"
+                                    ? "Expired"
+                                    : "Abandoned"}
                             </Badge>
                           </td>
                           <td className="px-6 py-4.5 text-center tabular-nums">
@@ -297,7 +299,9 @@ export default async function DashboardPage() {
                               </Button>
                             ) : (
                               <Button asChild variant="secondary" size="sm" disabled className="opacity-50">
-                                <Link href={`/results/${a.id}`}>Abandoned</Link>
+                                <Link href={`/results/${a.id}`}>
+                                  {a.status === "EXPIRED" ? "Expired" : "Abandoned"}
+                                </Link>
                               </Button>
                             )}
                           </td>

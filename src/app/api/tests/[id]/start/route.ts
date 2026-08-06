@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { startAttempt } from "@/lib/attempt-engine";
+import { reconcileAttemptLifecycle, startAttempt } from "@/lib/attempt-engine";
 import { canAccessTest } from "@/lib/test-access";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { abandonAttempt } from "@/lib/attempt-transitions";
 
 /**
  * Start (or resume) an attempt for a given test.
@@ -53,7 +54,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       select: { id: true },
     });
     if (existing) {
-      if (fresh) {
+      await reconcileAttemptLifecycle(existing.id);
+      const stillOpen = await prisma.testAttempt.findUnique({
+        where: { id: existing.id },
+        select: { status: true },
+      });
+      if (stillOpen?.status !== "IN_PROGRESS") {
+        // Expiry closed it; continue to create a replacement attempt.
+      } else if (fresh) {
         existingToAbandon = existing.id;
       } else {
         // Resume.
@@ -75,10 +83,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   if (existingToAbandon) {
-    await prisma.testAttempt.update({
-      where: { id: existingToAbandon },
-      data: { status: "ABANDONED", completedAt: new Date() },
-    });
+    await abandonAttempt(existingToAbandon);
   }
 
   try {

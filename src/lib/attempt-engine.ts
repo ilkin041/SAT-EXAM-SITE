@@ -10,6 +10,11 @@ import { prisma } from "@/lib/prisma";
 import { isAnswerCorrect } from "@/lib/answer-matching";
 import { chooseModule2Difficulty } from "@/lib/adaptive-routing";
 import { canAccessTest, type TestAccessUser } from "@/lib/test-access";
+import {
+  AttemptTransitionConflict,
+  lockAttempt,
+  transitionAttempt,
+} from "@/lib/attempt-transitions";
 
 /** Standard break between Reading-Writing and Math sections. */
 export const BREAK_SECONDS = 10 * 60;
@@ -19,7 +24,7 @@ export const DEADLINE_GRACE_SECONDS = 10;
 export class AttemptMutationError extends Error {
   constructor(
     message: string,
-    readonly code: "TIME_EXPIRED" | "MODULE_NOT_STARTED",
+    readonly code: "TIME_EXPIRED" | "MODULE_NOT_STARTED" | "ATTEMPT_EXPIRED",
   ) {
     super(message);
     this.name = "AttemptMutationError";
@@ -36,42 +41,144 @@ export function isModuleDeadlineExpired(deadline: Date, now = Date.now()): boole
   return now > deadline.getTime();
 }
 
-/** Single authoritative deadline guard shared by every scored mutation path. */
-async function enforceModuleDeadline(attempt: {
-  id: string;
-  currentModuleId: string | null;
-  moduleStartedAt: Date | null;
-  moduleDeadlineAt: Date | null;
+type Transaction = Prisma.TransactionClient;
+
+function moduleTimeLimit(module: {
+  moduleNumber: number;
+  section: { module1TimeLimit: number; module2TimeLimit: number };
 }) {
-  if (!attempt.currentModuleId || !attempt.moduleStartedAt) {
-    throw new AttemptMutationError("The module has not started", "MODULE_NOT_STARTED");
-  }
+  return module.moduleNumber === 1
+    ? module.section.module1TimeLimit
+    : module.section.module2TimeLimit;
+}
 
-  let deadline = attempt.moduleDeadlineAt;
-  if (!deadline) {
-    // Compatibility for an attempt created immediately before this migration.
-    const currentModule = await prisma.module.findUnique({
-      where: { id: attempt.currentModuleId },
-      select: {
-        moduleNumber: true,
-        section: { select: { module1TimeLimit: true, module2TimeLimit: true } },
-      },
-    });
-    if (!currentModule) throw new Error("Module not found");
-    const timeLimit =
-      currentModule.moduleNumber === 1
-        ? currentModule.section.module1TimeLimit
-        : currentModule.section.module2TimeLimit;
-    deadline = calculateModuleDeadline(attempt.moduleStartedAt, timeLimit);
-    await prisma.testAttempt.update({
-      where: { id: attempt.id },
-      data: { moduleDeadlineAt: deadline },
-    });
-  }
+async function scoreCurrentModuleForExpiry(
+  tx: Transaction,
+  attemptId: string,
+  moduleId: string,
+) {
+  const questionLinks = await tx.moduleQuestion.findMany({
+    where: { moduleId },
+    select: { questionId: true },
+  });
+  const questionIds = questionLinks.map((link) => link.questionId);
+  const correct = await tx.answer.count({
+    where: { attemptId, questionId: { in: questionIds }, isCorrect: true },
+  });
+  await tx.moduleResult.upsert({
+    where: { attemptId_moduleId: { attemptId, moduleId } },
+    create: {
+      attemptId,
+      moduleId,
+      correctCount: correct,
+      totalCount: questionIds.length,
+      routedTo: null,
+    },
+    update: {
+      correctCount: correct,
+      totalCount: questionIds.length,
+      routedTo: null,
+    },
+  });
+}
 
-  if (isModuleDeadlineExpired(deadline)) {
-    throw new AttemptMutationError("Time expired for this module", "TIME_EXPIRED");
+async function expireAttemptInTransaction(
+  tx: Transaction,
+  attempt: TestAttempt,
+  now: Date,
+) {
+  if (attempt.currentModuleId && attempt.moduleStartedAt) {
+    await scoreCurrentModuleForExpiry(tx, attempt.id, attempt.currentModuleId);
   }
+  await transitionAttempt(tx, {
+    attemptId: attempt.id,
+    expectedStatus: "IN_PROGRESS",
+    expectedModuleId: attempt.currentModuleId,
+    data: {
+      status: "EXPIRED",
+      completedAt: now,
+      currentSectionId: null,
+      currentModuleId: null,
+      moduleStartedAt: null,
+      moduleDeadlineAt: null,
+      breakStartedAt: null,
+    },
+  });
+}
+
+async function deadlineForAttempt(tx: Transaction, attempt: TestAttempt) {
+  if (!attempt.currentModuleId || !attempt.moduleStartedAt) return null;
+  if (attempt.moduleDeadlineAt) return attempt.moduleDeadlineAt;
+  const currentModule = await tx.module.findUnique({
+    where: { id: attempt.currentModuleId },
+    select: {
+      moduleNumber: true,
+      section: { select: { module1TimeLimit: true, module2TimeLimit: true } },
+    },
+  });
+  if (!currentModule) throw new Error("Module not found");
+  const deadline = calculateModuleDeadline(
+    attempt.moduleStartedAt,
+    moduleTimeLimit(currentModule),
+  );
+  await transitionAttempt(tx, {
+    attemptId: attempt.id,
+    expectedStatus: "IN_PROGRESS",
+    expectedModuleId: attempt.currentModuleId,
+    data: { moduleDeadlineAt: deadline },
+  });
+  return deadline;
+}
+
+type ReconcileResult = "active" | "break" | "advanced" | "expired" | "closed";
+
+/** Lazy lifecycle enforcement used by every attempt read and the nightly sweep. */
+export async function reconcileAttemptLifecycle(
+  attemptId: string,
+  now = new Date(),
+): Promise<ReconcileResult> {
+  return prisma.$transaction(async (tx) => {
+    await lockAttempt(tx, attemptId);
+    const attempt = await tx.testAttempt.findUnique({ where: { id: attemptId } });
+    if (!attempt || attempt.status !== "IN_PROGRESS") return "closed";
+
+    if (attempt.breakStartedAt && !attempt.moduleStartedAt && attempt.currentModuleId) {
+      const breakEndsAt = new Date(attempt.breakStartedAt.getTime() + BREAK_SECONDS * 1000);
+      if (now < breakEndsAt) return "break";
+      const nextModule = await tx.module.findUnique({
+        where: { id: attempt.currentModuleId },
+        select: {
+          moduleNumber: true,
+          section: { select: { module1TimeLimit: true, module2TimeLimit: true } },
+        },
+      });
+      if (!nextModule) throw new Error("Module not found");
+      const deadline = calculateModuleDeadline(breakEndsAt, moduleTimeLimit(nextModule));
+      if (isModuleDeadlineExpired(deadline, now.getTime())) {
+        await expireAttemptInTransaction(tx, attempt, now);
+        return "expired";
+      }
+      await transitionAttempt(tx, {
+        attemptId,
+        expectedStatus: "IN_PROGRESS",
+        expectedModuleId: attempt.currentModuleId,
+        data: {
+          moduleStartedAt: breakEndsAt,
+          moduleDeadlineAt: deadline,
+          breakStartedAt: null,
+        },
+      });
+      return "advanced";
+    }
+
+    const deadline = await deadlineForAttempt(tx, attempt);
+    if (!deadline) return "active";
+    if (isModuleDeadlineExpired(deadline, now.getTime())) {
+      await expireAttemptInTransaction(tx, attempt, now);
+      return "expired";
+    }
+    return "active";
+  }, { timeout: 60_000 });
 }
 
 // ---------- Start a new attempt ----------
@@ -188,6 +295,7 @@ export async function loadAttemptState(
   attemptId: string,
   user: TestAccessUser | null | undefined,
 ): Promise<AttemptState | null> {
+  await reconcileAttemptLifecycle(attemptId);
   const attempt = await prisma.testAttempt.findUnique({
     where: { id: attemptId },
     include: {
@@ -198,8 +306,8 @@ export async function loadAttemptState(
   if (!attempt) return null;
   if (!(await canAccessTest(user, attempt.test))) return null;
 
-  // Completed attempts: return what we have, with no current module fields.
-  if (attempt.status === "COMPLETED" || !attempt.currentModuleId) {
+  // Closed attempts have no current module payload.
+  if (attempt.status !== "IN_PROGRESS" || !attempt.currentModuleId) {
     return null;
   }
 
@@ -231,6 +339,25 @@ export async function loadAttemptState(
       : currentModule.section.module2TimeLimit;
 
   const isOnBreak = attempt.moduleStartedAt === null && attempt.breakStartedAt !== null;
+
+  // Capture grading fields from these exact in-memory Question rows before they
+  // are projected to the client. A later admin edit cannot change this attempt.
+  if (!isOnBreak) {
+    await prisma.attemptQuestionSnapshot.createMany({
+      data: currentModule.moduleQuestions.map((mq) => ({
+        attemptId,
+        moduleId: currentModule.id,
+        questionId: mq.question.id,
+        questionType: mq.question.type,
+        correctAnswer: mq.question.correctAnswer,
+        acceptedAnswers:
+          mq.question.acceptedAnswers === null
+            ? Prisma.DbNull
+            : (mq.question.acceptedAnswers as Prisma.InputJsonValue),
+      })),
+      skipDuplicates: true,
+    });
+  }
 
   const { test: sectionTest, ...sectionFields } = currentModule.section;
   // `currentModule` was loaded with full Question rows for server-side assembly.
@@ -289,63 +416,118 @@ export async function saveAnswer(params: {
   timeSpent: number;
   currentQuestionIndex?: number;
 }) {
-  const attempt = await prisma.testAttempt.findUnique({
-    where: { id: params.attemptId },
-  });
-  if (!attempt) throw new Error("Attempt not found");
-  if (attempt.status !== "IN_PROGRESS") {
-    throw new Error("Attempt is not in progress");
-  }
-  if (!attempt.currentModuleId) throw new Error("No current module");
-  await enforceModuleDeadline(attempt);
+  const outcome = await prisma.$transaction(async (tx) => {
+    await lockAttempt(tx, params.attemptId);
+    const attempt = await tx.testAttempt.findUnique({ where: { id: params.attemptId } });
+    if (!attempt) throw new Error("Attempt not found");
+    if (attempt.status === "EXPIRED") return "expired" as const;
+    if (attempt.status !== "IN_PROGRESS") throw new Error("Attempt is not in progress");
+    if (!attempt.currentModuleId || !attempt.moduleStartedAt) {
+      throw new AttemptMutationError("The module has not started", "MODULE_NOT_STARTED");
+    }
+    const deadline = await deadlineForAttempt(tx, attempt);
+    if (!deadline || isModuleDeadlineExpired(deadline)) {
+      await expireAttemptInTransaction(tx, attempt, new Date());
+      return "expired" as const;
+    }
 
-  // Verify the question is in the current module via the join table.
-  const link = await prisma.moduleQuestion.findUnique({
-    where: {
-      moduleId_questionId: {
-        moduleId: attempt.currentModuleId,
-        questionId: params.questionId,
+    // Verify the question is in the locked current module.
+    const link = await tx.moduleQuestion.findUnique({
+      where: {
+        moduleId_questionId: {
+          moduleId: attempt.currentModuleId,
+          questionId: params.questionId,
+        },
       },
-    },
-    include: { question: true },
-  });
-  if (!link) {
-    throw new Error("Question is not in the current module");
-  }
-  const question = link.question;
+      include: { question: true },
+    });
+    if (!link) throw new Error("Question is not in the current module");
 
-  const isCorrect = isAnswerCorrect(question, params.response);
+    let snapshot = await tx.attemptQuestionSnapshot.findUnique({
+      where: {
+        attemptId_questionId: {
+          attemptId: params.attemptId,
+          questionId: params.questionId,
+        },
+      },
+    });
+    if (!snapshot) {
+      snapshot = await tx.attemptQuestionSnapshot.create({
+        data: {
+          attemptId: params.attemptId,
+          moduleId: attempt.currentModuleId,
+          questionId: link.question.id,
+          questionType: link.question.type,
+          correctAnswer: link.question.correctAnswer,
+          acceptedAnswers:
+            link.question.acceptedAnswers === null
+              ? Prisma.DbNull
+              : (link.question.acceptedAnswers as Prisma.InputJsonValue),
+        },
+      });
+    }
 
-  await prisma.answer.upsert({
-    where: {
-      attemptId_questionId: {
+    const isCorrect = isAnswerCorrect(
+      {
+        type: snapshot.questionType,
+        correctAnswer: snapshot.correctAnswer,
+        acceptedAnswers: snapshot.acceptedAnswers,
+      } as Pick<Question, "type" | "correctAnswer" | "acceptedAnswers">,
+      params.response,
+    );
+    const existingAnswer = await tx.answer.findUnique({
+      where: {
+        attemptId_questionId: {
+          attemptId: params.attemptId,
+          questionId: params.questionId,
+        },
+      },
+      select: { timeSpent: true },
+    });
+    const accumulatedTime = Math.max(
+      existingAnswer?.timeSpent ?? 0,
+      Math.max(0, params.timeSpent),
+    );
+
+    await tx.answer.upsert({
+      where: {
+        attemptId_questionId: {
+          attemptId: params.attemptId,
+          questionId: params.questionId,
+        },
+      },
+      create: {
         attemptId: params.attemptId,
         questionId: params.questionId,
+        response: params.response,
+        isCorrect,
+        isMarkedForReview: params.isMarkedForReview,
+        eliminatedChoices: params.eliminatedChoices as unknown as Prisma.InputJsonValue,
+        timeSpent: accumulatedTime,
       },
-    },
-    create: {
-      attemptId: params.attemptId,
-      questionId: params.questionId,
-      response: params.response,
-      isCorrect,
-      isMarkedForReview: params.isMarkedForReview,
-      eliminatedChoices: params.eliminatedChoices as unknown as Prisma.InputJsonValue,
-      timeSpent: params.timeSpent,
-    },
-    update: {
-      response: params.response,
-      isCorrect,
-      isMarkedForReview: params.isMarkedForReview,
-      eliminatedChoices: params.eliminatedChoices as unknown as Prisma.InputJsonValue,
-      timeSpent: { increment: Math.max(0, params.timeSpent) },
-    },
-  });
-
-  if (typeof params.currentQuestionIndex === "number") {
-    await prisma.testAttempt.update({
-      where: { id: params.attemptId },
-      data: { currentQuestionIndex: params.currentQuestionIndex },
+      update: {
+        response: params.response,
+        isCorrect,
+        isMarkedForReview: params.isMarkedForReview,
+        eliminatedChoices: params.eliminatedChoices as unknown as Prisma.InputJsonValue,
+        // The client sends the accumulated absolute value, not a delta.
+        timeSpent: accumulatedTime,
+      },
     });
+
+    if (typeof params.currentQuestionIndex === "number") {
+      await transitionAttempt(tx, {
+        attemptId: params.attemptId,
+        expectedStatus: "IN_PROGRESS",
+        expectedModuleId: attempt.currentModuleId,
+        data: { currentQuestionIndex: params.currentQuestionIndex },
+      });
+    }
+    return "saved" as const;
+  }, { timeout: 60_000 });
+
+  if (outcome === "expired") {
+    throw new AttemptMutationError("Time expired for this module", "TIME_EXPIRED");
   }
 }
 
@@ -357,123 +539,170 @@ export interface SubmitModuleResult {
   breakRemainingSeconds?: number;
 }
 
-export async function submitCurrentModule(attemptId: string): Promise<SubmitModuleResult> {
-  const attempt = await prisma.testAttempt.findUnique({
-    where: { id: attemptId },
-    include: { test: true },
-  });
-  if (!attempt) throw new Error("Attempt not found");
-  if (attempt.status !== "IN_PROGRESS") {
-    throw new Error("Attempt is not in progress");
-  }
-  if (!attempt.currentModuleId) throw new Error("No current module");
-  await enforceModuleDeadline(attempt);
+type SubmitOutcome =
+  | { kind: "expired" }
+  | { kind: "result"; result: SubmitModuleResult };
 
-  const currentModule = await prisma.module.findUnique({
-    where: { id: attempt.currentModuleId },
-    include: {
-      section: true,
-      moduleQuestions: {
-        orderBy: { order: "asc" },
-        include: {
-          question: {
-            select: { id: true, type: true, correctAnswer: true, acceptedAnswers: true },
-          },
+export async function submitCurrentModule(
+  attemptId: string,
+  expectedModuleId: string,
+): Promise<SubmitModuleResult> {
+  let outcome: SubmitOutcome;
+  try {
+    outcome = await prisma.$transaction(async (tx): Promise<SubmitOutcome> => {
+    await lockAttempt(tx, attemptId);
+    const attempt = await tx.testAttempt.findUnique({
+      where: { id: attemptId },
+      include: { test: true },
+    });
+    if (!attempt) throw new Error("Attempt not found");
+    if (attempt.status === "COMPLETED") {
+      return { kind: "result" as const, result: { status: "completed" as const } };
+    }
+    if (attempt.status === "EXPIRED") return { kind: "expired" as const };
+    if (attempt.status !== "IN_PROGRESS") throw new Error("Attempt is not in progress");
+
+    // A duplicate request for the module that just advanced is a successful
+    // no-op. It must never score the newly current module.
+    if (attempt.currentModuleId !== expectedModuleId) {
+      if (attempt.breakStartedAt) {
+        return {
+          kind: "result" as const,
+          result: { status: "break" as const, breakRemainingSeconds: BREAK_SECONDS },
+        };
+      }
+      return {
+        kind: "result" as const,
+        result: { status: "next_module" as const },
+      };
+    }
+    if (!attempt.currentModuleId || !attempt.moduleStartedAt) {
+      throw new AttemptMutationError("The module has not started", "MODULE_NOT_STARTED");
+    }
+    const deadline = await deadlineForAttempt(tx, attempt);
+    if (!deadline || isModuleDeadlineExpired(deadline)) {
+      await expireAttemptInTransaction(tx, attempt, new Date());
+      return { kind: "expired" as const };
+    }
+
+    const currentModule = await tx.module.findUnique({
+      where: { id: attempt.currentModuleId },
+      include: {
+        section: true,
+        moduleQuestions: {
+          orderBy: { order: "asc" },
+          select: { questionId: true },
         },
       },
-    },
-  });
-  if (!currentModule) throw new Error("Module not found");
+    });
+    if (!currentModule) throw new Error("Module not found");
+    const questionIds = currentModule.moduleQuestions.map((mq) => mq.questionId);
+    // Answer.isCorrect was computed from the immutable attempt snapshot.
+    const correct = await tx.answer.count({
+      where: { attemptId, questionId: { in: questionIds }, isCorrect: true },
+    });
 
-  const moduleQuestions = currentModule.moduleQuestions.map((mq) => mq.question);
-
-  const moduleAnswers = await prisma.answer.findMany({
-    where: {
-      attemptId,
-      questionId: { in: moduleQuestions.map((q) => q.id) },
-    },
-  });
-
-  let correct = 0;
-  for (const q of moduleQuestions) {
-    const a = moduleAnswers.find((x) => x.questionId === q.id);
-    if (a && isAnswerCorrect(q, a.response)) correct++;
-  }
-
-  const next = await pickNextModule({
-    test: attempt.test,
-    currentModule,
-    correctCount: correct,
-    totalCount: moduleQuestions.length,
-  });
-
-  await prisma.moduleResult.upsert({
-    where: { attemptId_moduleId: { attemptId, moduleId: currentModule.id } },
-    create: {
-      attemptId,
-      moduleId: currentModule.id,
+    const next = await pickNextModule(tx, {
+      test: attempt.test,
+      currentModule,
       correctCount: correct,
-      totalCount: moduleQuestions.length,
-      routedTo: next?.id ?? null,
-    },
-    update: {
-      correctCount: correct,
-      totalCount: moduleQuestions.length,
-      routedTo: next?.id ?? null,
-    },
-  });
+      totalCount: questionIds.length,
+    });
 
-  if (!next) {
-    await prisma.testAttempt.update({
-      where: { id: attemptId },
-      data: {
-        status: "COMPLETED",
-        completedAt: new Date(),
-        currentModuleId: null,
-        currentSectionId: null,
-        moduleStartedAt: null,
-        moduleDeadlineAt: null,
-        breakStartedAt: null,
+    await tx.moduleResult.upsert({
+      where: { attemptId_moduleId: { attemptId, moduleId: currentModule.id } },
+      create: {
+        attemptId,
+        moduleId: currentModule.id,
+        correctCount: correct,
+        totalCount: questionIds.length,
+        routedTo: next?.id ?? null,
+      },
+      update: {
+        correctCount: correct,
+        totalCount: questionIds.length,
+        routedTo: next?.id ?? null,
       },
     });
-    return { status: "completed" };
-  }
 
-  const crossesSection = next.sectionId !== currentModule.sectionId;
-  if (crossesSection) {
-    const now = new Date();
-    await prisma.testAttempt.update({
-      where: { id: attemptId },
+    if (!next) {
+      await transitionAttempt(tx, {
+        attemptId,
+        expectedStatus: "IN_PROGRESS",
+        expectedModuleId,
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date(),
+          currentModuleId: null,
+          currentSectionId: null,
+          moduleStartedAt: null,
+          moduleDeadlineAt: null,
+          breakStartedAt: null,
+        },
+      });
+      return { kind: "result" as const, result: { status: "completed" as const } };
+    }
+
+    const crossesSection = next.sectionId !== currentModule.sectionId;
+    if (crossesSection) {
+      const now = new Date();
+      await transitionAttempt(tx, {
+        attemptId,
+        expectedStatus: "IN_PROGRESS",
+        expectedModuleId,
+        data: {
+          currentSectionId: next.sectionId,
+          currentModuleId: next.id,
+          currentQuestionIndex: 0,
+          moduleStartedAt: null,
+          moduleDeadlineAt: null,
+          breakStartedAt: now,
+        },
+      });
+      return {
+        kind: "result" as const,
+        result: { status: "break" as const, breakRemainingSeconds: BREAK_SECONDS },
+      };
+    }
+
+    const startedAt = new Date();
+    await transitionAttempt(tx, {
+      attemptId,
+      expectedStatus: "IN_PROGRESS",
+      expectedModuleId,
       data: {
         currentSectionId: next.sectionId,
         currentModuleId: next.id,
         currentQuestionIndex: 0,
-        moduleStartedAt: null,
-        moduleDeadlineAt: null,
-        breakStartedAt: now,
+        moduleStartedAt: startedAt,
+        moduleDeadlineAt: calculateModuleDeadline(startedAt, moduleTimeLimit(next)),
+        breakStartedAt: null,
       },
     });
-    return { status: "break", breakRemainingSeconds: BREAK_SECONDS };
+      return { kind: "result", result: { status: "next_module" } };
+    }, { timeout: 60_000 });
+  } catch (error) {
+    if (!(error instanceof AttemptTransitionConflict)) throw error;
+    // The losing concurrent transaction rolled back. Return the winner's
+    // committed transition as the idempotent result for this module token.
+    const latest = await prisma.testAttempt.findUnique({ where: { id: attemptId } });
+    if (!latest) throw new Error("Attempt not found");
+    if (latest.status === "COMPLETED") return { status: "completed" };
+    if (latest.status === "EXPIRED") {
+      throw new AttemptMutationError("This attempt has expired", "ATTEMPT_EXPIRED");
+    }
+    if (latest.currentModuleId !== expectedModuleId) {
+      return latest.breakStartedAt
+        ? { status: "break", breakRemainingSeconds: BREAK_SECONDS }
+        : { status: "next_module" };
+    }
+    throw error;
   }
 
-  // Same section: auto-start next module immediately.
-  const startedAt = new Date();
-  const nextTimeLimit =
-    next.moduleNumber === 1
-      ? next.section.module1TimeLimit
-      : next.section.module2TimeLimit;
-  await prisma.testAttempt.update({
-    where: { id: attemptId },
-    data: {
-      currentSectionId: next.sectionId,
-      currentModuleId: next.id,
-      currentQuestionIndex: 0,
-      moduleStartedAt: startedAt,
-      moduleDeadlineAt: calculateModuleDeadline(startedAt, nextTimeLimit),
-      breakStartedAt: null,
-    },
-  });
-  return { status: "next_module" };
+  if (outcome.kind === "expired") {
+    throw new AttemptMutationError("This attempt has expired", "ATTEMPT_EXPIRED");
+  }
+  return outcome.result;
 }
 
 /**
@@ -484,7 +713,7 @@ export async function submitCurrentModule(attemptId: string): Promise<SubmitModu
  *  - From Module 2 → Module 1 of the next ordered section.
  *  - End of last section → null (test complete).
  */
-async function pickNextModule(params: {
+async function pickNextModule(tx: Transaction, params: {
   test: Test;
   currentModule: Module & { section: Section };
   correctCount: number;
@@ -494,7 +723,7 @@ async function pickNextModule(params: {
 
   if (currentModule.moduleNumber === 1) {
     if (test.mode === "LINEAR") {
-      return prisma.module.findFirst({
+      return tx.module.findFirst({
         where: { sectionId: currentModule.sectionId, moduleNumber: 2 },
         include: { section: true },
         orderBy: { difficulty: "asc" },
@@ -507,26 +736,26 @@ async function pickNextModule(params: {
       correctCount,
       totalCount,
     });
-    const routed = await prisma.module.findFirst({
+    const routed = await tx.module.findFirst({
       where: { sectionId: currentModule.sectionId, moduleNumber: 2, difficulty: target },
       include: { section: true },
     });
     if (routed) return routed;
     // Fallback: any Module 2 in this section.
-    return prisma.module.findFirst({
+    return tx.module.findFirst({
       where: { sectionId: currentModule.sectionId, moduleNumber: 2 },
       include: { section: true },
     });
   }
 
   // Module 2 → next section's Module 1
-  const nextSection = await prisma.section.findFirst({
+  const nextSection = await tx.section.findFirst({
     where: { testId: test.id, order: { gt: currentModule.section.order } },
     orderBy: { order: "asc" },
   });
   if (!nextSection) return null;
 
-  const m1 = await prisma.module.findFirst({
+  const m1 = await tx.module.findFirst({
     where: { sectionId: nextSection.id, moduleNumber: 1 },
     include: { section: true },
   });
@@ -536,34 +765,50 @@ async function pickNextModule(params: {
 // ---------- End break, start the next module ----------
 
 export async function endBreakAndStartModule(attemptId: string) {
-  const attempt = await prisma.testAttempt.findUnique({
-    where: { id: attemptId },
-  });
-  if (!attempt) throw new Error("Attempt not found");
-  if (attempt.status !== "IN_PROGRESS") throw new Error("Attempt not in progress");
-  if (attempt.moduleStartedAt) return; // already running
-  if (!attempt.currentModuleId) throw new Error("No current module");
-  const nextModule = await prisma.module.findUnique({
-    where: { id: attempt.currentModuleId },
-    select: {
-      moduleNumber: true,
-      section: { select: { module1TimeLimit: true, module2TimeLimit: true } },
-    },
-  });
-  if (!nextModule) throw new Error("Module not found");
-  const timeLimit =
-    nextModule.moduleNumber === 1
-      ? nextModule.section.module1TimeLimit
-      : nextModule.section.module2TimeLimit;
-  const startedAt = new Date();
-  await prisma.testAttempt.update({
-    where: { id: attemptId },
-    data: {
-      moduleStartedAt: startedAt,
-      moduleDeadlineAt: calculateModuleDeadline(startedAt, timeLimit),
-      breakStartedAt: null,
-    },
-  });
+  const outcome = await prisma.$transaction(async (tx) => {
+    await lockAttempt(tx, attemptId);
+    const attempt = await tx.testAttempt.findUnique({ where: { id: attemptId } });
+    if (!attempt) throw new Error("Attempt not found");
+    if (attempt.status === "EXPIRED") return "expired" as const;
+    if (attempt.status !== "IN_PROGRESS") throw new Error("Attempt not in progress");
+    if (attempt.moduleStartedAt) return "started" as const;
+    if (!attempt.currentModuleId || !attempt.breakStartedAt) {
+      throw new AttemptMutationError("The attempt is not on a break", "MODULE_NOT_STARTED");
+    }
+    const nextModule = await tx.module.findUnique({
+      where: { id: attempt.currentModuleId },
+      select: {
+        moduleNumber: true,
+        section: { select: { module1TimeLimit: true, module2TimeLimit: true } },
+      },
+    });
+    if (!nextModule) throw new Error("Module not found");
+    const now = new Date();
+    const breakEndsAt = new Date(attempt.breakStartedAt.getTime() + BREAK_SECONDS * 1000);
+    // Early manual resume is allowed. A late resume receives only the time that
+    // remains from the scheduled end of the bounded break.
+    const startedAt = now < breakEndsAt ? now : breakEndsAt;
+    const deadline = calculateModuleDeadline(startedAt, moduleTimeLimit(nextModule));
+    if (isModuleDeadlineExpired(deadline, now.getTime())) {
+      await expireAttemptInTransaction(tx, attempt, now);
+      return "expired" as const;
+    }
+    await transitionAttempt(tx, {
+      attemptId,
+      expectedStatus: "IN_PROGRESS",
+      expectedModuleId: attempt.currentModuleId,
+      data: {
+        moduleStartedAt: startedAt,
+        moduleDeadlineAt: deadline,
+        breakStartedAt: null,
+      },
+    });
+    return "started" as const;
+  }, { timeout: 60_000 });
+
+  if (outcome === "expired") {
+    throw new AttemptMutationError("This attempt has expired", "ATTEMPT_EXPIRED");
+  }
 }
 
 // ---------- Final completion ----------
@@ -571,12 +816,29 @@ export async function endBreakAndStartModule(attemptId: string) {
 export async function completeAttempt(attemptId: string) {
   const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId } });
   if (!attempt) throw new Error("Attempt not found");
-  if (attempt.status === "COMPLETED") return;
-  if (attempt.currentModuleId || attempt.currentSectionId) {
-    throw new Error("Submit the final module before completing the attempt");
+  if (
+    attempt.status !== "COMPLETED" ||
+    attempt.currentModuleId !== null ||
+    attempt.currentSectionId !== null
+  ) {
+    throw new Error("Only final-module submission can complete an attempt");
   }
-  await prisma.testAttempt.update({
-    where: { id: attemptId },
-    data: { status: "COMPLETED", completedAt: new Date() },
+}
+
+/** Reconcile every open attempt. Intended for the nightly Vercel cron. */
+export async function sweepStaleAttempts(now = new Date()) {
+  const attempts = await prisma.testAttempt.findMany({
+    where: { status: "IN_PROGRESS" },
+    select: { id: true },
+    orderBy: { startedAt: "asc" },
+    take: 1_000,
   });
+  let expired = 0;
+  let advanced = 0;
+  for (const attempt of attempts) {
+    const result = await reconcileAttemptLifecycle(attempt.id, now);
+    if (result === "expired") expired++;
+    if (result === "advanced") advanced++;
+  }
+  return { examined: attempts.length, expired, advanced };
 }

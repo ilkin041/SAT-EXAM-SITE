@@ -40,6 +40,7 @@ enum AttemptStatus {
   IN_PROGRESS
   COMPLETED
   ABANDONED
+  EXPIRED
 }
 
 enum AnnotationColor {
@@ -64,7 +65,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  testsCreated Test[]                @relation("TestCreatedBy")
+  testsCreated Test[]               @relation("TestCreatedBy")
   attempts     TestAttempt[]
   resetTokens  PasswordResetToken[]
   groups       Group[]
@@ -105,12 +106,12 @@ model Test {
 }
 
 model Section {
-  id                String      @id @default(cuid())
-  testId            String
-  type              SectionType
-  order              Int
-  module1TimeLimit  Int // seconds
-  module2TimeLimit  Int // seconds
+  id               String      @id @default(cuid())
+  testId           String
+  type             SectionType
+  order            Int
+  module1TimeLimit Int // seconds
+  module2TimeLimit Int // seconds
 
   test    Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
   modules Module[]
@@ -190,29 +191,30 @@ model ModuleQuestion {
 }
 
 model TestAttempt {
-  id                    String        @id @default(cuid())
-  userId                String? // null = public/anonymous attempt
-  testId                String
-  startedAt             DateTime      @default(now())
-  completedAt           DateTime?
-  currentSectionId      String?
-  currentModuleId       String?
-  currentQuestionIndex  Int           @default(0)
+  id                   String        @id @default(cuid())
+  userId               String? // null = public/anonymous attempt
+  testId               String
+  startedAt            DateTime      @default(now())
+  completedAt          DateTime?
+  currentSectionId     String?
+  currentModuleId      String?
+  currentQuestionIndex Int           @default(0)
   /// Server-recorded UTC time the current module started — drives the authoritative timer.
-  moduleStartedAt       DateTime?
+  moduleStartedAt      DateTime?
   /// Authoritative server-side deadline for the current module. Queryable for expiry sweepers.
-  moduleDeadlineAt      DateTime?
+  moduleDeadlineAt     DateTime?
   /// Set when the student finishes one section and is on the 10-minute break before the next.
-  breakStartedAt        DateTime?
-  status                AttemptStatus @default(IN_PROGRESS)
+  breakStartedAt       DateTime?
+  status               AttemptStatus @default(IN_PROGRESS)
   /// Tab-switch / focus-loss events for light anti-cheat logging.
-  focusEvents           Json?
+  focusEvents          Json?
 
-  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  test          Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
-  answers       Answer[]
-  moduleResults ModuleResult[]
-  annotations   Annotation[]
+  user              User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  test              Test                      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  answers           Answer[]
+  questionSnapshots AttemptQuestionSnapshot[]
+  moduleResults     ModuleResult[]
+  annotations       Annotation[]
 
   @@index([userId])
   @@index([testId])
@@ -221,22 +223,42 @@ model TestAttempt {
 }
 
 model Answer {
-  id                 String   @id @default(cuid())
-  attemptId          String
-  questionId         String
-  response           String   @default("")
-  isCorrect          Boolean  @default(false)
-  isMarkedForReview  Boolean  @default(false)
+  id                String   @id @default(cuid())
+  attemptId         String
+  questionId        String
+  response          String   @default("")
+  isCorrect         Boolean  @default(false)
+  isMarkedForReview Boolean  @default(false)
   /// JSON: ('A'|'B'|'C'|'D')[]
-  eliminatedChoices  Json?
-  timeSpent          Int      @default(0) // seconds accumulated on this question
-  updatedAt          DateTime @updatedAt
+  eliminatedChoices Json?
+  timeSpent         Int      @default(0) // seconds accumulated on this question
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   attempt  TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([attemptId, questionId])
   @@index([attemptId])
+}
+
+/// Immutable grading data captured from the same Question row sent to the
+/// student. Live question edits can never alter an in-flight attempt's score.
+model AttemptQuestionSnapshot {
+  id              String       @id @default(cuid())
+  attemptId       String
+  moduleId        String
+  questionId      String
+  questionType    QuestionType
+  correctAnswer   String
+  acceptedAnswers Json?
+  createdAt       DateTime     @default(now())
+
+  attempt TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId, moduleId])
+  @@index([questionId])
 }
 
 model Annotation {

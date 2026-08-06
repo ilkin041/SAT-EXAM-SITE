@@ -33,9 +33,10 @@ export default async function AttemptPage({
   if (attempt.status === "COMPLETED") {
     redirect(`/results/${attempt.id}`);
   }
+  if (attempt.status !== "IN_PROGRESS") redirect("/dashboard");
 
   const state = await loadAttemptState(attemptId, session?.user);
-  if (!state) redirect(`/results/${attempt.id}`);
+  if (!state) redirect("/dashboard");
 
   const displayName =
     attempt.user?.name ||

@@ -142,7 +142,9 @@ export default async function UserDetailPage({
                             ? "In progress"
                             : isDone
                               ? "Completed"
-                              : "Abandoned"}
+                              : a.status === "EXPIRED"
+                                ? "Expired"
+                                : "Abandoned"}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">

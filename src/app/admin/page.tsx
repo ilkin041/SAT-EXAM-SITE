@@ -97,7 +97,9 @@ export default async function AdminDashboard() {
                             ? "In progress"
                             : a.status === "COMPLETED"
                               ? "Completed"
-                              : "Abandoned"}
+                              : a.status === "EXPIRED"
+                                ? "Expired"
+                                : "Abandoned"}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-xs text-muted-foreground">

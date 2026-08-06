@@ -181,7 +181,7 @@ export function TestInterface({ initialState, studentName }: Props) {
               response: value.response,
               isMarkedForReview: value.isMarkedForReview,
               eliminatedChoices: value.eliminatedChoices,
-              timeSpent: 0, // server tracks; client just emits writes
+              timeSpent: value.timeSpent,
               currentQuestionIndex: qIndex,
             }),
           });
@@ -190,7 +190,7 @@ export function TestInterface({ initialState, studentName }: Props) {
               code?: string;
               error?: string;
             };
-            if (data.code === "TIME_EXPIRED") {
+            if (data.code === "TIME_EXPIRED" || data.code === "ATTEMPT_EXPIRED") {
               setTimeUp(true);
               toast("Time expired. No further answers can be saved.", "error");
             }
@@ -408,9 +408,15 @@ export function TestInterface({ initialState, studentName }: Props) {
 
       const res = await fetch(`/api/attempts/${state.attempt.id}/submit-module`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleId: state.module.id }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
+        if (data.code === "ATTEMPT_EXPIRED") {
+          router.push("/dashboard");
+          return;
+        }
         alert(
           data.code === "TIME_EXPIRED"
             ? "Time expired. This module can no longer be submitted from the browser."
@@ -437,6 +443,10 @@ export function TestInterface({ initialState, studentName }: Props) {
     setPhase("loading_next");
     const res = await fetch(`/api/attempts/${state.attempt.id}`);
     const data = await res.json();
+    if (data.closed) {
+      router.push("/dashboard");
+      return;
+    }
     if (data.completed) {
       router.push(`/results/${state.attempt.id}`);
       return;
@@ -469,7 +479,12 @@ export function TestInterface({ initialState, studentName }: Props) {
       method: "POST",
     });
     if (!res.ok) {
-      alert("Failed to start next module");
+      const data = await res.json().catch(() => ({}));
+      if (data.code === "ATTEMPT_EXPIRED") {
+        router.push("/dashboard");
+        return;
+      }
+      alert(data.error ?? "Failed to start next module");
       setPhase("break");
       return;
     }

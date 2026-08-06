@@ -11,6 +11,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:backfill-question-hashes": "tsx scripts/backfill-question-hashes.ts",
+    "db:finalize-stale-attempts": "tsx scripts/finalize-stale-attempts.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "test": "vitest run",

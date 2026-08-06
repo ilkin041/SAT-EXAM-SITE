@@ -3,8 +3,10 @@ import type { Difficulty, SectionType, TestMode } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import {
+  completeAttempt,
   endBreakAndStartModule,
   loadAttemptState,
+  reconcileAttemptLifecycle,
   saveAnswer,
   startAttempt,
   submitCurrentModule,
@@ -182,7 +184,7 @@ describe("attempt lifecycle against Postgres", () => {
       );
 
       await answerCorrectly(attempt.id, fixture.readingWriting.module1.questionId);
-      await expect(submitCurrentModule(attempt.id)).resolves.toEqual({
+      await expect(submitCurrentModule(attempt.id, fixture.readingWriting.module1.id)).resolves.toEqual({
         status: "next_module",
       });
       let persisted = await prisma.testAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
@@ -191,7 +193,7 @@ describe("attempt lifecycle against Postgres", () => {
       expect(persisted.moduleStartedAt).not.toBeNull();
 
       await answerCorrectly(attempt.id, firstM2.questionId);
-      await expect(submitCurrentModule(attempt.id)).resolves.toMatchObject({ status: "break" });
+      await expect(submitCurrentModule(attempt.id, firstM2.id)).resolves.toMatchObject({ status: "break" });
       persisted = await prisma.testAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
       expect(persisted.currentModuleId).toBe(fixture.math.module1.id);
       expect(persisted.currentQuestionIndex).toBe(0);
@@ -212,14 +214,14 @@ describe("attempt lifecycle against Postgres", () => {
       expect(persisted.breakStartedAt).toBeNull();
 
       await answerCorrectly(attempt.id, fixture.math.module1.questionId);
-      await expect(submitCurrentModule(attempt.id)).resolves.toEqual({
+      await expect(submitCurrentModule(attempt.id, fixture.math.module1.id)).resolves.toEqual({
         status: "next_module",
       });
       persisted = await prisma.testAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
       expect(persisted.currentModuleId).toBe(secondM2.id);
 
       await answerCorrectly(attempt.id, secondM2.questionId);
-      await expect(submitCurrentModule(attempt.id)).resolves.toEqual({ status: "completed" });
+      await expect(submitCurrentModule(attempt.id, secondM2.id)).resolves.toEqual({ status: "completed" });
       persisted = await prisma.testAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
       expect(persisted).toMatchObject({
         status: "COMPLETED",
@@ -253,7 +255,7 @@ describe("attempt lifecycle against Postgres", () => {
 
     const attempt = await startAttempt({ testId: test.id, userId: null });
     await answerCorrectly(attempt.id, section.module1.questionId);
-    await expect(submitCurrentModule(attempt.id)).resolves.toEqual({
+    await expect(submitCurrentModule(attempt.id, section.module1.id)).resolves.toEqual({
       status: "next_module",
     });
 
@@ -266,5 +268,158 @@ describe("attempt lifecycle against Postgres", () => {
     });
     expect(result.correctCount).toBe(1);
     expect(result.routedTo).toBe(section.module2Easy!.id);
+  });
+
+  it("makes concurrent submits for the same module idempotent", async () => {
+    const fixture = await createLifecycleTest("LINEAR");
+    const attempt = await startAttempt({ testId: fixture.test.id, userId: null });
+    await loadAttemptState(attempt.id, null);
+    await answerCorrectly(attempt.id, fixture.readingWriting.module1.questionId);
+
+    const results = await Promise.all([
+      submitCurrentModule(attempt.id, fixture.readingWriting.module1.id),
+      submitCurrentModule(attempt.id, fixture.readingWriting.module1.id),
+    ]);
+
+    expect(results).toEqual([{ status: "next_module" }, { status: "next_module" }]);
+    const persisted = await prisma.testAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
+    expect(persisted.currentModuleId).toBe(fixture.readingWriting.module2Linear!.id);
+    expect(await prisma.moduleResult.count({ where: { attemptId: attempt.id } })).toBe(1);
+    expect(
+      await prisma.moduleResult.findUnique({
+        where: {
+          attemptId_moduleId: {
+            attemptId: attempt.id,
+            moduleId: fixture.readingWriting.module2Linear!.id,
+          },
+        },
+      }),
+    ).toBeNull();
+  });
+
+  it("grades from the question snapshot after the live answer key is edited", async () => {
+    const test = await prisma.test.create({
+      data: { title: `Snapshot ${randomUUID()}`, mode: "LINEAR", isPublic: true },
+    });
+    const section = await createSection({
+      testId: test.id,
+      mode: "LINEAR",
+      order: 1,
+      type: "MATH",
+    });
+    const attempt = await startAttempt({ testId: test.id, userId: null });
+    await loadAttemptState(attempt.id, null);
+
+    await prisma.question.update({
+      where: { id: section.module1.questionId },
+      data: { correctAnswer: "B" },
+    });
+    await answerCorrectly(attempt.id, section.module1.questionId);
+    await saveAnswer({
+      attemptId: attempt.id,
+      questionId: section.module1.questionId,
+      response: "A",
+      isMarkedForReview: false,
+      eliminatedChoices: [],
+      timeSpent: 8,
+    });
+    const answer = await prisma.answer.findUniqueOrThrow({
+      where: {
+        attemptId_questionId: {
+          attemptId: attempt.id,
+          questionId: section.module1.questionId,
+        },
+      },
+    });
+    expect(answer.isCorrect).toBe(true);
+    expect(answer.timeSpent).toBe(8);
+    expect(answer.createdAt).toBeInstanceOf(Date);
+
+    await submitCurrentModule(attempt.id, section.module1.id);
+    const result = await prisma.moduleResult.findUniqueOrThrow({
+      where: { attemptId_moduleId: { attemptId: attempt.id, moduleId: section.module1.id } },
+    });
+    expect(result.correctCount).toBe(1);
+  });
+
+  it("scores saved work and marks an overdue module EXPIRED", async () => {
+    const test = await prisma.test.create({
+      data: { title: `Expiry ${randomUUID()}`, mode: "LINEAR", isPublic: true },
+    });
+    const section = await createSection({
+      testId: test.id,
+      mode: "LINEAR",
+      order: 1,
+      type: "MATH",
+    });
+    const attempt = await startAttempt({ testId: test.id, userId: null });
+    await loadAttemptState(attempt.id, null);
+    await answerCorrectly(attempt.id, section.module1.questionId);
+    const now = new Date();
+    await prisma.testAttempt.update({
+      where: { id: attempt.id },
+      data: { moduleDeadlineAt: new Date(now.getTime() - 1_000) },
+    });
+
+    await expect(reconcileAttemptLifecycle(attempt.id, now)).resolves.toBe("expired");
+    const expired = await prisma.testAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
+    expect(expired.status).toBe("EXPIRED");
+    expect(expired.currentModuleId).toBeNull();
+    const result = await prisma.moduleResult.findUniqueOrThrow({
+      where: { attemptId_moduleId: { attemptId: attempt.id, moduleId: section.module1.id } },
+    });
+    expect(result.correctCount).toBe(1);
+  });
+
+  it("bounds an expired break and expires an absurdly late resume", async () => {
+    const fixture = await createLifecycleTest("LINEAR");
+    const now = new Date();
+    const breakStartedAt = new Date(now.getTime() - 11 * 60 * 1_000);
+    const resumable = await prisma.testAttempt.create({
+      data: {
+        testId: fixture.test.id,
+        currentSectionId: fixture.math.id,
+        currentModuleId: fixture.math.module1.id,
+        moduleStartedAt: null,
+        moduleDeadlineAt: null,
+        breakStartedAt,
+        status: "IN_PROGRESS",
+      },
+    });
+
+    await expect(reconcileAttemptLifecycle(resumable.id, now)).resolves.toBe("advanced");
+    const advanced = await prisma.testAttempt.findUniqueOrThrow({ where: { id: resumable.id } });
+    expect(advanced.moduleStartedAt?.getTime()).toBe(
+      breakStartedAt.getTime() + 10 * 60 * 1_000,
+    );
+    expect(advanced.moduleDeadlineAt).not.toBeNull();
+
+    const farTooLate = await prisma.testAttempt.create({
+      data: {
+        testId: fixture.test.id,
+        currentSectionId: fixture.math.id,
+        currentModuleId: fixture.math.module1.id,
+        moduleStartedAt: null,
+        moduleDeadlineAt: null,
+        breakStartedAt: new Date(now.getTime() - 3 * 60 * 60 * 1_000),
+        status: "IN_PROGRESS",
+      },
+    });
+    await expect(reconcileAttemptLifecycle(farTooLate.id, now)).resolves.toBe("expired");
+    expect(
+      (await prisma.testAttempt.findUniqueOrThrow({ where: { id: farTooLate.id } })).status,
+    ).toBe("EXPIRED");
+  });
+
+  it("rejects on-demand completion before final-module submission", async () => {
+    const fixture = await createLifecycleTest("LINEAR");
+    const attempt = await startAttempt({ testId: fixture.test.id, userId: null });
+
+    await expect(completeAttempt(attempt.id)).rejects.toThrow(
+      "Only final-module submission can complete an attempt",
+    );
+    expect(
+      (await prisma.testAttempt.findUniqueOrThrow({ where: { id: attempt.id } })).status,
+    ).toBe("IN_PROGRESS");
   });
 });

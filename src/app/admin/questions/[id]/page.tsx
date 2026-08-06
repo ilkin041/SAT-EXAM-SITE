@@ -91,8 +91,9 @@ export default async function EditQuestionPage({
             </div>
             <p className="mt-1 text-xs">
               Any changes you save will only affect future attempts —
-              ongoing attempts will continue to see the version they started
-              with.
+              grading keys already loaded by ongoing attempts are frozen.
+              Avoid editing until they finish because a reload can still show
+              revised wording or choices.
             </p>
           </div>
         </div>

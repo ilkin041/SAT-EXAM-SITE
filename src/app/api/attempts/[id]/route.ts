@@ -28,8 +28,26 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (attempt.status === "COMPLETED") {
     return NextResponse.json({ ok: true, completed: true, attemptId: attempt.id });
   }
+  if (attempt.status !== "IN_PROGRESS") {
+    return NextResponse.json(
+      { ok: false, closed: true, status: attempt.status, attemptId: attempt.id },
+      { status: 410 },
+    );
+  }
 
   const state = await loadAttemptState(id, session?.user);
-  if (!state) return NextResponse.json({ ok: true, completed: true, attemptId: attempt.id });
+  if (!state) {
+    const closed = await prisma.testAttempt.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+    if (closed?.status === "COMPLETED") {
+      return NextResponse.json({ ok: true, completed: true, attemptId: attempt.id });
+    }
+    return NextResponse.json(
+      { ok: false, closed: true, status: closed?.status, attemptId: attempt.id },
+      { status: 410 },
+    );
+  }
   return NextResponse.json({ ok: true, state });
 }

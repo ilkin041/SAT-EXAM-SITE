@@ -163,7 +163,11 @@ describe("TestInterface lifecycle smoke tests", () => {
     expect(timeUpBeep).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/attempts/attempt-1/submit-module",
-      { method: "POST" },
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleId: "module-1" }),
+      },
     );
     expect(routerPush).toHaveBeenCalledWith("/results/attempt-1");
   });
