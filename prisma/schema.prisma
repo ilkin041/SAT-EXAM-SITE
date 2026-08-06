@@ -49,6 +49,13 @@ enum AnnotationColor {
   PINK
 }
 
+enum AttemptEventType {
+  BLUR
+  FOCUS
+  FULLSCREEN_EXIT
+  FULLSCREEN_ENTER
+}
+
 enum ImagePosition {
   TOP
   INLINE
@@ -189,35 +196,45 @@ model ModuleQuestion {
 }
 
 model TestAttempt {
-  id                   String        @id @default(cuid())
+  id                   String                    @id @default(cuid())
   userId               String? // null = public/anonymous attempt
   testId               String
-  startedAt            DateTime      @default(now())
+  startedAt            DateTime                  @default(now())
   completedAt          DateTime?
   currentSectionId     String?
   currentModuleId      String?
-  currentQuestionIndex Int           @default(0)
+  currentQuestionIndex Int                       @default(0)
   /// Server-recorded UTC time the current module started — drives the authoritative timer.
   moduleStartedAt      DateTime?
   /// Authoritative server-side deadline for the current module. Queryable for expiry sweepers.
   moduleDeadlineAt     DateTime?
   /// Set when the student finishes one section and is on the 10-minute break before the next.
   breakStartedAt       DateTime?
-  status               AttemptStatus @default(IN_PROGRESS)
-  /// Tab-switch / focus-loss events for light anti-cheat logging.
-  focusEvents          Json?
-
-  user              User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  test              Test                      @relation(fields: [testId], references: [id], onDelete: Cascade)
-  answers           Answer[]
-  questionSnapshots AttemptQuestionSnapshot[]
-  moduleResults     ModuleResult[]
-  annotations       Annotation[]
+  status               AttemptStatus             @default(IN_PROGRESS)
+  user                 User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  test                 Test                      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  answers              Answer[]
+  questionSnapshots    AttemptQuestionSnapshot[]
+  moduleResults        ModuleResult[]
+  annotations          Annotation[]
+  events               AttemptEvent[]
 
   @@index([userId])
   @@index([testId])
   @@index([status])
   @@index([status, moduleDeadlineAt])
+}
+
+model AttemptEvent {
+  id         String           @id @default(cuid())
+  attemptId  String
+  type       AttemptEventType
+  occurredAt DateTime
+  receivedAt DateTime         @default(now())
+
+  attempt TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId, occurredAt])
 }
 
 model Answer {

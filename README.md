@@ -72,6 +72,8 @@ The route cap, full-length thresholds, short-test estimate treatment, and limits
 of the practice conversion are documented in [docs/scoring-policy.md](docs/scoring-policy.md).
 Feature retention decisions for groups and annotations are recorded in
 [docs/feature-decisions.md](docs/feature-decisions.md).
+Anonymous-practice, integrity-telemetry, and stored-HTML boundaries are documented
+in [docs/commercial-readiness.md](docs/commercial-readiness.md).
 
 ## Important security invariant
 

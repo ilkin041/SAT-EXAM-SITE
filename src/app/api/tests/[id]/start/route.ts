@@ -5,6 +5,11 @@ import { reconcileAttemptLifecycle, startAttempt } from "@/lib/attempt-engine";
 import { canAccessTest } from "@/lib/test-access";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { abandonAttempt } from "@/lib/attempt-transitions";
+import {
+  ANONYMOUS_ATTEMPT_COOKIE,
+  anonymousAttemptCookieOptions,
+  createAnonymousAttemptToken,
+} from "@/lib/anonymous-attempt";
 
 /**
  * Start (or resume) an attempt for a given test.
@@ -88,7 +93,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   try {
     const attempt = await startAttempt({ testId: id, userId });
-    return NextResponse.json({ ok: true, attemptId: attempt.id, resumed: false });
+    const response = NextResponse.json({ ok: true, attemptId: attempt.id, resumed: false });
+    if (!userId) {
+      response.cookies.set(
+        ANONYMOUS_ATTEMPT_COOKIE,
+        createAnonymousAttemptToken(attempt.id),
+        anonymousAttemptCookieOptions,
+      );
+    }
+    return response;
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }

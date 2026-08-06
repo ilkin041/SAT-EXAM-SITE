@@ -72,15 +72,16 @@ export default async function PreTestPage({
 
   const displayName =
     session?.user?.name || session?.user?.email?.split("@")[0] || null;
+  const backHref = session?.user ? "/dashboard" : "/practice";
 
   return (
     <main className="container mx-auto max-w-3xl px-4 py-12">
       <Link
-        href="/dashboard"
+        href={backHref}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to dashboard
+        Back to {session?.user ? "dashboard" : "free samples"}
       </Link>
 
       <header className="mt-4">
@@ -176,7 +177,7 @@ export default async function PreTestPage({
       <div className="mt-6 flex items-start gap-3 rounded-xl border border-blue-500/30 bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
         <span>
-          The test opens in <strong>fullscreen</strong>. Leaving fullscreen or
+          Your browser will be asked to enter <strong>fullscreen</strong>. Leaving fullscreen or
           switching tabs is logged.
         </span>
       </div>

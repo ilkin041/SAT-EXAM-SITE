@@ -45,7 +45,6 @@ function state(overrides: Partial<AttemptState> = {}): AttemptState {
       moduleStartedAt: new Date(NOW),
       moduleDeadlineAt: new Date(NOW + 3_600_000),
       breakStartedAt: null,
-      focusEvents: null,
     },
     test: {
       id: "test-1",

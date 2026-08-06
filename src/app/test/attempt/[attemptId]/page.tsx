@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { loadAttemptState } from "@/lib/attempt-engine";
 import { TestInterface } from "./test-interface";
 import { canAccessTest } from "@/lib/test-access";
+import { canAccessAttempt } from "@/lib/attempt-auth";
 
 export const metadata = { title: "Test in progress" };
 
@@ -21,11 +22,7 @@ export default async function AttemptPage({
   });
   if (!attempt) notFound();
 
-  // Auth: owner OR admin OR anonymous attempt on public test.
-  const isOwner = attempt.userId && session?.user?.id === attempt.userId;
-  const isAdmin = session?.user?.role === "ADMIN";
-  const isAnonymousPublic = !attempt.userId && attempt.test.isPublic;
-  if (!isOwner && !isAdmin && !isAnonymousPublic) {
+  if (!(await canAccessAttempt(session?.user, attempt))) {
     redirect("/login");
   }
   if (!(await canAccessTest(session?.user, attempt.test))) redirect("/dashboard");

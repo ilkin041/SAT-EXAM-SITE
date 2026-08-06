@@ -422,4 +422,26 @@ describe("attempt lifecycle against Postgres", () => {
       (await prisma.testAttempt.findUniqueOrThrow({ where: { id: attempt.id } })).status,
     ).toBe("IN_PROGRESS");
   });
+
+  it("appends concurrent integrity events without dropping rows", async () => {
+    const fixture = await createLifecycleTest("LINEAR");
+    const attempt = await startAttempt({ testId: fixture.test.id, userId: null });
+    const occurredAt = new Date();
+
+    await Promise.all(
+      Array.from({ length: 24 }, (_, index) =>
+        prisma.attemptEvent.create({
+          data: {
+            attemptId: attempt.id,
+            type: index % 2 === 0 ? "BLUR" : "FOCUS",
+            occurredAt: new Date(occurredAt.getTime() + index),
+          },
+        }),
+      ),
+    );
+
+    await expect(
+      prisma.attemptEvent.count({ where: { attemptId: attempt.id } }),
+    ).resolves.toBe(24);
+  });
 });

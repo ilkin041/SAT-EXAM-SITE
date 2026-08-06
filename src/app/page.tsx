@@ -101,7 +101,7 @@ export default async function Home() {
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden />
-                Free to use
+                Free sample available
               </span>
             </div>
 
@@ -114,6 +114,9 @@ export default async function Home() {
               </Button>
               <Button asChild variant="secondary" size="lg">
                 <Link href="/login">Log in</Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg">
+                <Link href="/practice">Try a sample</Link>
               </Button>
             </div>
           </div>
@@ -132,7 +135,7 @@ export default async function Home() {
             { value: "1600", label: "Max SAT Score", icon: Target },
             { value: "236+", label: "Practice Questions", icon: BookOpenCheck },
             { value: "4", label: "Full-Length Tests", icon: LayoutGrid },
-            { value: "∞", label: "Free Attempts", icon: Zap },
+            { value: "Free", label: "Sample Test", icon: Zap },
           ].map((stat) => (
             <div key={stat.label} className="flex flex-col items-center text-center">
               <stat.icon className="mb-2 h-5 w-5 text-primary/70" aria-hidden />
@@ -265,6 +268,9 @@ export default async function Home() {
               </Button>
               <Button asChild variant="secondary" size="lg">
                 <Link href="/login">Log in</Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg">
+                <Link href="/practice">Try a sample</Link>
               </Button>
             </div>
           </div>

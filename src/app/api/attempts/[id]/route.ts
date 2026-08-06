@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { loadAttemptState } from "@/lib/attempt-engine";
 import { canAccessTest } from "@/lib/test-access";
+import { canAccessAttempt } from "@/lib/attempt-auth";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -14,11 +15,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   });
   if (!attempt) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Authorization: owner OR admin OR public+anonymous attempt.
-  const isOwner = attempt.userId && session?.user?.id === attempt.userId;
-  const isAdmin = session?.user?.role === "ADMIN";
-  const isAnonymousPublic = !attempt.userId && attempt.test.isPublic;
-  if (!isOwner && !isAdmin && !isAnonymousPublic) {
+  if (!(await canAccessAttempt(session?.user, attempt))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (!(await canAccessTest(session?.user, attempt.test))) {

@@ -9,13 +9,9 @@ import {
   computeScaledScores,
   getScoreFidelity,
 } from "@/lib/scoring";
+import { summarizeFocusEvents } from "@/lib/analytics";
 
 export const metadata = { title: "Attempt — Admin" };
-
-interface FocusEvent {
-  type: "blur" | "focus" | "fullscreen_exit" | "fullscreen_enter";
-  at: number;
-}
 
 export default async function AttemptDetailPage({
   params,
@@ -35,6 +31,7 @@ export default async function AttemptDetailPage({
         },
       },
       answers: true,
+      events: { orderBy: { occurredAt: "desc" } },
     },
   });
   if (!attempt) notFound();
@@ -54,22 +51,7 @@ export default async function AttemptDetailPage({
   const hasScore = attempt.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE";
   const scoreHint = scoreFidelity === "ESTIMATE" ? "short-test estimate" : "400–1600";
 
-  const events = ((attempt.focusEvents as FocusEvent[] | null) ?? []).slice().reverse();
-  const blurs = events.filter((e) => e.type === "blur").length;
-  const fullscreenExits = events.filter((e) => e.type === "fullscreen_exit").length;
-
-  // Roughly compute time spent out of focus by pairing consecutive blur/focus events.
-  let outOfFocusMs = 0;
-  let lastBlur: number | null = null;
-  // events is reversed; iterate chronologically
-  for (const e of [...events].reverse()) {
-    if (e.type === "blur") lastBlur = e.at;
-    else if (e.type === "focus" && lastBlur != null) {
-      outOfFocusMs += Math.max(0, e.at - lastBlur);
-      lastBlur = null;
-    }
-  }
-  const outOfFocusSec = Math.round(outOfFocusMs / 1000);
+  const focusSummary = summarizeFocusEvents(attempt.events);
 
   return (
     <>
@@ -107,18 +89,18 @@ export default async function AttemptDetailPage({
       <section className="mt-8 rounded-xl border border-border bg-card p-5 shadow-card">
         <h2 className="text-sm font-semibold">Focus-event log</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          {blurs} tab-switch{blurs === 1 ? "" : "es"} · {fullscreenExits} fullscreen exit
-          {fullscreenExits === 1 ? "" : "s"} · ~{outOfFocusSec}s out of focus
+          {focusSummary.blurCount} tab-switch{focusSummary.blurCount === 1 ? "" : "es"} · {focusSummary.fullscreenExitCount} fullscreen exit
+          {focusSummary.fullscreenExitCount === 1 ? "" : "s"} · ~{focusSummary.outOfFocusSeconds}s out of focus
         </p>
-        {events.length === 0 ? (
+        {attempt.events.length === 0 ? (
           <p className="mt-3 text-xs text-muted-foreground">No events recorded.</p>
         ) : (
           <ul className="mt-3 max-h-60 space-y-1 overflow-y-auto text-xs">
-            {events.map((e, i) => (
-              <li key={i} className="flex justify-between font-mono">
-                <span>{e.type}</span>
+            {attempt.events.map((event) => (
+              <li key={event.id} className="flex justify-between font-mono">
+                <span>{event.type.toLowerCase()}</span>
                 <span className="text-muted-foreground">
-                  {new Date(e.at).toLocaleString()}
+                  {event.occurredAt.toLocaleString()}
                 </span>
               </li>
             ))}

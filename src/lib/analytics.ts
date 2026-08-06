@@ -99,37 +99,52 @@ export function computeItemAnalysis(exposures: ItemExposure[]): ItemAnalysis[] {
 }
 
 export interface FocusEvent {
-  type: "blur" | "focus" | "fullscreen_exit" | "fullscreen_enter";
+  type:
+    | "blur"
+    | "focus"
+    | "fullscreen_exit"
+    | "fullscreen_enter"
+    | "BLUR"
+    | "FOCUS"
+    | "FULLSCREEN_EXIT"
+    | "FULLSCREEN_ENTER";
   at: number;
 }
 
 export function summarizeFocusEvents(value: unknown) {
   const events = Array.isArray(value)
-    ? value.filter(
-        (event): event is FocusEvent =>
-          Boolean(
-            event &&
-              typeof event === "object" &&
-              "type" in event &&
-              "at" in event &&
-              typeof event.type === "string" &&
-              typeof event.at === "number",
-          ),
-      )
+    ? value.flatMap((event) => {
+        if (!event || typeof event !== "object" || !("type" in event)) return [];
+        const type = typeof event.type === "string" ? event.type.toLowerCase() : "";
+        if (!new Set(["blur", "focus", "fullscreen_exit", "fullscreen_enter"]).has(type)) {
+          return [];
+        }
+        const at =
+          "at" in event && typeof event.at === "number"
+            ? event.at
+            : "occurredAt" in event && event.occurredAt instanceof Date
+              ? event.occurredAt.getTime()
+              : "occurredAt" in event && typeof event.occurredAt === "string"
+                ? new Date(event.occurredAt).getTime()
+                : Number.NaN;
+        return Number.isFinite(at) ? [{ type, at } as FocusEvent] : [];
+      })
     : [];
   let lastBlur: number | null = null;
   let outOfFocusMs = 0;
   for (const event of [...events].sort((a, b) => a.at - b.at)) {
-    if (event.type === "blur") lastBlur = event.at;
-    if (event.type === "focus" && lastBlur !== null) {
+    if (event.type.toLowerCase() === "blur") lastBlur = event.at;
+    if (event.type.toLowerCase() === "focus" && lastBlur !== null) {
       outOfFocusMs += Math.max(0, event.at - lastBlur);
       lastBlur = null;
     }
   }
   return {
     eventCount: events.length,
-    blurCount: events.filter((event) => event.type === "blur").length,
-    fullscreenExitCount: events.filter((event) => event.type === "fullscreen_exit").length,
+    blurCount: events.filter((event) => event.type.toLowerCase() === "blur").length,
+    fullscreenExitCount: events.filter(
+      (event) => event.type.toLowerCase() === "fullscreen_exit",
+    ).length,
     outOfFocusSeconds: Math.round(outOfFocusMs / 1000),
   };
 }

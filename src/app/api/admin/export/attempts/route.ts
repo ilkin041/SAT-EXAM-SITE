@@ -21,6 +21,7 @@ export async function GET() {
         questionSnapshots: {
           select: { questionId: true, correctAnswer: true },
         },
+        events: { orderBy: { occurredAt: "asc" } },
         moduleResults: {
           include: {
             module: {
@@ -79,7 +80,7 @@ export async function GET() {
 
     const rows = attempts.flatMap((attempt) => {
       const score = computeAttemptScorePoint(attempt);
-      const focus = summarizeFocusEvents(attempt.focusEvents);
+      const focus = summarizeFocusEvents(attempt.events);
       const answerByQuestion = new Map(
         attempt.answers.map((answer) => [answer.questionId, answer]),
       );

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ReviewClient, type ReviewItem } from "./review-client";
+import { canAccessAttempt } from "@/lib/attempt-auth";
 
 export const metadata = { title: "Review answers" };
 
@@ -36,10 +37,7 @@ export default async function ReviewAnswersPage({
   });
   if (!attempt) notFound();
 
-  const isOwner = attempt.userId && session?.user?.id === attempt.userId;
-  const isAdmin = session?.user?.role === "ADMIN";
-  const isAnonymousPublic = !attempt.userId && attempt.test.isPublic;
-  if (!isOwner && !isAdmin && !isAnonymousPublic) notFound();
+  if (!(await canAccessAttempt(session?.user, attempt))) notFound();
   if (attempt.status !== "COMPLETED") {
     redirect(
       attempt.status === "IN_PROGRESS"
