@@ -382,26 +382,30 @@ export function TestInterface({ initialState, studentName }: Props) {
     setShowSubmitConfirm(false);
     setPhase("submitting");
 
-    // Flush any pending debounced saves.
-    Object.entries(saveTimeoutRef.current).forEach(([qid, t]) => {
-      clearTimeout(t);
-      const a = answers[qid];
-      if (!a) return;
-      fetch(`/api/attempts/${state.attempt.id}/answer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId: qid,
-          response: a.response,
-          isMarkedForReview: a.isMarkedForReview,
-          eliminatedChoices: a.eliminatedChoices,
-          timeSpent: a.timeSpent,
-        }),
-        keepalive: true,
-      }).catch(() => {});
-    });
-
     try {
+      // Flush and await every pending debounced save before scoring. Fire-and-forget
+      // here creates a race where submit can read the old answer set from Postgres.
+      const pendingSaves = Object.entries(saveTimeoutRef.current).map(async ([qid, t]) => {
+        clearTimeout(t);
+        delete saveTimeoutRef.current[qid];
+        const a = answers[qid];
+        if (!a) return;
+        const saveResponse = await fetch(`/api/attempts/${state.attempt.id}/answer`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            questionId: qid,
+            response: a.response,
+            isMarkedForReview: a.isMarkedForReview,
+            eliminatedChoices: a.eliminatedChoices,
+            timeSpent: a.timeSpent,
+          }),
+          keepalive: true,
+        });
+        if (!saveResponse.ok) throw new Error("Failed to save an answer before submission");
+      });
+      await Promise.all(pendingSaves);
+
       const res = await fetch(`/api/attempts/${state.attempt.id}/submit-module`, {
         method: "POST",
       });
@@ -735,6 +739,7 @@ function TopBar({
   const critical = remainingSeconds <= 60 && remainingSeconds > 0;
   const mm = Math.floor(remainingSeconds / 60);
   const ss = String(remainingSeconds % 60).padStart(2, "0");
+  const criticalSeconds = String(remainingSeconds).padStart(2, "0");
 
   return (
     <header
@@ -780,7 +785,7 @@ function TopBar({
             !critical && !timerHidden && !low && "text-neutral-900",
           )}
         >
-          {timerHidden ? "Hidden" : critical ? `:${ss}` : `${mm}:${ss}`}
+          {timerHidden ? "Hidden" : critical ? `:${criticalSeconds}` : `${mm}:${ss}`}
         </div>
         <button
           type="button"

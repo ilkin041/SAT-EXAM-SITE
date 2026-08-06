@@ -233,11 +233,19 @@ export async function loadAttemptState(
   const isOnBreak = attempt.moduleStartedAt === null && attempt.breakStartedAt !== null;
 
   const { test: sectionTest, ...sectionFields } = currentModule.section;
+  // `currentModule` was loaded with full Question rows for server-side assembly.
+  // Never return its relation fields: they contain answer keys and explanations.
+  const moduleFields: Module = {
+    id: currentModule.id,
+    sectionId: currentModule.sectionId,
+    moduleNumber: currentModule.moduleNumber,
+    difficulty: currentModule.difficulty,
+  };
   return {
     attempt,
     test: sectionTest,
     section: sectionFields,
-    module: currentModule,
+    module: moduleFields,
     questions: moduleQuestions.map((q, i) => ({
       id: q.id,
       order: i + 1, // display position within the module
