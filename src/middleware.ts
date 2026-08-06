@@ -34,6 +34,8 @@ const PUBLIC_PREFIXES = [
   "/results/",
   "/api/tests/",
   "/api/attempts/",
+  // Cron handlers authenticate their own Vercel bearer token.
+  "/api/cron/",
 ];
 
 function isPublic(pathname: string): boolean {
