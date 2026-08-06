@@ -20,7 +20,7 @@ export async function StudentNav() {
           href="/dashboard"
           className="flex items-center gap-2.5 text-sm font-bold text-foreground transition-all duration-150 hover:text-primary active:scale-[0.98]"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
             <GraduationCap className="h-5 w-5" aria-hidden />
           </span>
           <span className="tracking-tight animate-fade-in">SAT Practice</span>

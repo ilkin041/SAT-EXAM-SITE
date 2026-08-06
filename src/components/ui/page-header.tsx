@@ -9,7 +9,7 @@ interface PageHeaderProps {
 }
 
 /**
- * Standard page header — title on the left with a decorative gradient
+ * Standard page header — title on the left with a decorative solid
  * accent line, optional action buttons on the right. Stacks vertically
  * on mobile.
  */
@@ -28,11 +28,9 @@ export function PageHeader({ title, description, actions, className }: PageHeade
         {description && (
           <p className="mt-2 text-sm text-muted-foreground">{description}</p>
         )}
-        {/* Decorative gradient accent line */}
-        <div
-          className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-primary to-primary/40"
-          aria-hidden
-        />
+        {/* Decorative accent line — solid, so the header costs no gradient
+            budget on the 10 routes that render it. */}
+        <div className="mt-3 h-1 w-12 rounded-full bg-primary" aria-hidden />
       </div>
       {actions && (
         <div className="flex flex-wrap items-center gap-2">{actions}</div>

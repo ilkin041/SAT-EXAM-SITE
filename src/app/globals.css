@@ -27,6 +27,9 @@
 
     /* Brand anchor — deep navy for nav bars & anchoring surfaces */
     --brand-navy: 224 55% 16%;
+    /* Lifted navy — the midpoint of the admin bar's single sanctioned
+       gradient. Exists so that bar needs no raw hex. */
+    --brand-navy-light: 223 40% 24%;
 
     /* Accent — vibrant for CTAs & highlights */
     --accent-pop: 250 85% 64%;        /* electric violet for key actions */
@@ -93,6 +96,7 @@
     --primary-foreground: 224 45% 6%;
 
     --brand-navy: 224 50% 10%;
+    --brand-navy-light: 223 38% 17%;
 
     --accent-pop: 250 80% 72%;
     --accent-warm: 25 90% 60%;

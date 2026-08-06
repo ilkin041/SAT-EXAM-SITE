@@ -71,6 +71,8 @@ const config: Config = {
         // every button on the page.
         brand: {
           navy: "hsl(var(--brand-navy))",
+          // Midpoint of the admin bar gradient. Only `AdminNav` should use it.
+          "navy-light": "hsl(var(--brand-navy-light))",
         },
       },
       borderRadius: {

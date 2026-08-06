@@ -61,8 +61,8 @@ Every rule is `error` or `off`, never `warn`, so `--max-warnings=0` keeps the ra
 suppression must name the task that removes it: `// TODO(T4.1): …` above the
 `// eslint-disable-next-line`.
 
-Current debt for the design rules: **8 inline suppressions in 8 files** — T1.2 (StatCard shimmer),
-T1.3 (two `SELECT_CLS`), T4.1 (the auth dot lattice, 4×), T9.6 (`admin-nav` hex) — plus two
+Current debt for the design rules: **7 inline suppressions in 7 files** — T1.2 (StatCard shimmer),
+T1.3 (two `SELECT_CLS`), T4.1 (the auth dot lattice, 4×) — plus two
 file-scoped overrides in `.eslintrc.js` for T6.1 (`test-interface.tsx` hook deps) and T10.2
 (`review-client.tsx` `<img>`), both used because an inline comment there is not possible or not
 allowed. It only goes down.
@@ -106,7 +106,8 @@ allowed. It only goes down.
 
 ### Gradient budget — one gradient element per viewport
 
-17 of 30 routes currently violate this. `/dashboard` has 6 above the fold, `/` has 4.
+8 of 30 routes still violate this (was 17 before T0.6 fixed shared chrome). Per-route before/after
+counts are in `docs/gradient-audit.md`. `/dashboard` has 6, `/` has 5 — both owned by T1.8.
 
 | Token | Reserved for |
 |---|---|
@@ -118,8 +119,8 @@ allowed. It only goes down.
 | `success` (emerald) | Correct, completed, mastered |
 | `destructive` | Incorrect, destructive actions, offline |
 
-The cheapest fixes are in shared chrome, not pages: `AdminNav` carries 3 gradients onto all 15 admin
-routes; the logo mark and `UserMenu` avatar carry 2 onto every student route.
+Shared chrome is already clean (T0.6): `AdminNav` is down to its one navy bar, and `StudentNav`,
+`UserMenu` and `PageHeader` carry none. What is left is page-level and belongs to T1.8.
 
 ### Numbers are mono — TARGET (T1.1)
 
@@ -163,9 +164,9 @@ No raw hex or `rgb()`/`hsla()` in `.tsx`. No `style={{ color }}`.
 four hardcoded colours (`#f4f5f7`, `#1a237e`, `#121212`, `#1a1a1a`) are correct. Lint rules must
 exempt that directory.
 
-Known violations to fix elsewhere: `admin-nav.tsx:20` (`via-[#1e305e]`), the four auth pages'
-`rgba(255,255,255,0.8)` dot lattice (same code copy-pasted 4×), `stat-card.tsx:52`
-(`hsla(228,60%,50%,0.03)`).
+Known violations to fix elsewhere: the four auth pages' `rgba(255,255,255,0.8)` dot lattice (same
+code copy-pasted 4×), `stat-card.tsx:52` (`hsla(228,60%,50%,0.03)`). The `admin-nav.tsx` hex is
+gone — T0.6 replaced it with `--brand-navy-light`.
 
 ---
 
