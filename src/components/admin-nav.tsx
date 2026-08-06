@@ -2,7 +2,7 @@ import { Shield } from "lucide-react";
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { AdminNavLinks } from "@/components/admin-nav-links";
-import { DarkModeToggle } from "@/components/dark-mode-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface Props {
   email: string;
@@ -38,7 +38,7 @@ export function AdminNav({ email }: Props) {
             </span>
             <span className="text-xs text-white/70 font-medium">{email}</span>
           </div>
-          <DarkModeToggle />
+          <ThemeToggle tone="inverted" />
           <form
             action={async () => {
               "use server";

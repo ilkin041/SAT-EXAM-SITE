@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import { Providers } from "./providers";
+import { ThemeScript } from "@/components/theme-script";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -19,6 +20,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={plusJakarta.variable} suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <Providers>{children}</Providers>
       </body>

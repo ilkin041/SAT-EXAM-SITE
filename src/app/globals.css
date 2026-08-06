@@ -11,6 +11,10 @@
  * ========================================================================= */
 @layer base {
   :root {
+    /* Tells the UA which palette to use for scrollbars and native controls,
+       so they match the theme the blocking <ThemeScript /> picked. */
+    color-scheme: light;
+
     /* Surfaces */
     --background: 220 20% 97%;         /* page bg — soft cool off-white */
     --foreground: 224 50% 10%;         /* primary text — rich near-black */
@@ -78,6 +82,8 @@
   }
 
   .dark {
+    color-scheme: dark;
+
     --background: 224 45% 6%;          /* deep blue-tinted black */
     --foreground: 220 25% 93%;
     --card: 224 40% 9%;                /* blue-tinted dark card */

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { auth } from "@/auth";
-import { DarkModeToggle } from "@/components/dark-mode-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 
 /**
@@ -26,7 +26,7 @@ export async function StudentNav() {
           <span className="tracking-tight animate-fade-in">SAT Practice</span>
         </Link>
         <div className="flex items-center gap-2">
-          <DarkModeToggle />
+          <ThemeToggle />
           {user ? (
             <UserMenu name={user.name ?? null} email={user.email ?? null} />
           ) : (
