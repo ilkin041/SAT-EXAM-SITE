@@ -19,12 +19,13 @@ import { StatCard } from "@/components/ui/stat-card";
 import {
   computeDifficultyBreakdown,
   computeDomainBreakdown,
+  computeAttemptRoutes,
   computeRawScores,
   computeScaledScores,
   computeTimeStats,
   formatDuration,
+  getScoreFidelity,
   type DifficultyKey,
-  type ScoringTable,
 } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,7 @@ export default async function ResultsPage({
   const attempt = await prisma.testAttempt.findUnique({
     where: { id: attemptId },
     include: {
-      test: { select: { title: true, isPublic: true, scoringTable: true } },
+      test: { select: { title: true, isPublic: true } },
       moduleResults: {
         include: {
           module: {
@@ -89,11 +90,14 @@ export default async function ResultsPage({
     sectionType: r.module.section.type,
     correctCount: r.correctCount,
     totalCount: r.totalCount,
+    moduleId: r.moduleId,
+    routedTo: r.routedTo,
+    moduleNumber: r.module.moduleNumber,
+    difficulty: r.module.difficulty,
   }));
   const raw = computeRawScores(moduleResults);
-
-  const scoringTable = (attempt.test.scoringTable as ScoringTable | null) ?? null;
-  const scaled = computeScaledScores(raw, scoringTable);
+  const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
+  const scoreFidelity = getScoreFidelity(raw);
 
   const domainBreakdown = computeDomainBreakdown(
     attempt.answers.flatMap((a) => {
@@ -147,7 +151,16 @@ export default async function ResultsPage({
         </div>
       </header>
 
-      {/* ---------- Score Hero Section ---------- */}
+      {scoreFidelity === "INCOMPLETE" ? (
+        <section className="mb-10 rounded-2xl border border-amber-500/30 bg-amber-50/60 p-6 text-center dark:bg-amber-950/20">
+          <h2 className="text-lg font-bold text-foreground">No complete SAT score available</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This attempt does not contain scored results for both sections. Raw module
+            performance remains available to administrators, but a 400–1600 total would
+            be misleading.
+          </p>
+        </section>
+      ) : (
       <section className="relative overflow-hidden rounded-3xl bg-gradient-hero border border-border/50 p-8 mb-10 shadow-sm flex flex-col items-center">
         {/* Blurred ambient background spots */}
         <div className="absolute -left-16 -top-16 h-36 w-36 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
@@ -155,7 +168,7 @@ export default async function ResultsPage({
 
         <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold bg-primary/10 text-primary mb-6">
           <Award className="h-4 w-4" />
-          Overall Performance
+          {scoreFidelity === "ESTIMATE" ? "Estimated Performance" : "Overall Performance"}
         </span>
 
         {/* Dynamic Pure SVG Circle Gauge */}
@@ -187,6 +200,7 @@ export default async function ResultsPage({
           </div>
         </div>
 
+        {scoreFidelity === "FULL_LENGTH" ? (
         <div className="mt-6 flex flex-col items-center">
           <span className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-4 py-1 text-xs font-bold border shadow-xs transition-colors",
@@ -195,6 +209,12 @@ export default async function ResultsPage({
             {tierLabel(scaled.total / 1600)}
           </span>
         </div>
+        ) : (
+          <p className="mt-6 max-w-xl rounded-xl border border-amber-500/25 bg-amber-50/70 px-4 py-3 text-center text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+            Estimate from a short test. Proportional scaling has fewer score points than
+            a full 54-question R&amp;W and 44-question Math test, so no performance tier is assigned.
+          </p>
+        )}
 
         <div className="mt-8 grid gap-4 w-full sm:grid-cols-2">
           <SectionScore
@@ -213,6 +233,7 @@ export default async function ResultsPage({
           />
         </div>
       </section>
+      )}
 
       {/* ---------- Domain breakdown ---------- */}
       <section className="mb-10">

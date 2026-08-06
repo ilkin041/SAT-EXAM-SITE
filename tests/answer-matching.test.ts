@@ -18,7 +18,7 @@ describe("normalizeSPR", () => {
     expect(normalizeSPR("+4")).toBe("4");
   });
 
-  it("keeps leading-zero-less decimals as written", () => {
+  it("keeps readable decimal forms during string normalization", () => {
     expect(normalizeSPR(".5")).toBe(".5");
     expect(normalizeSPR("0.5")).toBe("0.5");
   });
@@ -30,9 +30,30 @@ describe("normalizeSPR", () => {
 
 describe("sprMatches", () => {
   it("matches across equivalent decimal forms", () => {
-    expect(sprMatches("0.5", ["1/2", "0.5"])).toBe(true);
+    expect(sprMatches("0.5", ["1/2"])).toBe(true);
     expect(sprMatches("0.50", ["1/2", "0.5"])).toBe(true);
-    expect(sprMatches(".5", ["1/2", ".5"])).toBe(true);
+    expect(sprMatches(".5", ["0.5"])).toBe(true);
+  });
+
+  it("matches mixed numbers, improper fractions, and decimals", () => {
+    expect(sprMatches("1 1/2", ["3/2"])).toBe(true);
+    expect(sprMatches("3/2", ["1.5"])).toBe(true);
+    expect(sprMatches("1.5", ["1 1/2"])).toBe(true);
+    expect(sprMatches("-1 1/2", ["-3/2"])).toBe(true);
+    expect(normalizeSPR("1 1/2")).toBe("3/2");
+  });
+
+  it("matches percentages to their numeric decimal value", () => {
+    expect(sprMatches("50%", ["0.5"])).toBe(true);
+    expect(sprMatches("12.5%", ["1/8"])).toBe(true);
+  });
+
+  it("accepts Bluebook-style rounding or truncation of non-terminating fractions", () => {
+    expect(sprMatches(".6666", ["2/3"])).toBe(true);
+    expect(sprMatches(".6667", ["2/3"])).toBe(true);
+    expect(sprMatches("0.666", ["2/3"])).toBe(true);
+    expect(sprMatches("0.667", ["2/3"])).toBe(true);
+    expect(sprMatches(".66", ["2/3"])).toBe(false);
   });
 
   it("matches a fraction with whitespace", () => {

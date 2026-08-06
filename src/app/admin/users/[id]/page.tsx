@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import {
+  computeAttemptRoutes,
   computeRawScores,
   computeScaledScores,
-  type ScoringTable,
+  getScoreFidelity,
 } from "@/lib/scoring";
 
 export const metadata = { title: "User detail — Admin" };
@@ -27,7 +28,7 @@ export default async function UserDetailPage({
         orderBy: { startedAt: "desc" },
         take: 20,
         include: {
-          test: { select: { title: true, scoringTable: true } },
+          test: { select: { title: true } },
           moduleResults: {
             include: {
               module: { include: { section: { select: { type: true } } } },
@@ -118,12 +119,14 @@ export default async function UserDetailPage({
                     sectionType: r.module.section.type,
                     correctCount: r.correctCount,
                     totalCount: r.totalCount,
+                    moduleId: r.moduleId,
+                    routedTo: r.routedTo,
+                    moduleNumber: r.module.moduleNumber,
+                    difficulty: r.module.difficulty,
                   }));
                   const raw = computeRawScores(moduleResults);
-                  const scaled = computeScaledScores(
-                    raw,
-                    (a.test.scoringTable as ScoringTable | null) ?? null,
-                  );
+                  const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
+                  const scoreFidelity = getScoreFidelity(raw);
                   const isDone = a.status === "COMPLETED";
                   return (
                     <tr key={a.id} className="transition-colors hover:bg-accent/40">
@@ -148,8 +151,10 @@ export default async function UserDetailPage({
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
-                        {isDone ? (
-                          <span className="font-semibold">{scaled.total}</span>
+                        {isDone && scoreFidelity !== "INCOMPLETE" ? (
+                          <span className="font-semibold">
+                            {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
+                          </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}

@@ -3,11 +3,14 @@ import {
   scaleScore,
   computeRawScores,
   computeScaledScores,
+  computeAttemptRoutes,
+  getScoreFidelity,
   computeDomainBreakdown,
   DEFAULT_RW_TABLE,
   DEFAULT_MATH_TABLE,
   SCALED_MIN,
   SCALED_MAX,
+  EASY_ROUTE_CAP,
 } from "@/lib/scoring";
 
 describe("scaleScore", () => {
@@ -98,17 +101,14 @@ describe("computeScaledScores", () => {
     expect(scaled.math).toBe(DEFAULT_MATH_TABLE[22]);
   });
 
-  it("uses per-section tables when provided", () => {
+  it("caps only sections that were served an EASY Module 2", () => {
     const scaled = computeScaledScores(
-      { readingWriting: { correct: 2, total: 4 }, math: { correct: 4, total: 4 } },
-      {
-        readingWriting: [200, 300, 500, 700, 800],
-        math: [200, 250, 500, 750, 800],
-      },
+      { readingWriting: { correct: 54, total: 54 }, math: { correct: 44, total: 44 } },
+      { readingWriting: "EASY", math: "HARD" },
     );
-    expect(scaled.readingWriting).toBe(500);
+    expect(scaled.readingWriting).toBe(EASY_ROUTE_CAP);
     expect(scaled.math).toBe(800);
-    expect(scaled.total).toBe(1300);
+    expect(scaled.total).toBe(EASY_ROUTE_CAP + 800);
   });
 
   it("ranges 400–1600 across the extremes", () => {
@@ -122,6 +122,67 @@ describe("computeScaledScores", () => {
     });
     expect(zero.total).toBe(400);
     expect(perfect.total).toBe(1600);
+  });
+});
+
+describe("score fidelity and adaptive routes", () => {
+  it("does not classify a one-section attempt as a complete score", () => {
+    expect(
+      getScoreFidelity({
+        readingWriting: { correct: 45, total: 54 },
+        math: { correct: 0, total: 0 },
+      }),
+    ).toBe("INCOMPLETE");
+  });
+
+  it("labels short tests as estimates and full SAT counts as full length", () => {
+    expect(
+      getScoreFidelity({
+        readingWriting: { correct: 8, total: 10 },
+        math: { correct: 8, total: 10 },
+      }),
+    ).toBe("ESTIMATE");
+    expect(
+      getScoreFidelity({
+        readingWriting: { correct: 40, total: 54 },
+        math: { correct: 35, total: 44 },
+      }),
+    ).toBe("FULL_LENGTH");
+  });
+
+  it("resolves routedTo to the Module 2 result that was actually served", () => {
+    expect(
+      computeAttemptRoutes([
+        {
+          moduleId: "rw1",
+          routedTo: "rw2",
+          sectionType: "READING_WRITING",
+          moduleNumber: 1,
+          difficulty: "MIXED",
+        },
+        {
+          moduleId: "rw2",
+          routedTo: null,
+          sectionType: "READING_WRITING",
+          moduleNumber: 2,
+          difficulty: "EASY",
+        },
+        {
+          moduleId: "m1",
+          routedTo: "m2",
+          sectionType: "MATH",
+          moduleNumber: 1,
+          difficulty: "MIXED",
+        },
+        {
+          moduleId: "m2",
+          routedTo: null,
+          sectionType: "MATH",
+          moduleNumber: 2,
+          difficulty: "HARD",
+        },
+      ]),
+    ).toEqual({ readingWriting: "EASY", math: "HARD" });
   });
 });
 

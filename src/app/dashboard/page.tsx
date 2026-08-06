@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
+  computeAttemptRoutes,
   computeRawScores,
   computeScaledScores,
-  type ScoringTable,
+  getScoreFidelity,
 } from "@/lib/scoring";
 
 export const metadata = { title: "Dashboard — SAT Practice" };
@@ -42,7 +43,7 @@ export default async function DashboardPage() {
       orderBy: { startedAt: "desc" },
       take: 10,
       include: {
-        test: { select: { title: true, scoringTable: true } },
+        test: { select: { title: true } },
         moduleResults: {
           include: { module: { include: { section: { select: { type: true } } } } },
         },
@@ -65,9 +66,8 @@ export default async function DashboardPage() {
   const displayName = user.name?.trim() || user.email?.split("@")[0] || "there";
 
   // Pre-calculate completed attempts for stats
-  const completedAttemptsData = attempts
-    .filter((a) => a.status === "COMPLETED")
-    .map((a) => {
+  const completedAttempts = attempts.filter((a) => a.status === "COMPLETED");
+  const completedAttemptsData = completedAttempts.flatMap((a) => {
       const liveResults = a.moduleResults.filter(
         (r) => r.module && r.module.section,
       );
@@ -75,20 +75,21 @@ export default async function DashboardPage() {
         sectionType: r.module.section.type,
         correctCount: r.correctCount,
         totalCount: r.totalCount,
+        moduleId: r.moduleId,
+        routedTo: r.routedTo,
+        moduleNumber: r.module.moduleNumber,
+        difficulty: r.module.difficulty,
       }));
       const raw = computeRawScores(moduleResults);
-      const scaled = computeScaledScores(
-        raw,
-        (a.test.scoringTable as ScoringTable | null) ?? null,
-      );
-      return scaled.total;
+      if (getScoreFidelity(raw) !== "FULL_LENGTH") return [];
+      return [computeScaledScores(raw, computeAttemptRoutes(moduleResults)).total];
     });
 
-  const completedCount = completedAttemptsData.length;
-  const avgScore = completedCount > 0
-    ? Math.round(completedAttemptsData.reduce((sum, s) => sum + s, 0) / completedCount)
+  const completedCount = completedAttempts.length;
+  const avgScore = completedAttemptsData.length > 0
+    ? Math.round(completedAttemptsData.reduce((sum, s) => sum + s, 0) / completedAttemptsData.length)
     : null;
-  const bestScore = completedCount > 0
+  const bestScore = completedAttemptsData.length > 0
     ? Math.max(...completedAttemptsData)
     : null;
 
@@ -236,12 +237,14 @@ export default async function DashboardPage() {
                         sectionType: r.module.section.type,
                         correctCount: r.correctCount,
                         totalCount: r.totalCount,
+                        moduleId: r.moduleId,
+                        routedTo: r.routedTo,
+                        moduleNumber: r.module.moduleNumber,
+                        difficulty: r.module.difficulty,
                       }));
                       const raw = computeRawScores(moduleResults);
-                      const scaled = computeScaledScores(
-                        raw,
-                        (a.test.scoringTable as ScoringTable | null) ?? null,
-                      );
+                      const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
+                      const scoreFidelity = getScoreFidelity(raw);
                       const isDone = a.status === "COMPLETED";
                       return (
                         <tr key={a.id} className="transition-colors hover:bg-muted/30">
@@ -267,9 +270,9 @@ export default async function DashboardPage() {
                             </Badge>
                           </td>
                           <td className="px-6 py-4.5 text-center tabular-nums">
-                            {isDone ? (
+                            {isDone && scoreFidelity !== "INCOMPLETE" ? (
                               <span className="inline-flex items-center justify-center font-extrabold px-3 py-1 rounded-full bg-primary/10 text-primary text-xs border border-primary/20 shadow-xs">
-                                {scaled.total}
+                                {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
                               </span>
                             ) : (
                               <span className="text-muted-foreground font-medium">—</span>

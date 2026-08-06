@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
 import {
+  computeAttemptRoutes,
   computeRawScores,
   computeScaledScores,
-  type ScoringTable,
+  getScoreFidelity,
 } from "@/lib/scoring";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
@@ -16,7 +19,7 @@ export async function GET() {
       orderBy: { completedAt: "desc" },
       include: {
         user: { select: { email: true, name: true } },
-        test: { select: { title: true, scoringTable: true } },
+        test: { select: { title: true } },
         moduleResults: {
           include: {
             module: { include: { section: { select: { type: true } } } },
@@ -33,6 +36,7 @@ export async function GET() {
       "Total Score",
       "Reading & Writing Score",
       "Math Score",
+      "Score Fidelity",
     ];
 
     const rows = attempts.map((a) => {
@@ -43,21 +47,25 @@ export async function GET() {
         sectionType: r.module.section.type,
         correctCount: r.correctCount,
         totalCount: r.totalCount,
+        moduleId: r.moduleId,
+        routedTo: r.routedTo,
+        moduleNumber: r.module.moduleNumber,
+        difficulty: r.module.difficulty,
       }));
       const raw = computeRawScores(moduleResults);
-      const scaled = computeScaledScores(
-        raw,
-        (a.test.scoringTable as ScoringTable | null) ?? null,
-      );
+      const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
+      const scoreFidelity = getScoreFidelity(raw);
+      const hasScore = scoreFidelity !== "INCOMPLETE";
 
       return [
         a.user?.name ?? "anonymous",
         a.user?.email ?? "",
         a.test.title,
         a.completedAt ? a.completedAt.toISOString() : "",
-        scaled.total.toString(),
-        scaled.readingWriting.toString(),
-        scaled.math.toString(),
+        hasScore ? scaled.total.toString() : "",
+        hasScore ? scaled.readingWriting.toString() : "",
+        hasScore ? scaled.math.toString() : "",
+        scoreFidelity,
       ];
     });
 

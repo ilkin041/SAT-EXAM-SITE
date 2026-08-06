@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Activity, Search, Download } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
+  computeAttemptRoutes,
   computeRawScores,
   computeScaledScores,
-  type ScoringTable,
+  getScoreFidelity,
 } from "@/lib/scoring";
 import type { Prisma, AttemptStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,7 @@ export default async function AdminAttemptsPage({
       skip: (page - 1) * PAGE_SIZE,
       include: {
         user: { select: { email: true, name: true } },
-        test: { select: { id: true, title: true, scoringTable: true } },
+        test: { select: { id: true, title: true } },
         moduleResults: {
           include: { module: { include: { section: { select: { type: true } } } } },
         },
@@ -87,13 +88,14 @@ export default async function AdminAttemptsPage({
       sectionType: r.module.section.type,
       correctCount: r.correctCount,
       totalCount: r.totalCount,
+      moduleId: r.moduleId,
+      routedTo: r.routedTo,
+      moduleNumber: r.module.moduleNumber,
+      difficulty: r.module.difficulty,
     }));
     const raw = computeRawScores(moduleResults);
-    const scaled = computeScaledScores(
-      raw,
-      (a.test.scoringTable as ScoringTable | null) ?? null,
-    );
-    return { attempt: a, raw, scaled };
+    const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
+    return { attempt: a, raw, scaled, scoreFidelity: getScoreFidelity(raw) };
   });
 
   const qs = (overrides: Record<string, string | undefined>) => {
@@ -185,7 +187,7 @@ return (
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {rows.map(({ attempt: a, scaled }) => (
+              {rows.map(({ attempt: a, scaled, scoreFidelity }) => (
                 <tr key={a.id} className="transition-colors hover:bg-muted/30">
                   <td className="px-6 py-4">
                     <Link
@@ -205,17 +207,21 @@ return (
                     <StatusPill status={a.status} />
                   </td>
                   <td className="px-6 py-4 text-center font-extrabold text-foreground tabular-nums">
-                    {a.status === "COMPLETED" ? (
+                    {a.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE" ? (
                       <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs border border-primary/20 shadow-xs font-extrabold">
-                        {scaled.total}
+                        {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
                       </span>
                     ) : "—"}
                   </td>
                   <td className="px-6 py-4 text-center font-semibold text-muted-foreground tabular-nums">
-                    {a.status === "COMPLETED" ? scaled.readingWriting : "—"}
+                    {a.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE"
+                      ? scaled.readingWriting
+                      : "—"}
                   </td>
                   <td className="px-6 py-4 text-center font-semibold text-muted-foreground tabular-nums">
-                    {a.status === "COMPLETED" ? scaled.math : "—"}
+                    {a.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE"
+                      ? scaled.math
+                      : "—"}
                   </td>
                   <td className="px-6 py-4 text-xs text-muted-foreground">
                     {a.startedAt.toLocaleString(undefined, {

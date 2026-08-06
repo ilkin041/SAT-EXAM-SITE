@@ -189,7 +189,6 @@ export async function duplicateTest(input: { testId: string; newTitle: string })
           mode: source.mode,
           isPublic: false,
           adaptiveThreshold: source.adaptiveThreshold,
-          scoringTable: source.scoringTable ?? undefined,
           createdById: admin.id,
         },
       });

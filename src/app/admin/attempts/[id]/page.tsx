@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import {
+  computeAttemptRoutes,
   computeRawScores,
   computeScaledScores,
-  type ScoringTable,
+  getScoreFidelity,
 } from "@/lib/scoring";
 
 export const metadata = { title: "Attempt — Admin" };
@@ -27,7 +28,7 @@ export default async function AttemptDetailPage({
     where: { id },
     include: {
       user: { select: { email: true, name: true } },
-      test: { select: { id: true, title: true, scoringTable: true } },
+      test: { select: { id: true, title: true } },
       moduleResults: {
         include: {
           module: { include: { section: { select: { type: true } } } },
@@ -42,12 +43,16 @@ export default async function AttemptDetailPage({
     sectionType: r.module.section.type,
     correctCount: r.correctCount,
     totalCount: r.totalCount,
+    moduleId: r.moduleId,
+    routedTo: r.routedTo,
+    moduleNumber: r.module.moduleNumber,
+    difficulty: r.module.difficulty,
   }));
   const raw = computeRawScores(moduleResults);
-  const scaled = computeScaledScores(
-    raw,
-    (attempt.test.scoringTable as ScoringTable | null) ?? null,
-  );
+  const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
+  const scoreFidelity = getScoreFidelity(raw);
+  const hasScore = attempt.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE";
+  const scoreHint = scoreFidelity === "ESTIMATE" ? "short-test estimate" : "400–1600";
 
   const events = ((attempt.focusEvents as FocusEvent[] | null) ?? []).slice().reverse();
   const blurs = events.filter((e) => e.type === "blur").length;
@@ -82,15 +87,19 @@ export default async function AttemptDetailPage({
       </header>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total scaled" value={scaled.total} hint="400–1600" />
+        <StatCard
+          label={scoreFidelity === "ESTIMATE" ? "Estimated total" : "Total scaled"}
+          value={hasScore ? scaled.total : "—"}
+          hint={hasScore ? scoreHint : "incomplete attempt"}
+        />
         <StatCard
           label="R&W"
-          value={scaled.readingWriting}
+          value={hasScore ? scaled.readingWriting : "—"}
           hint={`${raw.readingWriting.correct}/${raw.readingWriting.total} raw`}
         />
         <StatCard
           label="Math"
-          value={scaled.math}
+          value={hasScore ? scaled.math : "—"}
           hint={`${raw.math.correct}/${raw.math.total} raw`}
         />
       </section>

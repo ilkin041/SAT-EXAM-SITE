@@ -66,6 +66,11 @@ npm run db:backfill-question-hashes
 
 Question images are stored in Cloudinary; Vercel's ephemeral filesystem is not used.
 
+## Scoring
+
+The route cap, full-length thresholds, short-test estimate treatment, and limits
+of the practice conversion are documented in [docs/scoring-policy.md](docs/scoring-policy.md).
+
 ## Important security invariant
 
 `loadAttemptState` deliberately maps database questions to a small `ClientQuestion`

@@ -54,7 +54,6 @@ function state(overrides: Partial<AttemptState> = {}): AttemptState {
       mode: "LINEAR",
       isPublic: true,
       adaptiveThreshold: 0.6,
-      scoringTable: null,
       createdById: null,
       createdAt: new Date(NOW),
       updatedAt: new Date(NOW),

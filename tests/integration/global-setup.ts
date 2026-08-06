@@ -14,8 +14,13 @@ export default async function setup() {
     throw new Error("Integration database environment was not initialized");
   }
 
+  // DDL and teardown should bypass Neon PgBouncer. A pooled admin connection
+  // can retain Prisma's advisory lock or time out while dropping the schema.
+  const adminDatabaseUrl = new URL(baseDatabaseUrl);
+  adminDatabaseUrl.hostname = adminDatabaseUrl.hostname.replace("-pooler.", ".");
+
   const admin = new PrismaClient({
-    datasources: { db: { url: baseDatabaseUrl } },
+    datasources: { db: { url: adminDatabaseUrl.toString() } },
   });
 
   await admin.$executeRawUnsafe(`CREATE SCHEMA ${quotedIdentifier(schema)}`);

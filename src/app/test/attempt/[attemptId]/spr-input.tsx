@@ -66,8 +66,15 @@ export function SprInput({ value, onChange, placeholder }: Props) {
     <input
       ref={inputRef}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        const next = e.target.value;
+        const limit = next.startsWith("-") ? 6 : 5;
+        onChange(next.slice(0, limit));
+      }}
       inputMode="text"
+      maxLength={value.startsWith("-") ? 6 : 5}
+      aria-label="Student-produced response"
+      title="Up to 5 characters, or 6 including a negative sign"
       placeholder={placeholder}
       className={cn(
         "mt-2 w-64 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base",

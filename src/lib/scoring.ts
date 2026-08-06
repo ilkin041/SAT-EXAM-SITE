@@ -2,16 +2,12 @@
  * Scoring helpers for SAT-style tests.
  *
  *  - Raw score = number of correct answers in a section.
- *  - Scaled score = 200–800 per section, looked up from an admin-supplied
- *    table or, by default, from the embedded real Digital SAT conversion
- *    tables (54 R&W questions / 44 Math questions baseline).
+ *  - Scaled score = 200–800 per section, looked up from embedded practice-test
+ *    conversion tables (54 R&W / 44 Math baseline).
+ *  - An EASY adaptive Module 2 caps that section at 600.
  *  - Total = R&W scaled + Math scaled (400–1600).
  *
- * The scoring table on a Test is stored as JSON with this shape:
- *   { readingWriting?: number[]; math?: number[] }
- * Each array is indexed by raw score (so array length should be max + 1).
- *
- * When a table is used, the raw score is mapped proportionally onto the
+ * The raw score is mapped proportionally onto the
  * table's index range so that tests with a different question count than
  * the table baseline still yield sensible scores.
  *
@@ -19,13 +15,11 @@
  *   proportionalIdx = round(5/10 × 54) = 27 → scaled 570
  */
 
-export interface ScoringTable {
-  readingWriting?: number[];
-  math?: number[];
-}
-
 export const SCALED_MIN = 200;
 export const SCALED_MAX = 800;
+export const EASY_ROUTE_CAP = 600;
+export const FULL_LENGTH_RW_QUESTIONS = 54;
+export const FULL_LENGTH_MATH_QUESTIONS = 44;
 
 /**
  * Default Digital SAT Reading & Writing conversion table.
@@ -62,8 +56,7 @@ export const DEFAULT_MATH_TABLE: number[] = [
  *
  *   proportionalIdx = round(correct / max × (table.length − 1))
  *
- * This works correctly whether you're using the default 54- or 44-question
- * SAT table or a custom admin-supplied table sized to the test.
+ * This works with the 54-question R&W and 44-question Math baselines.
  *
  * Falls back to a linear 200–800 mapping if no table is provided.
  */
@@ -110,6 +103,28 @@ export interface AttemptScaledScores {
   total: number;
 }
 
+export interface AttemptRoutes {
+  readingWriting?: "EASY" | "MEDIUM" | "HARD" | "MIXED";
+  math?: "EASY" | "MEDIUM" | "HARD" | "MIXED";
+}
+
+export type ScoreFidelity = "INCOMPLETE" | "ESTIMATE" | "FULL_LENGTH";
+
+/**
+ * A SAT score needs results from both sections. Short tests can still show a
+ * proportional estimate, but must never be presented as a full-fidelity score.
+ */
+export function getScoreFidelity(raw: AttemptRawScores): ScoreFidelity {
+  if (raw.readingWriting.total <= 0 || raw.math.total <= 0) return "INCOMPLETE";
+  if (
+    raw.readingWriting.total !== FULL_LENGTH_RW_QUESTIONS ||
+    raw.math.total !== FULL_LENGTH_MATH_QUESTIONS
+  ) {
+    return "ESTIMATE";
+  }
+  return "FULL_LENGTH";
+}
+
 export interface DomainStat {
   domain: string;
   correct: number;
@@ -139,21 +154,49 @@ export function computeRawScores(
 }
 
 /**
- * Convert raw scores to scaled scores using the admin-supplied scoring table
- * (if present) or the built-in Digital SAT default tables.
- *
- * Admin table entries override the defaults on a per-section basis, so you
- * can supply a custom Math table while keeping the default R&W table, etc.
+ * Convert raw scores with the built-in practice-test tables, then apply the
+ * lower-module cap to any section that was served an EASY Module 2.
  */
 export function computeScaledScores(
   raw: AttemptRawScores,
-  table?: ScoringTable | null,
+  routes: AttemptRoutes = {},
 ): AttemptScaledScores {
-  const rwTable = table?.readingWriting ?? DEFAULT_RW_TABLE;
-  const mathTable = table?.math ?? DEFAULT_MATH_TABLE;
-  const rw = scaleScore(raw.readingWriting.correct, raw.readingWriting.total, rwTable);
-  const math = scaleScore(raw.math.correct, raw.math.total, mathTable);
+  let rw = scaleScore(
+    raw.readingWriting.correct,
+    raw.readingWriting.total,
+    DEFAULT_RW_TABLE,
+  );
+  let math = scaleScore(raw.math.correct, raw.math.total, DEFAULT_MATH_TABLE);
+  if (routes.readingWriting === "EASY") rw = Math.min(rw, EASY_ROUTE_CAP);
+  if (routes.math === "EASY") math = Math.min(math, EASY_ROUTE_CAP);
   return { readingWriting: rw, math, total: rw + math };
+}
+
+/** Resolve each routedTo capability to the Module 2 result actually served. */
+export function computeAttemptRoutes(
+  results: {
+    moduleId: string;
+    routedTo: string | null;
+    sectionType: "READING_WRITING" | "MATH";
+    moduleNumber: number;
+    difficulty: "EASY" | "MEDIUM" | "HARD" | "MIXED";
+  }[],
+): AttemptRoutes {
+  const routes: AttemptRoutes = {};
+  const byModuleId = new Map(results.map((result) => [result.moduleId, result]));
+  for (const result of results) {
+    if (!result.routedTo) continue;
+    const target = byModuleId.get(result.routedTo);
+    if (!target || target.moduleNumber !== 2 || target.sectionType !== result.sectionType) {
+      continue;
+    }
+    if (target.sectionType === "READING_WRITING") {
+      routes.readingWriting = target.difficulty;
+    } else {
+      routes.math = target.difficulty;
+    }
+  }
+  return routes;
 }
 
 // ---------- Difficulty breakdown ----------

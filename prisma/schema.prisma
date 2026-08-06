@@ -91,8 +91,6 @@ model Test {
   mode              TestMode @default(ADAPTIVE)
   isPublic          Boolean  @default(false)
   adaptiveThreshold Float    @default(0.6)
-  /// JSON lookup table for raw->scaled conversion, shape: { readingWriting: number[], math: number[] }
-  scoringTable      Json?
   createdById       String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
