@@ -22,6 +22,9 @@ interface SearchParams {
 }
 
 const PAGE_SIZE = 100;
+// TODO(T1.3): remove when the Select primitive lands and replaces the raw
+// <select> elements on this page.
+// eslint-disable-next-line sat/no-class-constants
 const SELECT_CLS =
   "h-10 rounded-xl border border-input/80 bg-card px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
 

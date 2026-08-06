@@ -9,6 +9,9 @@ import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = { title: "Users — Admin" };
 
+// TODO(T1.3): remove when the Select primitive lands and replaces the raw
+// <select> elements on this page.
+// eslint-disable-next-line sat/no-class-constants
 const SELECT_CLS =
   "h-10 rounded-md border border-input bg-card px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 

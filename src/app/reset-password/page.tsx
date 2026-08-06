@@ -14,6 +14,9 @@ export default function ResetPasswordPage() {
         <div
           className="absolute inset-0 opacity-10"
           style={{
+            // TODO(T4.1): remove with the auth-page rework. This dot lattice is
+            // copy-pasted across all four auth pages and hardcodes white.
+            // eslint-disable-next-line sat/no-inline-color-style, sat/no-raw-color
             backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)",
             backgroundSize: "24px 24px",
           }}

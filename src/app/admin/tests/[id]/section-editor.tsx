@@ -108,14 +108,12 @@ export function SectionEditor({ section, modules }: Props) {
       )}
 
       <div className="divide-y divide-border">
-        {modules.map((m, mIdx) => (
+        {modules.map((m) => (
           <ModuleBlock
             key={m.id}
             mod={m}
-            sectionLabel={sectionLabel}
             sectionType={section.type}
             onOpenPanel={() => setPanelModuleId(m.id)}
-            isLast={mIdx === modules.length - 1}
           />
         ))}
       </div>
@@ -140,16 +138,12 @@ export function SectionEditor({ section, modules }: Props) {
 
 function ModuleBlock({
   mod,
-  sectionLabel,
   sectionType,
   onOpenPanel,
-  isLast,
 }: {
   mod: ModuleRow;
-  sectionLabel: string;
   sectionType: "READING_WRITING" | "MATH";
   onOpenPanel: () => void;
-  isLast: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Highlighter } from "lucide-react";
 import { RichContent } from "@/components/rich-content";
-import { cn } from "@/lib/utils";
 
 export type AnnotationColor = "YELLOW" | "BLUE" | "PINK";
 
@@ -236,7 +235,7 @@ export function AnnotatedPassage({ passageHtml, attemptId, questionId }: Props) 
         ref={wrapperRef}
         onMouseUp={onMouseUp}
         onClick={onClick}
-        className="annotated-passage relative"
+        className="relative"
       >
         <RichContent html={passageHtml} />
 

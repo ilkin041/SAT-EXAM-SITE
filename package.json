@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint --no-cache --max-warnings=0",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:all": "npm test && npm run test:integration",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "analyze": "cross-env ANALYZE=true next build"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -49,19 +50,25 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.3.0",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/bcryptjs": "^2.4.6",
+    "@types/eslint": "^9.6.1",
     "@types/katex": "^0.16.7",
     "@types/node": "^20.17.10",
     "@types/react": "^18.3.13",
     "@types/react-dom": "^18.3.1",
     "@types/react-katex": "^3.0.4",
     "@types/sanitize-html": "^2.13.0",
+    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@typescript-eslint/parser": "^8.66.0",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.18",
+    "eslint-plugin-sat": "file:./eslint-rules",
     "jsdom": "^29.1.1",
     "postcss": "^8.4.49",
     "prisma": "^6.1.0",

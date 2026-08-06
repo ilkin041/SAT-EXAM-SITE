@@ -36,12 +36,36 @@ npm run build
 npx tsc --noEmit              # there is no `typecheck` script
 npx tsc --noUnusedLocals      # catches dead imports
 npm test                      # vitest, 70 tests
-npm run lint                  # TARGET — no ESLint config exists yet (T0.4 creates it)
+npm run lint                  # next lint --no-cache --max-warnings=0; must be clean
+npm run analyze               # ANALYZE=true next build -> .next/analyze/*.html
 npx prisma migrate dev --name <name>
 npx prisma studio
 ```
 
-No Playwright, no `test:e2e`, no bundle analyzer script yet.
+No Playwright, no `test:e2e` yet.
+
+### Lint guardrails
+
+`.eslintrc.js` + five local rules in `eslint-rules/` (plugin name `sat`) enforce the design policy
+below. Each is covered by `tests/eslint-rules.test.ts`.
+
+| Rule | Fails on |
+|---|---|
+| `sat/no-unresolved-tailwind-class` | A class that compiles to no CSS. Asks Tailwind's own JIT, so `py-4.5`, `bg-primary/8` and `dark:text-emerald-350` are caught; classes declared in `globals.css` are accepted |
+| `sat/no-raw-color` | Hex / `rgb()` / `hsla()` in `.tsx`. `hsl(var(--token))` passes. Off under `src/app/test/attempt/**` |
+| `sat/no-inline-color-style` | A colour property in `style={{ }}` — raw or computed in JS. Dynamic width/transform is untouched |
+| `sat/no-class-constants` | Module-level `*_CLS` / `*_CLASSES` string constants |
+| `sat/no-client-page` | `"use client"` in any `page.tsx` / `layout.tsx` |
+
+Every rule is `error` or `off`, never `warn`, so `--max-warnings=0` keeps the ratchet honest. A
+suppression must name the task that removes it: `// TODO(T4.1): …` above the
+`// eslint-disable-next-line`.
+
+Current debt for the design rules: **8 inline suppressions in 8 files** — T1.2 (StatCard shimmer),
+T1.3 (two `SELECT_CLS`), T4.1 (the auth dot lattice, 4×), T9.6 (`admin-nav` hex) — plus two
+file-scoped overrides in `.eslintrc.js` for T6.1 (`test-interface.tsx` hook deps) and T10.2
+(`review-client.tsx` `<img>`), both used because an inline comment there is not possible or not
+allowed. It only goes down.
 
 ---
 

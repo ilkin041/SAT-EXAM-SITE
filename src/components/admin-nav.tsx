@@ -17,6 +17,10 @@ interface Props {
  */
 export function AdminNav({ email }: Props) {
   return (
+    // TODO(T9.6): remove with the admin UI polish. `via-[#1e305e]` is a raw hex
+    // midpoint with no token behind it, and AdminNav carries this gradient onto
+    // all 15 admin routes.
+    // eslint-disable-next-line sat/no-raw-color
     <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-gradient-to-r from-brand-navy via-[#1e305e] to-brand-navy text-white shadow-md">
       <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-6">

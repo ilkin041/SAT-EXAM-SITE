@@ -8,7 +8,6 @@ import {
   getScoreFidelity,
 } from "@/lib/scoring";
 import type { Prisma, AttemptStatus } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
