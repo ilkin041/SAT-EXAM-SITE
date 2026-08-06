@@ -19,7 +19,10 @@ export const Input = React.forwardRef<
       "file:border-0 file:bg-transparent file:text-sm file:font-medium",
       "placeholder:text-muted-foreground/60",
       "hover:border-ring/40",
-      "focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-0",
+      // No `outline-none` here: the border swap plus a 20%-opacity ring is not
+      // a 3:1 indicator on its own, so the input keeps the global
+      // `:focus-visible` outline from globals.css and layers this underneath.
+      "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-0",
       "disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}

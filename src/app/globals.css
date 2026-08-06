@@ -144,9 +144,80 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Globally consistent focus rings (keyboard-only). */
+  /*
+   * Globally consistent focus rings (keyboard-only).
+   *
+   * `outline` rather than a box-shadow ring: an outline is never clipped by an
+   * ancestor's `overflow-hidden` and never competes with an element's own
+   * shadow. The 2px offset leaves a band of the underlying surface between the
+   * element and the ring, which is what keeps it readable on filled buttons
+   * and gradient cards — the same job `ring-offset-2 ring-offset-background`
+   * does for the primitives.
+   *
+   * Primitives that draw their own ring (Button, Input, UserMenu trigger) opt
+   * out with `focus-visible:outline-none`; utilities win over this base layer,
+   * so they are unaffected. Everything else — raw <button>, <a>, <select>,
+   * <textarea>, <summary>, and anything with tabindex — is covered here.
+   */
   :focus-visible {
-    outline: none;
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /*
+   * Saturated fills: the indigo ring falls below 3:1 against a primary/warm
+   * gradient or the navy admin bar, so descendants of those surfaces switch to
+   * white — the same colour their text already uses.
+   */
+  .bg-gradient-primary :focus-visible,
+  .bg-gradient-accent :focus-visible,
+  .bg-gradient-warm :focus-visible,
+  .bg-primary :focus-visible,
+  .bg-brand-navy :focus-visible,
+  .from-brand-navy :focus-visible,
+  .from-primary :focus-visible,
+  .from-indigo-500 :focus-visible {
+    outline-color: hsl(0 0% 100%);
+  }
+}
+
+/*
+ * Radix menu items manage keyboard focus with `data-highlighted` and set
+ * `outline-none` on themselves, so `:focus-visible` never fires. The highlight
+ * is a background swap alone, which is not a 3:1 indicator. Unlayered and
+ * placed after `@tailwind utilities` so it overrides that `outline-none`;
+ * the negative offset keeps the ring inside the menu's padding box.
+ */
+[data-highlighted] {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+
+/* =========================================================================
+ * Reduced motion — global kill switch
+ *
+ * `float`, `pulse-glow`, `gradient-shift`, `shimmer` and `timer-critical-pulse`
+ * are infinite loops. Everything decorative stops here; the states they signal
+ * are carried by colour and size instead (see `.animate-timer-critical`).
+ * ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /*
+   * `animated-gradient-bg` is sized 400% so it has room to pan. With the pan
+   * stopped it would freeze on one corner of the ramp; drop it back to a
+   * normal-sized static gradient instead.
+   */
+  .animated-gradient-bg,
+  .dark .animated-gradient-bg {
+    background-size: 100% 100% !important;
   }
 }
 
@@ -351,16 +422,47 @@
 .rich-content .katex-display { margin: 0.75em 0; }
 
 /*
- * Top-bar pulse used in the last minute of a module. Pulses the background
- * between the normal toolbar color and a saturated red so the timer is
- * impossible to miss without resorting to a full overlay.
+ * Top-bar treatment for the last minute of a module.
+ *
+ * The bar turns solid red and stays red — that is the signal, and it survives
+ * `prefers-reduced-motion` on its own. The pulse only darkens and lightens
+ * within the red, so it never returns to the toolbar grey; previously the
+ * keyframe spent half its cycle on #f4f5f7 while the timer text was white,
+ * which made the critical timer unreadable at the low point of every beat.
+ *
+ * (Hardcoded hex is intentional here: the Bluebook chrome ignores the theme.)
  */
 @keyframes timer-critical-pulse {
-  0%, 100% { background-color: #f4f5f7; }
-  50%      { background-color: #dc2626; }
+  0%, 100% { background-color: #dc2626; }
+  50%      { background-color: #991b1b; }
 }
 .animate-timer-critical {
+  background-color: #dc2626;
   animation: timer-critical-pulse 1s ease-in-out infinite;
+}
+
+/*
+ * The toolbar's own markup only recolours the section label and the timer for
+ * the critical state; the icon buttons and battery readout stay neutral-700,
+ * which was ~2.2:1 against the red. That was hidden while the bar spent half
+ * each cycle on grey — now that it is permanently red, recolour them here
+ * rather than editing the test interface.
+ */
+.animate-timer-critical,
+.animate-timer-critical .text-neutral-700,
+.animate-timer-critical .text-neutral-600,
+.animate-timer-critical .text-neutral-900 {
+  color: #fff;
+}
+
+/* …except controls that carry their own light fill, e.g. the Hide/Show pill. */
+.animate-timer-critical .bg-white {
+  color: #404040;
+}
+
+/* The ring on the red bar has to be white to clear 3:1. */
+.animate-timer-critical :focus-visible {
+  outline-color: #fff;
 }
 
 /*
