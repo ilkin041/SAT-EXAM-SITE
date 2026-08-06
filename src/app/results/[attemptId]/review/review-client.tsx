@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RichContent } from "@/components/rich-content";
+import { AnnotatedPassage } from "@/components/annotated-passage";
 import { ResizableSplit } from "@/components/resizable-split";
 import { formatDuration } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
@@ -167,9 +168,10 @@ export function ReviewClient({ attemptId, testTitle, items }: Props) {
           <ResizableSplit
             left={
               <div className="h-full overflow-y-auto px-5 py-5">
-                <RichContent
-                  html={item.passage}
-                  className="rich-content text-base leading-relaxed"
+                <AnnotatedPassage
+                  passageHtml={item.passage}
+                  attemptId={attemptId}
+                  questionId={item.questionId}
                 />
               </div>
             }

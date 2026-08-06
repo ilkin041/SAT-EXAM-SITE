@@ -238,6 +238,7 @@ model Answer {
 
   @@unique([attemptId, questionId])
   @@index([attemptId])
+  @@index([questionId])
 }
 
 /// Immutable grading data captured from the same Question row sent to the

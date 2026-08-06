@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Highlighter } from "lucide-react";
 import { RichContent } from "@/components/rich-content";
 import { cn } from "@/lib/utils";
 
@@ -223,27 +224,36 @@ export function AnnotatedPassage({ passageHtml, attemptId, questionId }: Props) 
   }
 
   return (
-    <div
-      ref={wrapperRef}
-      onMouseUp={onMouseUp}
-      onClick={onClick}
-      className="annotated-passage relative"
-    >
-      <RichContent html={passageHtml} />
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200/70 bg-blue-50/60 px-3 py-2 text-xs text-blue-800 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-200">
+        <span className="flex items-center gap-2">
+          <Highlighter className="h-4 w-4" aria-hidden />
+          Select passage text to highlight it or attach a note.
+        </span>
+        {annotations.length > 0 && <span className="font-bold tabular-nums">{annotations.length} saved</span>}
+      </div>
+      <div
+        ref={wrapperRef}
+        onMouseUp={onMouseUp}
+        onClick={onClick}
+        className="annotated-passage relative"
+      >
+        <RichContent html={passageHtml} />
 
-      {popup.open && (
-        <AnnotationPopup
-          x={popup.x}
-          y={popup.y}
-          onPick={(color) => void createAnnotation(color)}
-          onNote={() => {
-            const note = window.prompt("Add a note for this highlight:");
-            if (note === null) return;
-            void createAnnotation("YELLOW", note || null);
-          }}
-          onClose={clearSelectionAndPopup}
-        />
-      )}
+        {popup.open && (
+          <AnnotationPopup
+            x={popup.x}
+            y={popup.y}
+            onPick={(color) => void createAnnotation(color)}
+            onNote={() => {
+              const note = window.prompt("Add a note for this highlight:");
+              if (note === null) return;
+              void createAnnotation("YELLOW", note || null);
+            }}
+            onClose={clearSelectionAndPopup}
+          />
+        )}
+      </div>
     </div>
   );
 }

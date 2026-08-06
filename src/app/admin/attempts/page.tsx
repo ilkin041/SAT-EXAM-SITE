@@ -120,7 +120,7 @@ return (
         <Button asChild variant="secondary" size="sm" className="hover-lift active-press">
           <a href="/api/admin/export/attempts" download>
             <Download className="mr-1.5 h-4 w-4" />
-            Export CSV
+            Export question CSV
           </a>
         </Button>
       }

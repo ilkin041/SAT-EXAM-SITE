@@ -6,6 +6,8 @@ import { AdminResetPasswordModal } from "@/components/admin-reset-password-modal
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
+import { ScoreTrend } from "@/components/score-trend";
+import { computeAttemptScorePoint } from "@/lib/analytics";
 import {
   computeAttemptRoutes,
   computeRawScores,
@@ -43,6 +45,11 @@ export default async function UserDetailPage({
   const display = user.name || user.email;
   const totalAttempts = user.attempts.length;
   const completedAttempts = user.attempts.filter((a) => a.status === "COMPLETED").length;
+  const scorePoints = user.attempts
+    .filter((attempt) => attempt.status === "COMPLETED")
+    .map(computeAttemptScorePoint)
+    .filter((point): point is NonNullable<typeof point> => point !== null)
+    .filter((point) => point.fidelity === "FULL_LENGTH");
 
   return (
     <>
@@ -89,6 +96,10 @@ export default async function UserDetailPage({
           label="In progress"
           value={user.attempts.filter((a) => a.status === "IN_PROGRESS").length}
         />
+      </section>
+
+      <section className="mt-10">
+        <ScoreTrend points={scorePoints} admin />
       </section>
 
       {/* ----- Recent attempts ----- */}

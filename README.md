@@ -70,6 +70,8 @@ Question images are stored in Cloudinary; Vercel's ephemeral filesystem is not u
 
 The route cap, full-length thresholds, short-test estimate treatment, and limits
 of the practice conversion are documented in [docs/scoring-policy.md](docs/scoring-policy.md).
+Feature retention decisions for groups and annotations are recorded in
+[docs/feature-decisions.md](docs/feature-decisions.md).
 
 ## Important security invariant
 

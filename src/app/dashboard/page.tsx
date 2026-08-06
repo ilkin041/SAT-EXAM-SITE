@@ -7,6 +7,8 @@ import { TestCard } from "@/components/test-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ScoreTrend } from "@/components/score-trend";
+import { computeAttemptScorePoint } from "@/lib/analytics";
 import {
   computeAttemptRoutes,
   computeRawScores,
@@ -67,23 +69,11 @@ export default async function DashboardPage() {
 
   // Pre-calculate completed attempts for stats
   const completedAttempts = attempts.filter((a) => a.status === "COMPLETED");
-  const completedAttemptsData = completedAttempts.flatMap((a) => {
-      const liveResults = a.moduleResults.filter(
-        (r) => r.module && r.module.section,
-      );
-      const moduleResults = liveResults.map((r) => ({
-        sectionType: r.module.section.type,
-        correctCount: r.correctCount,
-        totalCount: r.totalCount,
-        moduleId: r.moduleId,
-        routedTo: r.routedTo,
-        moduleNumber: r.module.moduleNumber,
-        difficulty: r.module.difficulty,
-      }));
-      const raw = computeRawScores(moduleResults);
-      if (getScoreFidelity(raw) !== "FULL_LENGTH") return [];
-      return [computeScaledScores(raw, computeAttemptRoutes(moduleResults)).total];
-    });
+  const scorePoints = completedAttempts
+    .map(computeAttemptScorePoint)
+    .filter((point): point is NonNullable<typeof point> => point !== null);
+  const fullLengthPoints = scorePoints.filter((point) => point.fidelity === "FULL_LENGTH");
+  const completedAttemptsData = fullLengthPoints.map((point) => point.total);
 
   const completedCount = completedAttempts.length;
   const avgScore = completedAttemptsData.length > 0
@@ -161,6 +151,13 @@ export default async function DashboardPage() {
             </Button>
           )}
         </div>
+
+        <section className="mb-14">
+          <div className="mb-4 border-b border-border/40 pb-3">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">Progress over time</h2>
+          </div>
+          <ScoreTrend points={fullLengthPoints} />
+        </section>
 
         {/* ----- Available tests ----- */}
         <section className="mb-14">

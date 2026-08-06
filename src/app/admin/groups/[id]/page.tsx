@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpen, User } from "lucide-react";
+import { Activity, ArrowLeft, BookOpen, TrendingUp, User, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ScoreTrend } from "@/components/score-trend";
+import { StatCard } from "@/components/ui/stat-card";
+import { computeAttemptScorePoint } from "@/lib/analytics";
 import {
   addStudentToGroup,
   removeStudentFromGroup,
@@ -22,7 +25,22 @@ export default async function GroupDetailsPage({
   const group = await prisma.group.findUnique({
     where: { id },
     include: {
-      users: { orderBy: { email: "asc" } },
+      users: {
+        orderBy: { email: "asc" },
+        include: {
+          attempts: {
+            where: { status: "COMPLETED" },
+            orderBy: { completedAt: "desc" },
+            take: 20,
+            include: {
+              test: { select: { title: true } },
+              moduleResults: {
+                include: { module: { include: { section: { select: { type: true } } } } },
+              },
+            },
+          },
+        },
+      },
       tests: { orderBy: { title: "asc" } },
     },
   });
@@ -36,6 +54,27 @@ export default async function GroupDetailsPage({
 
   const unassignedTests = allTests.filter(
     (t) => !group.tests.some((gt) => gt.id === t.id)
+  );
+  const memberScores = new Map<string, number[]>();
+  const groupScorePoints = group.users.flatMap((member) => {
+    const points = member.attempts
+      .map(computeAttemptScorePoint)
+      .filter((point): point is NonNullable<typeof point> => point !== null)
+      .filter((point) => point.fidelity === "FULL_LENGTH");
+    memberScores.set(member.id, points.map((point) => point.total));
+    return points;
+  });
+  const groupAverage = groupScorePoints.length
+    ? Math.round(groupScorePoints.reduce((sum, point) => sum + point.total, 0) / groupScorePoints.length)
+    : null;
+  const activeStudents = group.users.filter((member) => member.attempts.length > 0).length;
+  const memberAverages = new Map(
+    [...memberScores].map(([memberId, scores]) => [
+      memberId,
+      scores.length
+        ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+        : null,
+    ]),
   );
 
   return (
@@ -54,6 +93,16 @@ export default async function GroupDetailsPage({
         title={group.name}
         description={group.description ?? "Manage students and tests for this group."}
       />
+
+      <section className="mb-8 grid gap-4 sm:grid-cols-3">
+        <StatCard label="Members" value={group.users.length} icon={Users} accentColor="blue" />
+        <StatCard label="Students with completions" value={activeStudents} icon={Activity} accentColor="emerald" />
+        <StatCard label="Full-length average" value={groupAverage ?? "—"} icon={TrendingUp} accentColor="violet" hint={`${groupScorePoints.length} scored attempts`} />
+      </section>
+
+      <section className="mb-8">
+        <ScoreTrend points={groupScorePoints} admin />
+      </section>
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* --- STUDENTS --- */}
@@ -86,6 +135,8 @@ export default async function GroupDetailsPage({
                 <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Name / Email</th>
+                    <th className="px-4 py-3 text-center font-semibold">Completed</th>
+                    <th className="px-4 py-3 text-center font-semibold">Avg.</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -96,6 +147,8 @@ export default async function GroupDetailsPage({
                         <div className="font-medium text-foreground">{u.name || "—"}</div>
                         <div className="text-xs text-muted-foreground">{u.email}</div>
                       </td>
+                      <td className="px-4 py-3 text-center tabular-nums">{u.attempts.length}</td>
+                      <td className="px-4 py-3 text-center font-semibold tabular-nums">{memberAverages.get(u.id) ?? "—"}</td>
                       <td className="px-4 py-3 text-right">
                         <form action={removeStudentFromGroup.bind(null, group.id, u.id)}>
                           <Button type="submit" variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive">
