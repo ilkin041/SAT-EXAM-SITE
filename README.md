@@ -8,7 +8,7 @@ The application includes:
 - a global question bank with cloning, bulk editing, JSON import, and duplicate detection;
 - adaptive and linear test assembly with reusable question assignments;
 - timed student attempts with server-authoritative deadlines;
-- SAT scoring, answer review, annotations, and AI explanations;
+- SAT scoring, answer review with authored explanations, and annotations;
 - groups, private-test access controls, and admin reporting.
 
 ## Local setup

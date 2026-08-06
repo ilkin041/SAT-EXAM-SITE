@@ -1,3 +1,9 @@
+> **STATUS: rationale only, partly superseded.**
+> Written before the codebase was audited. `docs/recon.md` §0 lists twelve
+> places this document is wrong about the code, and `docs/ROADMAP.md` +
+> `docs/prompts/` are the current task list. Read this for *why*; read
+> recon for *what is actually there*. On any conflict, recon wins.
+
 # SAT Practice Platform — Frontend & UX Improvement Plan
 
 **Scope:** frontend, design system, UI/UX, new landing page, new student- and admin-facing features.
@@ -99,7 +105,7 @@ Your token set is good. The problem is application policy, not values. Add these
 | Token | Reserved for |
 |---|---|
 | `--gradient-primary` (indigo→violet) | **One element per viewport.** The single primary CTA, or the score gauge, or the hero signature — never two at once. |
-| `--gradient-accent` (violet→purple) | AI features only (Explain button, AI-generated content chrome). Violet = "a model did this." |
+| `--gradient-accent` (violet→purple) | ~~AI features only.~~ **Unassigned as of 2026-08-06** — the AI explanation feature was removed and nothing else may claim this token without a new rule. |
 | `--gradient-warm` | Resume / in-progress / time-pressure only. |
 | `--brand-navy` | Admin chrome only (already correct). |
 | `--accent-warm` (amber) | Time, pacing, in-progress. Never decorative. |
@@ -393,7 +399,7 @@ const [questions, tests, attempts, avgGain] = await Promise.all([
 A `Tabs` component (from Phase 1) switching a device-framed screenshot:
 - **Test interface** — R&W split view with a highlight and an eliminated choice visible.
 - **Score report** — the real gauge + domain bars.
-- **Answer review** — showing an AI explanation.
+- **Answer review** — showing an authored explanation on a missed question.
 - **Admin** *(only if tutor-facing matters)* — the question bank.
 
 Capture at 2× on a clean seeded account, export as AVIF + WebP, `next/image` with explicit dimensions, `priority={false}`. Annotate with 2–3 small callout labels per tab rather than a paragraph.
@@ -405,8 +411,10 @@ Replace the three uniform cards with an asymmetric grid where size encodes impor
 - **Large tile — Adaptive module routing.** A 6-second looping SVG: Module 1 → performance threshold → two Module 2 branches. Shows what a sentence can't. **Only ship this tile if adaptive tests actually exist and are published.** If every test is currently `LINEAR`, either publish an adaptive test first or demote this to a small tile labelled honestly.
 - Medium — **Bluebook-accurate interface** (eliminator, highlighter, Desmos, reference sheet, keyboard shortcuts). List the specifics; specificity is the proof.
 - Medium — **Score report that explains itself** (domain, difficulty, pacing).
-- Small — **AI explanations** (violet, per the accent policy).
 - Small — **Works on iPad**.
+
+*(The former "AI explanations" tile is cut — the feature was removed 2026-08-06. Do not claim
+explanations on the landing page until authored-explanation coverage supports it; see §5.2.3.)*
 
 ### 2.6 FAQ
 
@@ -610,13 +618,13 @@ The retention feature. All charts hand-rolled SVG or a light lib — avoid pulli
 
 **5.2.2 Desktop sidebar** — a persistent left rail listing all questions with status icon, domain, and time, current item highlighted. Removes the "where am I" problem of one-at-a-time review. Collapses into the `Sheet` primitive below `lg`.
 
-**5.2.3 AI explanation upgrade**
-- **Stream the response** — a 6-second wait with no output is where students abandon. Token streaming with a skeleton.
-- **Cache** by `(questionId, chosenAnswer)` in the DB. The same wrong answer to the same question produces the same explanation for every student — you're currently paying for and waiting on the same generation repeatedly. This alone will cut your Gemini cost by an order of magnitude at any real usage.
-- **Follow-ups** as chips: `Explain more simply` · `Show me the algebra step by step` · `Why is B wrong?`
-- **Feedback** — thumbs up/down written to a table, so you can find bad explanations and, more importantly, find *bad questions*.
-- **Rate-limit UX** — when the 20/min limit hits, say what happened and when it clears, not "error".
-- Keep the violet accent — it's the AI colour under the token policy.
+**5.2.3 ~~AI explanation upgrade~~ — CUT (2026-08-06)**
+
+The AI explanation feature was removed rather than fixed: the route built its prompt from
+client-supplied stem, choices and correct answer, so any signed-in user could drive the model
+directly. Review now shows the **authored** `Question.explanation` only. Replacement work item:
+raise authored-explanation coverage in the bank (see `/admin/questions` "missing explanation"
+filter, §9.3).
 
 **5.2.4 Save to review queue** — a `Add to review queue` action per question, feeding Phase 7's spaced repetition. Ship the button and the table in this phase even if the scheduler lands later.
 
@@ -624,7 +632,6 @@ The retention feature. All charts hand-rolled SVG or a light lib — avoid pulli
 
 ### Acceptance criteria
 - Reviewing only incorrect answers takes 1 click from the score report.
-- AI explanation first token < 800ms; cached explanations < 100ms.
 - Review page state fully restorable from URL.
 - Score deltas correct across section-only and full attempts.
 
@@ -1003,7 +1010,6 @@ Student-first positioning (see §2.4). Every claim below is checkable — replac
 - *Adaptive routing* — "Your Module 2 difficulty is set by how you did in Module 1 — the same routing the real Digital SAT uses."
 - *Bluebook-accurate interface* — "Answer eliminator, passage highlighting with notes, Desmos graphing calculator, reference sheet, keyboard shortcuts, and a timer anchored to our server so it can't drift."
 - *A report that tells you what to do* — "200–800 per section, accuracy by domain and difficulty, pacing against target times, and the three things to work on next."
-- *Explanations on demand* — "Stuck on why your answer was wrong? Get a step-by-step explanation written for the answer you actually picked."
 - *Works on iPad* — "Same interface, touch-ready, with the passage split you can drag."
 
 **Tutor band**
@@ -1097,7 +1103,7 @@ Track these from Phase 0 so each phase can be judged.
 - Module abandon rate (by module — the diagnostic that matters)
 - Save-failure rate
 - Duplicate-tab lock triggers
-- AI explanation thumbs-down rate
+- Share of reviewed questions that have an authored explanation
 - Count of questions with negative discrimination *(should trend to zero)*
 - axe violations, Lighthouse, Core Web Vitals per route
 
@@ -1114,7 +1120,7 @@ Resolve these before the phase in brackets; each one changes downstream work mat
 5. **Chart library or hand-rolled?** [before Phase 4] Four charts don't justify 90kB. Recommend hand-rolled SVG reusing the score-band motif; revisit if Phase 9 needs a dozen more.
 6. **zustand: use it or drop it.** [Phase 1]
 7. **Mobile test-taking: support or warn?** [before Phase 6] Both are defensible; drifting between them is not.
-8. **AI explanations: cache and cost ceiling.** [before Phase 5] Per-`(question, answer)` caching changes the economics completely — decide before usage grows.
+8. ~~**AI explanations: cache and cost ceiling.**~~ **Resolved 2026-08-06 — feature removed.** No model is called anywhere in the product. Superseded question: how is authored-explanation coverage raised, and what does review show for a question that has none?
 9. **Localisation.** [before Phase 7] Cheap now, expensive later.
 
 ---

@@ -1,85 +1,112 @@
 # CLAUDE.md
 
-Place this at the repo root. Claude Code reads it automatically at the start of every session.
+Repo root. Read automatically every session.
+
+**This file describes the codebase as it is today, and marks target state explicitly.** Anything
+under "TARGET" does not exist yet — do not write code against it until the task that builds it has
+shipped.
 
 ---
 
 ## Project
 
-A self-hosted Bluebook-style Digital SAT practice platform. Students take timed, module-based
-practice tests in an interface that mirrors the real Digital SAT; tutors/admins manage a question
-bank, assemble tests, group students, and review attempts.
+Self-hosted Bluebook-style Digital SAT practice platform. Students take timed, module-based practice
+tests; tutors manage a question bank, assemble tests, group students, review attempts.
 
-**Stack:** Next.js 14 (App Router, RSC-first), React 18, TypeScript, Tailwind 3, Radix UI,
-NextAuth v5 (credentials), Prisma + PostgreSQL, Zustand, Cloudinary, Resend, KaTeX, Desmos.
+**Stack:** Next.js 14 App Router (RSC-first), React 18, TypeScript, Tailwind 3, Radix UI,
+NextAuth v5, Prisma + PostgreSQL, Cloudinary, Resend, KaTeX, Desmos.
 
-**Architecture rule:** server components by default. Interactivity lives in small, explicitly
-named client islands. Do not add `"use client"` to a page or layout — push it down to the
-smallest component that needs it.
+**Package manager is npm.** There is no pnpm and no `pnpm-lock.yaml`.
+
+**Routes live in `src/app/`. There are no route groups.** Do not write `app/(student)/…` or
+`app/(marketing)/…` — those directories do not exist.
+
+**File naming is kebab-case** (`test-card.tsx`, `review-client.tsx`). Client islands are named
+`*-form.tsx`, `*-client.tsx`, `*-table.tsx`. Follow the repo, not any other convention.
+
+**RSC rule holds today and must keep holding:** no `"use client"` in any `page.tsx` or `layout.tsx`.
+
+---
+
+## Commands
+
+```bash
+npm run dev
+npm run build
+npx tsc --noEmit              # there is no `typecheck` script
+npx tsc --noUnusedLocals      # catches dead imports
+npm test                      # vitest, 70 tests
+npm run lint                  # TARGET — no ESLint config exists yet (T0.4 creates it)
+npx prisma migrate dev --name <name>
+npx prisma studio
+```
+
+No Playwright, no `test:e2e`, no bundle analyzer script yet.
 
 ---
 
 ## How to work on a task
 
-1. You will be given a task prompt with an ID like `T2.4`. The full rationale for every task is in
-   `docs/improvement-plan.md` — read the relevant phase section before starting.
-2. **Plan first.** List the files you will create and modify, and any schema changes, before writing
-   code. If the task's scope seems wrong for the codebase as it actually is, say so and stop.
-3. Stay inside the task's scope. Each prompt has an explicit **Out of scope** list — respect it.
-   If you spot an unrelated problem, note it at the end of your response instead of fixing it.
-4. Work in small commits with conventional messages (`feat:`, `fix:`, `refactor:`, `chore:`).
-5. Finish by running the verification commands and reporting the acceptance criteria one by one,
-   each marked pass or fail. Do not claim a criterion passes without having checked it.
+1. You get a task prompt with an ID like `T3.4`. Rationale is in `docs/improvement-plan.md`;
+   ground truth about the codebase is in `docs/recon.md`. **Read `docs/recon.md` §0 before any task**
+   — it lists twelve places the plan was wrong.
+2. Plan first: list files you will create and modify, plus any migration, before writing code.
+3. Stay in scope. Every prompt has an explicit **Out of scope**. Note unrelated problems at the end
+   instead of fixing them.
+4. Small commits, conventional messages.
+5. Finish by reporting each acceptance criterion individually, pass or fail. Do not claim a pass you
+   did not verify.
 
 ---
 
 ## Never break these
 
-These are the load-bearing parts of the product. Changes here need tests first.
-
-- **The test-taking interface** (`/test/attempt/[attemptId]`). A student mid-exam losing answers is
-  the worst possible failure. Before refactoring it, Playwright coverage must exist and pass
-  (task T6.1). Never touch it in a task that is not explicitly a Phase 6 task.
-- **Answer persistence and the server-anchored clock.** Do not move timing logic client-side.
-- **Scoring logic.** Raw→scaled conversion is correctness-critical. Changes require a test.
-- **Auth and session handling.** No task in this plan should need to modify NextAuth config; if one
-  seems to, stop and ask.
+- **The test interface** (`src/app/test/attempt/[attemptId]/`, 1,589 lines across
+  `test-interface.tsx` + `test-interface-components.tsx` plus 5 islands). A student losing answers
+  mid-exam is the worst failure this product has. Playwright coverage must exist and pass before any
+  refactor. Never touch it outside a Phase 7 task.
+- **Server-anchored timing.** `moduleDeadlineAt` is authoritative and indexed for the cron sweeper.
+  Never move timing authority client-side.
+- **`AttemptQuestionSnapshot`.** It copies `correctAnswer`/`acceptedAnswers` at serve time so editing
+  a live question cannot change an in-flight score. Preserve this.
+- **`src/lib/scoring.ts` + `ScoreFidelity`.** Covered by `tests/scoring.test.ts`. Any change needs a
+  test. **Do not introduce a `scoreScope` enum** — `getScoreFidelity()` already handles section-only
+  attempts and a second enum would create conflicting policy.
+- **Anonymous attempts.** `src/lib/anonymous-attempt.ts` binds a logged-out attempt to a browser via
+  an HMAC cookie; `middleware.ts` whitelists `/practice`, `/test/`, `/results/`. **`/practice` is a
+  public route — do not build authenticated features there.** The drill feature goes at `/drill`.
 
 ---
 
 ## Design policy
 
-The design tokens already exist in `globals.css` and are good. The problem is application
-discipline. These rules are enforced in review.
+### Gradient budget — one gradient element per viewport
 
-### Gradient budget
-
-**One gradient-filled element per viewport. No exceptions.**
+17 of 30 routes currently violate this. `/dashboard` has 6 above the fold, `/` has 4.
 
 | Token | Reserved for |
 |---|---|
-| `--gradient-primary` (indigo→violet) | The single primary CTA on a page, **or** the score gauge, **or** the hero signature — never two at once |
-| `--gradient-accent` (violet→purple) | AI features only. Violet means "a model produced this" |
+| `--gradient-primary` | The single primary CTA on a page, **or** the score gauge, **or** the hero signature — never two at once |
+| `--gradient-accent` | **UNASSIGNED.** Was reserved for AI features; the AI feature was removed 2026-08-06. Do not silently reuse it — ask before assigning |
 | `--gradient-warm` | Resume / in-progress / time pressure only |
 | `--brand-navy` | Admin chrome only |
 | `--accent-warm` (amber) | Time, pacing, in-progress. Never decorative |
 | `success` (emerald) | Correct, completed, mastered |
 | `destructive` | Incorrect, destructive actions, offline |
 
-Consequences: the logo mark is solid indigo, not gradient. Hero headlines are solid ink.
-Repeated list actions (test cards, table rows) use `variant="soft"`, never a gradient fill.
+The cheapest fixes are in shared chrome, not pages: `AdminNav` carries 3 gradients onto all 15 admin
+routes; the logo mark and `UserMenu` avatar carry 2 onto every student route.
 
-### Numbers are mono
+### Numbers are mono — TARGET (T1.1)
 
-Every number in this product is set in IBM Plex Mono with `tabular-nums`: timers, scores, question
-counts, percentages, dates, table figures, stat values. Plus all eyebrow labels
-(`FEATURES`, `MODULE 1 · MATH`) in mono uppercase at `0.08em` tracking.
+`tailwind.config.ts` currently has **no `fontFamily.mono`**, so all 24 existing `font-mono` usages
+fall back to browser default. After T1.1: every number is IBM Plex Mono with `tabular-nums` via the
+`.tabular` utility — timers, scores, counts, percentages, dates, table figures. Eyebrow labels use
+`.eyebrow` (mono, uppercase, 0.08em).
 
-Use the `.tabular` utility. Never hand-roll `font-mono tabular-nums` inline.
+### Type scale — TARGET (T1.1)
 
-### Type scale
-
-Use the tokens; do not invent sizes.
+None of these exist yet. After T1.1, use them and do not invent sizes:
 
 ```
 --text-display  clamp(2.5rem, 4.5vw + 1rem, 4rem)    800 / -0.035em / 0.95
@@ -92,132 +119,129 @@ Use the tokens; do not invent sizes.
 --text-eyebrow  0.6875rem                             mono 600 / 0.08em / uppercase
 ```
 
-Marketing body copy is `--text-body-lg` at `max-w-[52ch]`. App body is `--text-body`.
+Marketing body is `--text-body-lg` at `max-w-[52ch]`. App body is `--text-body`.
 
 ### Spacing
 
-Marketing sections: `py-16 md:py-24` maximum. App pages: `py-10`.
-Density comes from content, not padding. If a section looks empty, add content or cut the section —
-do not add vertical space.
+Marketing sections `py-16 md:py-24` max. App pages `py-10`. Density comes from content, not padding.
 
 ### Motion
 
-- One orchestrated load sequence per page (60ms stagger), not `animate-fade-in` on every card.
-- Scroll reveal at most once per section: `translateY(12px)` + opacity, 350ms, `once: true`.
-- Ambient/looping animation is banned except inside the hero signature component.
-- Everything respects `prefers-reduced-motion` via the global block in `globals.css`.
+One orchestrated load sequence per page, not `animate-fade-in` on every card. Scroll reveal once per
+section. **`float`, `pulse-glow`, `gradient-shift`, `shimmer` are infinite loops running for everyone
+right now** — the global `prefers-reduced-motion` block lands in T0.1.
 
-### Colour tokens
+### Colour
 
-Never write a raw hex or `rgb()` in a `.tsx` file. Never use `style={{ color }}`. If a colour you
-need does not exist as a token, add the token.
+No raw hex or `rgb()`/`hsla()` in `.tsx`. No `style={{ color }}`.
+
+**Exception: `src/app/test/attempt/**`.** The Bluebook chrome deliberately ignores the theme and its
+four hardcoded colours (`#f4f5f7`, `#1a237e`, `#121212`, `#1a1a1a`) are correct. Lint rules must
+exempt that directory.
+
+Known violations to fix elsewhere: `admin-nav.tsx:20` (`via-[#1e305e]`), the four auth pages'
+`rgba(255,255,255,0.8)` dot lattice (same code copy-pasted 4×), `stat-card.tsx:52`
+(`hsla(228,60%,50%,0.03)`).
 
 ---
 
 ## Copy rules
 
-Words are design material. Apply these to every string you write.
-
-- **Active voice, plain verbs.** "Save changes", not "Submit". "Start test", not "Begin testing".
-- **An action keeps its name through the whole flow.** The button that says "Publish" produces a
-  toast that says "Published".
-- **Errors say what happened and what to do. They never apologise and are never vague.**
-  - Bad: "Something went wrong. Please try again."
-  - Good: "That email and password don't match an account. Check the email, or reset your password."
-- **Empty states are invitations to act,** with a CTA — not "No data".
-- **Sentence case everywhere** except mono eyebrows (uppercase).
-- **Never state a number the product cannot back.** No hardcoded marketing statistics, no invented
-  percentiles, no fabricated testimonials, no comparison to an unstated distribution. If a figure
-  is not queried from the database, it does not ship.
+- Active voice, plain verbs. "Save changes", not "Submit".
+- An action keeps its name through the flow. "Publish" → toast says "Published".
+- **Errors say what happened and what to do. Never apologise, never vague.**
+- Empty states are invitations to act, with a CTA.
+- Sentence case except mono eyebrows.
+- **Never state a number the product cannot back.** No hardcoded marketing stats, no invented
+  percentiles, no fabricated testimonials. `tierLabel()` in `results/[attemptId]/page.tsx:316`
+  currently violates this — it returns "Above Average Score" from a raw ratio against no
+  distribution. It is removed in T6.1.
 
 ---
 
 ## Accessibility floor
 
-Every task ships to this floor. It is not a separate phase.
+**Currently failing app-wide:** `globals.css:148` sets `:focus-visible { outline: none }` with no
+replacement. `Button` re-adds its own ring; every raw `<button>`, `<a>`, `<select>`, `<input>` has no
+visible focus indicator. Fixed in T0.1.
 
-- Visible `focus-visible` ring on every interactive element, including gradient-filled buttons
-  (use `ring-offset-2 ring-offset-background`).
-- All icon-only buttons have `aria-label`; all decorative SVG has `aria-hidden`.
-- Correct heading order; one `h1` per page.
-- Form controls have programmatic labels; errors announced via `aria-describedby`.
-- Status is never communicated by colour alone.
-- Keyboard-traversable, including modals (focus trap, restore on close).
-- No horizontal scroll at 360px on any full-support surface (see responsive policy below).
+Every task ships to this floor: visible focus ring ≥3:1, `aria-label` on icon-only buttons,
+`aria-hidden` on decorative SVG, correct heading order, programmatic form labels, status never by
+colour alone, keyboard-traversable modals, no horizontal scroll at 360px on full-support surfaces.
 
 ---
 
 ## Responsive policy
 
-Do not half-support surfaces. Each has a defined target:
-
 | Surface | Target |
 |---|---|
 | Landing, auth, content pages | Full support from 360px |
 | Dashboard, progress, results, review, account | Full support from 360px |
-| Practice/drill runner | Full support — this is the mobile use case |
-| Full test interface | Tablet-first; phone is supported-but-warned |
+| Drill runner (`/drill`) | Full support — this is the mobile use case |
+| Full test interface | Tablet-first; phone supported-but-warned |
 | Admin | Read on mobile (card lists below `md`), edit on desktop |
 
 ---
 
-## Conventions
+## Schema facts that constrain the work
 
-- **Components:** `src/components/ui/` for primitives, `src/components/<feature>/` for feature
-  components. One component per file, named export, `ComponentName.tsx`.
-- **Variants:** CVA. No prop-to-className string concatenation.
-- **Client islands:** name them `*Client.tsx` or place under a `client/` folder so the boundary is
-  obvious in a file listing.
-- **Data:** fetch in server components; never fetch in a client component if an RSC can do it.
-- **Prisma:** all queries in `src/lib/queries/` or a server action — never inline in a page beyond
-  a simple `findMany`.
-- **Never** use `localStorage` for anything that must survive a device change; it is fine for
-  theme and UI preferences only.
-- **New dependencies require justification.** Prefer hand-rolled SVG over a charting library for
-  fewer than ~8 charts.
+- **No score is persisted anywhere.** Every scaled score is recomputed from `ModuleResult`
+  (`correctCount`/`totalCount` per module) on each render. A conversion-table change retroactively
+  rewrites history. `/progress` charts and Δ columns are N+1 by construction — measure before
+  shipping.
+- **`Question.domain` is free-text String (indexed). `Question.skill` is nullable free-text, not
+  indexed.** `"Linear equations"`, `"Linear Equations"` and `"linear equations "` are three different
+  skills today. Per-skill drilling and `SkillMastery` require normalising this first (T2.2).
+- **`Test.isPublic: Boolean`.** There is no `Test.visibility` and no `Question.published`.
+- **`Test.mode` defaults to `ADAPTIVE`.** Adaptive routing is fully implemented and tested
+  (`src/lib/adaptive-routing.ts`, `ModuleResult.routedTo`, 600-point EASY-route cap). "Every test is
+  LINEAR" is a statement about seeded data, not capability.
+- **`TestAttempt.userId` is nullable** — that is the anonymous path.
+- **`AttemptEvent` records only BLUR/FOCUS/FULLSCREEN_ENTER/EXIT.** No device, viewport, or user
+  agent. Device analytics require capture first.
+- **All 280 questions have an authored explanation.** `Question.explanation` is nullable and nothing
+  enforces it at authoring time — one bulk import from being reachable.
+
+### Radix packages
+
+Installed: `react-dialog`, `react-dropdown-menu`, `react-label`, `react-slot`.
+**Not installed:** `react-select`, `react-tabs`, `react-tooltip`, `react-accordion`,
+`react-progress`. Phase 1 adds these — budget for it.
+
+### Existing primitives (6, in `src/components/ui/`)
+
+`Button` (107 LOC, 6 variants, 4 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
+· `EmptyState` · `PageHeader` (admin only) · `StatCard`. Everything else in the plan is greenfield.
 
 ---
 
 ## Definition of done
 
-A task is done when all of these are true:
-
-- [ ] Every acceptance criterion in the prompt is verified and reported individually
-- [ ] `pnpm typecheck` and `pnpm lint` pass with no new errors
-- [ ] `pnpm build` succeeds
-- [ ] The affected routes render at 360px with no horizontal scroll (for full-support surfaces)
-- [ ] New interactive components are keyboard-operable with a visible focus ring
-- [ ] New components have an entry in the `/ui` gallery (after T0.4 exists)
-- [ ] No new gradient-filled element violates the gradient budget
-- [ ] No hardcoded numbers, no raw hex, no `SELECT_CLS`-style class constants introduced
-- [ ] Any new user-facing string follows the copy rules above
-
----
-
-## Commands
-
-```bash
-pnpm dev
-pnpm build
-pnpm typecheck
-pnpm lint
-pnpm test            # unit
-pnpm test:e2e        # Playwright (exists after T6.1)
-pnpm prisma migrate dev --name <name>
-pnpm prisma studio
-pnpm analyze         # bundle analyzer (added in T0.6)
-```
+- [ ] Every acceptance criterion verified and reported individually
+- [ ] `npx tsc --noEmit` clean
+- [ ] `npm run build` succeeds
+- [ ] `npm test` passes
+- [ ] `npx tsc --noUnusedLocals` introduces no new dead imports
+- [ ] Full-support routes render at 360px with no horizontal scroll
+- [ ] New interactive components keyboard-operable with a visible focus ring
+- [ ] New primitives added to the `/ui` gallery (after T1.2)
+- [ ] No new gradient exceeds the budget
+- [ ] No raw hex outside `src/app/test/attempt/**`, no `_CLS` class constants, no hardcoded stats
 
 ---
 
 ## Open decisions
 
-Do not guess on these. If a task depends on one and it is unresolved, ask.
+Do not guess. Ask if a task depends on an unresolved one.
 
-1. **Primary audience — student or tutor?** Blocks all landing copy (Phase 2).
-2. **Does adaptive mode actually ship?** Every visible test is `LINEAR` while the landing page leads
-   with adaptive routing. Blocks T2.6.
-3. **Will there be paid tiers?** "Free to use" appears four times on the current landing page.
-4. **Test-content licensing.** The bank references "Official SAT Practice Test 4". Any public demo
-   question must be originally authored, not College Board content. Blocks T2.3.
-5. **Mobile test-taking: support or warn?** Blocks T6.4.
+1. **Primary audience — student or tutor?** Blocks all landing copy (Phase 3).
+2. ~~Does adaptive mode ship?~~ **Answered: yes, in code.** Query `Test.mode` where `isPublic` to
+   see whether *published data* is adaptive before writing landing copy about it.
+3. **Paid tiers?** "Free to use" appears repeatedly on the landing page.
+4. **Content licensing.** The bank references "Official SAT Practice Test 4". Blocks the public demo
+   and the stats strip.
+5. ~~Chart library or hand-rolled?~~ **Answered: hand-rolled.** `score-trend.tsx` already is, and no
+   charting dep is installed. Ratified.
+6. **zustand** — installed at `^5.0.2` with zero imports. Use in T7.2 or remove.
+7. **Mobile test-taking: support or warn?** Blocks T7.4.
+8. **Localisation** (Azerbaijani/Russian). Cheap now, expensive after Phase 8.
