@@ -8,6 +8,19 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-sans)", '"Plus Jakarta Sans"', "Inter", "system-ui", "sans-serif"],
+        // System mono stack. Tailwind ships no `fontFamily.mono` unless you
+        // declare one, so until this existed every `font-mono` in the app fell
+        // back to the browser default. T1.1 prepends the real face.
+        mono: [
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          '"Liberation Mono"',
+          '"Courier New"',
+          "monospace",
+        ],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -30,6 +43,12 @@ const config: Config = {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+          // Defined in globals.css since the token system landed but never
+          // mapped, so `text-accent-warm` / `bg-accent-pop` produced nothing.
+          // See the gradient budget in CLAUDE.md before reaching for these:
+          // `accent-warm` is time/pacing only, `accent-pop` is key actions.
+          pop: "hsl(var(--accent-pop))",
+          warm: "hsl(var(--accent-warm))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -60,6 +79,11 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
+        // Hairline lift, one step below Tailwind's `sm`. `shadow-xs` is a v4
+        // utility that 13 call sites already used against v3; several pair it
+        // with `hover:shadow-sm`, so it is defined here rather than collapsed
+        // into `sm` (which would flatten those hovers to a no-op).
+        xs: "0 1px 2px 0 rgb(0 0 0 / 0.04)",
         // Layered shadows for natural depth
         card: "0 1px 3px 0 rgb(0 0 0 / 0.04), 0 2px 8px -1px rgb(0 0 0 / 0.04)",
         elevated:

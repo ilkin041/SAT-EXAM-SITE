@@ -66,7 +66,7 @@ export default async function Home() {
 
         {/* Decorative blurred orbs */}
         <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/10 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-violet-500/8 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-violet-500/[0.08] blur-3xl" aria-hidden />
 
         <div className="container relative mx-auto grid max-w-6xl gap-12 px-4 py-24 lg:grid-cols-2 lg:items-center lg:py-32">
           <div>
@@ -368,8 +368,8 @@ function Step({
       </div>
 
       <div className="mt-3 flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/8 text-primary">
-          <Icon className="h-4.5 w-4.5" aria-hidden />
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/[0.08] text-primary">
+          <Icon className="h-5 w-5" aria-hidden />
         </div>
         <h3 className="text-base font-bold">{title}</h3>
       </div>
@@ -388,7 +388,7 @@ function MockTestCard() {
   return (
     <div className="relative mx-auto w-full max-w-md animate-float">
       {/* Multi-layer glow */}
-      <div className="absolute -inset-8 -z-10 rounded-3xl bg-primary/8 blur-2xl" aria-hidden />
+      <div className="absolute -inset-8 -z-10 rounded-3xl bg-primary/[0.08] blur-2xl" aria-hidden />
       <div className="absolute -inset-4 -z-10 rounded-3xl bg-violet-500/5 blur-xl" aria-hidden />
 
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-elevated-lg">

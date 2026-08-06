@@ -245,8 +245,8 @@ export default async function DashboardPage() {
                       const isDone = a.status === "COMPLETED";
                       return (
                         <tr key={a.id} className="transition-colors hover:bg-muted/30">
-                          <td className="px-6 py-4.5 font-semibold text-foreground">{a.test.title}</td>
-                          <td className="px-6 py-4.5">
+                          <td className="px-6 py-4 font-semibold text-foreground">{a.test.title}</td>
+                          <td className="px-6 py-4">
                             <Badge
                               variant={
                                 a.status === "COMPLETED"
@@ -266,7 +266,7 @@ export default async function DashboardPage() {
                                     : "Abandoned"}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4.5 text-center tabular-nums">
+                          <td className="px-6 py-4 text-center tabular-nums">
                             {isDone && scoreFidelity !== "INCOMPLETE" ? (
                               <span className="inline-flex items-center justify-center font-extrabold px-3 py-1 rounded-full bg-primary/10 text-primary text-xs border border-primary/20 shadow-xs">
                                 {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
@@ -275,14 +275,14 @@ export default async function DashboardPage() {
                               <span className="text-muted-foreground font-medium">—</span>
                             )}
                           </td>
-                          <td className="px-6 py-4.5 text-xs text-muted-foreground">
+                          <td className="px-6 py-4 text-xs text-muted-foreground">
                             {a.startedAt.toLocaleDateString(undefined, {
                               year: 'numeric',
                               month: 'short',
                               day: 'numeric'
                             })}
                           </td>
-                          <td className="px-6 py-4.5 text-right">
+                          <td className="px-6 py-4 text-right">
                             {isDone ? (
                               <Button asChild variant="secondary" size="sm" className="hover-lift active-press shadow-xs">
                                 <Link href={`/results/${a.id}`}>View results</Link>

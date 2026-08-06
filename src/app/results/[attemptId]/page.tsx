@@ -302,7 +302,7 @@ export default async function ResultsPage({
         <Button asChild size="lg" className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary hover-lift active-press transition-all duration-200">
           <Link href={`/results/${attempt.id}/review`} className="flex items-center gap-1.5">
             Review all answers
-            <ArrowRight className="h-4.5 w-4.5" />
+            <ArrowRight className="h-5 w-5" />
           </Link>
         </Button>
         <Button asChild variant="secondary" size="lg" className="hover-lift active-press shadow-xs">
@@ -321,8 +321,8 @@ function tierLabel(pct: number): string {
 }
 
 function tierPillStyle(pct: number): string {
-  if (pct >= 0.75) return "bg-emerald-50 text-emerald-700 border-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-350";
-  if (pct >= 0.5) return "bg-blue-50 text-blue-700 border-blue-500/20 dark:bg-blue-950/40 dark:text-blue-350";
+  if (pct >= 0.75) return "bg-emerald-50 text-emerald-700 border-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-300";
+  if (pct >= 0.5) return "bg-blue-50 text-blue-700 border-blue-500/20 dark:bg-blue-950/40 dark:text-blue-300";
   if (pct >= 0.25) return "bg-amber-50 text-amber-700 border-amber-500/20 dark:bg-amber-950/40 dark:text-amber-300";
   return "bg-muted text-muted-foreground border-border/80";
 }
@@ -342,7 +342,7 @@ function SectionScore({
 }) {
   const pct = Math.max(0, Math.min(100, Math.round(((value - 200) / 600) * 100)));
   return (
-    <div className="rounded-2xl border border-border/80 bg-card p-5.5 shadow-xs hover:border-primary/20 hover:shadow-sm transition-all duration-200">
+    <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs hover:border-primary/20 hover:shadow-sm transition-all duration-200">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
           <Icon className="h-4 w-4 text-primary" aria-hidden />
@@ -443,7 +443,7 @@ function DifficultyTable({
         </table>
       </div>
       {hint && (
-        <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50/50 px-4 py-3 text-xs text-amber-850 dark:bg-amber-950/20 dark:text-amber-250 leading-relaxed">
+        <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50/50 px-4 py-3 text-xs text-amber-800 dark:bg-amber-950/20 dark:text-amber-200 leading-relaxed">
           {hint}
         </p>
       )}
