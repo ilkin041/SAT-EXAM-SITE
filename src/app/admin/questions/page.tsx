@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BookOpen, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { Difficulty, Prisma, QuestionType, SectionType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { listAssignableModules } from "./actions";
 import { QuestionsTable, type QuestionRow } from "./_components/questions-table";
+import { ALL_QUESTION_DOMAINS } from "@/lib/question-taxonomy";
 
 export const metadata = { title: "Questions — Admin" };
 
@@ -22,17 +22,6 @@ interface SearchParams {
 }
 
 const PAGE_SIZE = 100;
-const getCachedDomains = unstable_cache(
-  () =>
-    prisma.question.findMany({
-      distinct: ["domain"],
-      select: { domain: true },
-      orderBy: { domain: "asc" },
-    }),
-  ["admin-question-domains"],
-  { revalidate: 60 },
-);
-
 const SELECT_CLS =
   "h-10 rounded-xl border border-input/80 bg-card px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
 
@@ -65,16 +54,15 @@ export default async function QuestionsPage({
   const hasFilter = !!(sp.q || domain || difficulty || type || section);
 
   const requestedPage = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
-  const [questionCount, domains, assignableTests] = await Promise.all([
+  const [questionCount, assignableTests] = await Promise.all([
     prisma.question.count({ where }),
-    getCachedDomains(),
     listAssignableModules(),
   ]);
   const totalPages = Math.max(1, Math.ceil(questionCount / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
   const questions = await prisma.question.findMany({
     where,
-    orderBy: { id: "desc" },
+    orderBy: { updatedAt: "desc" },
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: { _count: { select: { moduleAssignments: true } } },
@@ -88,6 +76,7 @@ export default async function QuestionsPage({
     domain: q.domain,
     difficulty: q.difficulty,
     assignmentCount: q._count.moduleAssignments,
+    updatedAt: q.updatedAt.toISOString(),
   }));
 
   return (
@@ -135,9 +124,9 @@ export default async function QuestionsPage({
           </select>
           <select name="domain" defaultValue={domain ?? ""} className={SELECT_CLS}>
             <option value="">All domains</option>
-            {domains.map((d) => (
-              <option key={d.domain} value={d.domain}>
-                {d.domain}
+            {ALL_QUESTION_DOMAINS.map((domainOption) => (
+              <option key={domainOption} value={domainOption}>
+                {domainOption}
               </option>
             ))}
           </select>

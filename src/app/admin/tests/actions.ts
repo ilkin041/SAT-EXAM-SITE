@@ -194,40 +194,49 @@ export async function duplicateTest(input: { testId: string; newTitle: string })
         },
       });
 
-      for (const s of source.sections) {
-        const newSection = await tx.section.create({
-          data: {
-            testId: newTest.id,
-            type: s.type,
-            order: s.order,
-            module1TimeLimit: s.module1TimeLimit,
-            module2TimeLimit: s.module2TimeLimit,
-          },
-        });
-
-        for (const m of s.modules) {
-          const newModule = await tx.module.create({
-            data: {
-              sectionId: newSection.id,
-              moduleNumber: m.moduleNumber,
-              difficulty: m.difficulty,
-            },
-          });
-
-          if (m.moduleQuestions.length > 0) {
-            await tx.moduleQuestion.createMany({
-              data: m.moduleQuestions.map((mq) => ({
-                moduleId: newModule.id,
-                questionId: mq.questionId,
-                order: mq.order,
-              })),
-            });
-          }
-        }
-      }
+      const newSections = await tx.section.createManyAndReturn({
+        data: source.sections.map((section) => ({
+          testId: newTest.id,
+          type: section.type,
+          order: section.order,
+          module1TimeLimit: section.module1TimeLimit,
+          module2TimeLimit: section.module2TimeLimit,
+        })),
+      });
+      const sectionIdByOrder = new Map(
+        newSections.map((section) => [section.order, section.id]),
+      );
+      const sourceModules = source.sections.flatMap((section) =>
+        section.modules.map((module) => ({ section, module })),
+      );
+      const newModules = await tx.module.createManyAndReturn({
+        data: sourceModules.map(({ section, module }) => ({
+          sectionId: sectionIdByOrder.get(section.order)!,
+          moduleNumber: module.moduleNumber,
+          difficulty: module.difficulty,
+        })),
+      });
+      const moduleIdByKey = new Map(
+        newModules.map((module) => [
+          `${module.sectionId}:${module.moduleNumber}:${module.difficulty}`,
+          module.id,
+        ]),
+      );
+      const links = sourceModules.flatMap(({ section, module }) => {
+        const sectionId = sectionIdByOrder.get(section.order)!;
+        const moduleId = moduleIdByKey.get(
+          `${sectionId}:${module.moduleNumber}:${module.difficulty}`,
+        )!;
+        return module.moduleQuestions.map((link) => ({
+          moduleId,
+          questionId: link.questionId,
+          order: link.order,
+        }));
+      });
+      if (links.length > 0) await tx.moduleQuestion.createMany({ data: links });
 
       return newTest;
-    });
+    }, { timeout: 60_000 });
 
     revalidatePath("/admin/tests");
     return { ok: true as const, testId: created.id };

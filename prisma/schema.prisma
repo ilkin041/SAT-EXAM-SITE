@@ -134,6 +134,7 @@ model Module {
 
 model Question {
   id              String        @id @default(cuid())
+  contentHash     String?
   /// Which SAT section this question belongs to — splits the bank into Math
   /// and Reading-and-Writing. Enforced by `assignQuestionToModule` so a
   /// MATH question can't be dropped into an R&W module by mistake.
@@ -157,6 +158,8 @@ model Question {
   /// JSON: string[] — alternate accepted forms for SPR
   acceptedAnswers Json?
   explanation     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   moduleAssignments ModuleQuestion[]
   answers           Answer[]
@@ -165,6 +168,7 @@ model Question {
   @@index([sectionType])
   @@index([domain])
   @@index([difficulty])
+  @@index([contentHash])
 }
 
 /// Join table linking a question in the global bank to a specific module of a
@@ -174,14 +178,13 @@ model ModuleQuestion {
   id         String   @id @default(cuid())
   moduleId   String
   questionId String
-  order      Int
+  order      Float
   createdAt  DateTime @default(now())
 
   module   Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([moduleId, questionId])
-  @@unique([moduleId, order])
   @@index([moduleId])
   @@index([questionId])
 }

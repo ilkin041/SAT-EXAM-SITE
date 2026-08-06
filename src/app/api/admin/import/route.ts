@@ -9,6 +9,10 @@ import {
   type ImportPayload,
   type BankImportPayload,
 } from "@/lib/import-schema";
+import {
+  questionContentHash,
+  selectQuestionImportIndices,
+} from "@/lib/question-content-hash";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -81,13 +85,32 @@ async function handleBankImport(body: unknown, dryRun: boolean) {
     );
   }
   const data = parsed.data;
-  const preview = data.questions.map((q) => ({
-    type: q.type,
-    domain: q.domain,
-    skill: q.skill ?? null,
-    difficulty: q.difficulty,
-    stemPreview: stripHtml(q.stem).slice(0, 160),
-  }));
+  const hashes = data.questions.map((q) => questionContentHash(q));
+  const existing = await prisma.question.findMany({
+    where: { contentHash: { in: hashes } },
+    select: { id: true, contentHash: true, stem: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const existingByHash = new Map(existing.map((question) => [question.contentHash, question]));
+  const firstImportIndex = new Map<string, number>();
+  const preview = data.questions.map((q, index) => {
+    const contentHash = hashes[index];
+    const duplicateImportIndex = firstImportIndex.get(contentHash);
+    if (duplicateImportIndex === undefined) firstImportIndex.set(contentHash, index);
+    const duplicate = existingByHash.get(contentHash);
+    return {
+      index,
+      type: q.type,
+      domain: q.domain,
+      skill: q.skill ?? null,
+      difficulty: q.difficulty,
+      stemPreview: stripHtml(q.stem).slice(0, 160),
+      duplicate: duplicate
+        ? { id: duplicate.id, stemPreview: stripHtml(duplicate.stem).slice(0, 160) }
+        : null,
+      duplicateImportIndex: duplicateImportIndex ?? null,
+    };
+  });
 
   if (dryRun) {
     return NextResponse.json({
@@ -99,43 +122,66 @@ async function handleBankImport(body: unknown, dryRun: boolean) {
     });
   }
 
-  await commitBank(data);
+  const result = await commitBank(data);
   return NextResponse.json({
     ok: true,
     mode: "bank",
     dryRun: false,
-    count: data.questions.length,
+    count: result.added,
+    skipped: result.skipped,
   });
 }
 
 async function commitBank(payload: BankImportPayload) {
-  // Single transaction — partial failure leaves nothing behind.
-  await prisma.$transaction(async (tx) => {
-    for (const q of payload.questions) {
-      await tx.question.create({
-        data: {
-          sectionType: SectionType[q.sectionType!],
-          type: QuestionType[q.type],
-          domain: q.domain,
-          skill: q.skill ?? null,
-          difficulty: Difficulty[q.difficulty],
-          passage: q.passage ?? null,
-          stem: q.stem,
-          imageUrl: q.imageUrl && q.imageUrl.length > 0 ? q.imageUrl : null,
-          imagePosition: q.imagePosition === "TOP" ? "TOP" : "INLINE",
-          imageMaxWidth: q.imageMaxWidth ?? null,
-          choices: q.choices
-            ? (q.choices as unknown as Prisma.InputJsonValue)
-            : Prisma.DbNull,
-          correctAnswer: q.correctAnswer,
-          acceptedAnswers: q.acceptedAnswers
-            ? (q.acceptedAnswers as unknown as Prisma.InputJsonValue)
-            : Prisma.DbNull,
-          explanation: q.explanation ?? null,
-        },
-      });
-    }
-  });
+  return prisma.$transaction(async (tx) => {
+    const hashes = payload.questions.map((question) => questionContentHash(question));
+    const existing = await tx.question.findMany({
+      where: { contentHash: { in: hashes } },
+      select: { contentHash: true },
+    });
+    const selectedIndices = selectQuestionImportIndices({
+      hashes,
+      existingHashes: existing.flatMap((question) => question.contentHash ?? []),
+      keepDuplicateIndices: payload.keepDuplicateIndices,
+    });
+    const rows = selectedIndices.map((index) =>
+      questionCreateData(payload.questions[index], payload.questions[index].sectionType!, hashes[index]),
+    );
+    if (rows.length > 0) await tx.question.createMany({ data: rows });
+    return { added: rows.length, skipped: payload.questions.length - rows.length };
+  }, { timeout: 60_000 });
+}
+
+type ImportedQuestion =
+  | BankImportPayload["questions"][number]
+  | ImportPayload["sections"][number]["modules"][number]["questions"][number];
+
+function questionCreateData(
+  q: ImportedQuestion,
+  sectionType: "READING_WRITING" | "MATH",
+  contentHash = questionContentHash(q),
+): Prisma.QuestionCreateManyInput {
+  return {
+    sectionType: SectionType[sectionType],
+    type: QuestionType[q.type],
+    domain: q.domain,
+    skill: q.skill ?? null,
+    difficulty: Difficulty[q.difficulty],
+    passage: q.passage ?? null,
+    stem: q.stem,
+    imageUrl: q.imageUrl && q.imageUrl.length > 0 ? q.imageUrl : null,
+    imagePosition: q.imagePosition === "TOP" ? "TOP" : "INLINE",
+    imageMaxWidth: q.imageMaxWidth ?? null,
+    choices: q.choices
+      ? (q.choices as unknown as Prisma.InputJsonValue)
+      : Prisma.DbNull,
+    correctAnswer: q.correctAnswer,
+    acceptedAnswers: q.acceptedAnswers
+      ? (q.acceptedAnswers as unknown as Prisma.InputJsonValue)
+      : Prisma.DbNull,
+    explanation: q.explanation ?? null,
+    contentHash,
+  };
 }
 
 function stripHtml(s: string) {
@@ -206,48 +252,53 @@ async function commit(payload: ImportPayload, adminId: string) {
           },
         });
 
-        for (let i = 0; i < mod.questions.length; i++) {
-          const q = mod.questions[i];
-          // 1) Create the bank question (no module link yet).
-          const createdQuestion = await tx.question.create({
-            data: {
-              // Inherits from the section it's placed in — overridable by an
-              // explicit per-question value, but normally just the section type.
-              sectionType:
-                q.sectionType
-                  ? SectionType[q.sectionType]
-                  : SectionType[section.type],
-              type: QuestionType[q.type],
-              domain: q.domain,
-              skill: q.skill ?? null,
-              difficulty: Difficulty[q.difficulty],
-              passage: q.passage ?? null,
-              stem: q.stem,
-              imageUrl: q.imageUrl && q.imageUrl.length > 0 ? q.imageUrl : null,
-              imagePosition: q.imagePosition === "TOP" ? "TOP" : "INLINE",
-              imageMaxWidth: q.imageMaxWidth ?? null,
-              choices: q.choices
-                ? (q.choices as unknown as Prisma.InputJsonValue)
-                : Prisma.DbNull,
-              correctAnswer: q.correctAnswer,
-              acceptedAnswers: q.acceptedAnswers
-                ? (q.acceptedAnswers as unknown as Prisma.InputJsonValue)
-                : Prisma.DbNull,
-              explanation: q.explanation ?? null,
-            },
+        const hashes = mod.questions.map((question) => questionContentHash(question));
+        const existingQuestions = await tx.question.findMany({
+          where: {
+            contentHash: { in: hashes },
+            sectionType: SectionType[section.type],
+          },
+          select: { id: true, contentHash: true },
+        });
+        const questionIdByHash = new Map(
+          existingQuestions.flatMap((question) =>
+            question.contentHash ? [[question.contentHash, question.id] as const] : [],
+          ),
+        );
+        const missingByHash = new Map<string, Prisma.QuestionCreateManyInput>();
+        mod.questions.forEach((question, index) => {
+          const hash = hashes[index];
+          if (!questionIdByHash.has(hash) && !missingByHash.has(hash)) {
+            missingByHash.set(
+              hash,
+              questionCreateData(question, question.sectionType ?? section.type, hash),
+            );
+          }
+        });
+        if (missingByHash.size > 0) {
+          const createdQuestions = await tx.question.createManyAndReturn({
+            data: [...missingByHash.values()],
+            select: { id: true, contentHash: true },
           });
-          // 2) Link it into this module at the right order.
-          await tx.moduleQuestion.create({
-            data: {
-              moduleId: createdModule.id,
-              questionId: createdQuestion.id,
-              order: i + 1,
-            },
-          });
+          for (const question of createdQuestions) {
+            if (question.contentHash) questionIdByHash.set(question.contentHash, question.id);
+          }
         }
+        const linksByHash = new Map<string, Prisma.ModuleQuestionCreateManyInput>();
+        mod.questions.forEach((_question, index) => {
+          const hash = hashes[index];
+          if (!linksByHash.has(hash)) {
+            linksByHash.set(hash, {
+              moduleId: createdModule.id,
+              questionId: questionIdByHash.get(hash)!,
+              order: index + 1,
+            });
+          }
+        });
+        await tx.moduleQuestion.createMany({ data: [...linksByHash.values()] });
       }
     }
 
     return test;
-  });
+  }, { timeout: 60_000 });
 }

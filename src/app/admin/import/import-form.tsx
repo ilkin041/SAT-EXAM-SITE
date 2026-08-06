@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   AlertCircle,
   BookOpen,
@@ -38,11 +39,14 @@ interface TestSummary {
 }
 
 interface BankPreviewRow {
+  index: number;
   type: "MULTIPLE_CHOICE" | "STUDENT_PRODUCED_RESPONSE";
   domain: string;
   skill: string | null;
   difficulty: "EASY" | "MEDIUM" | "HARD" | "MIXED";
   stemPreview: string;
+  duplicate: { id: string; stemPreview: string } | null;
+  duplicateImportIndex: number | null;
 }
 
 type Phase = "idle" | "validated" | "committing" | "done";
@@ -64,11 +68,13 @@ export function ImportForm() {
     count: number;
     questions: BankPreviewRow[];
   } | null>(null);
+  const [keepDuplicateIndices, setKeepDuplicateIndices] = useState<Set<number>>(new Set());
 
   function resetPreviews() {
     setTestSummary(null);
     setBankPreview(null);
     setErrors([]);
+    setKeepDuplicateIndices(new Set());
     setPhase("idle");
   }
 
@@ -150,10 +156,17 @@ export function ImportForm() {
     setErrors([]);
     setPhase("committing");
     startTransition(async () => {
+      let body: unknown = text;
+      if (mode === "bank") {
+        body = {
+          ...(JSON.parse(text) as Record<string, unknown>),
+          keepDuplicateIndices: [...keepDuplicateIndices],
+        };
+      }
       const res = await fetch("/api/admin/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: text,
+        body: typeof body === "string" ? body : JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -163,7 +176,7 @@ export function ImportForm() {
       }
       setPhase("done");
       if (data.mode === "bank") {
-        toast(`${data.count} question${data.count === 1 ? "" : "s"} added to the bank`);
+        toast(`${data.count} added · ${data.skipped ?? 0} duplicate${data.skipped === 1 ? "" : "s"} skipped`);
         router.push("/admin/questions");
       } else {
         router.push(`/admin/tests/${data.testId}`);
@@ -305,7 +318,19 @@ export function ImportForm() {
       )}
 
       {bankPreview && phase !== "idle" && mode === "bank" && (
-        <BankPreview count={bankPreview.count} questions={bankPreview.questions} />
+        <BankPreview
+          count={bankPreview.count}
+          questions={bankPreview.questions}
+          keepDuplicateIndices={keepDuplicateIndices}
+          onToggleDuplicate={(index) =>
+            setKeepDuplicateIndices((current) => {
+              const next = new Set(current);
+              if (next.has(index)) next.delete(index);
+              else next.add(index);
+              return next;
+            })
+          }
+        />
       )}
     </div>
   );
@@ -398,15 +423,24 @@ function TestPreview({ summary }: { summary: TestSummary }) {
 function BankPreview({
   count,
   questions,
+  keepDuplicateIndices,
+  onToggleDuplicate,
 }: {
   count: number;
   questions: BankPreviewRow[];
+  keepDuplicateIndices: Set<number>;
+  onToggleDuplicate: (index: number) => void;
 }) {
+  const duplicateCount = questions.filter(
+    (question) => question.duplicate || question.duplicateImportIndex !== null,
+  ).length;
   return (
     <div className="rounded-xl border border-green-500/30 bg-green-50 p-5 dark:bg-green-950/20">
       <div className="mb-3 flex items-center gap-2 text-sm font-medium text-green-800 dark:text-green-300">
         <CheckCircle2 className="h-4 w-4" />
-        {count} question{count === 1 ? "" : "s"} will be added to the question bank.
+        {count - duplicateCount + keepDuplicateIndices.size} question
+        {count - duplicateCount + keepDuplicateIndices.size === 1 ? "" : "s"} will be added.
+        {duplicateCount > 0 && ` ${duplicateCount} likely duplicate${duplicateCount === 1 ? "" : "s"} will be skipped by default.`}
       </div>
       <div className="overflow-hidden rounded-md border border-border bg-card">
         <table className="w-full text-xs">
@@ -416,6 +450,7 @@ function BankPreview({
               <th className="p-2">Domain</th>
               <th className="p-2">Diff.</th>
               <th className="p-2">Stem preview</th>
+              <th className="p-2">Duplicate handling</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -432,6 +467,35 @@ function BankPreview({
                 </td>
                 <td className="p-2 text-muted-foreground">{q.difficulty}</td>
                 <td className="p-2">{q.stemPreview}</td>
+                <td className="p-2">
+                  {q.duplicate || q.duplicateImportIndex !== null ? (
+                    <div className="space-y-1">
+                      {q.duplicate ? (
+                        <Link
+                          href={`/admin/questions/${q.duplicate.id}`}
+                          target="_blank"
+                          className="block text-amber-700 underline dark:text-amber-300"
+                        >
+                          Existing question
+                        </Link>
+                      ) : (
+                        <span className="block text-amber-700 dark:text-amber-300">
+                          Same as import row {(q.duplicateImportIndex ?? 0) + 1}
+                        </span>
+                      )}
+                      <label className="flex items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          checked={keepDuplicateIndices.has(q.index)}
+                          onChange={() => onToggleDuplicate(q.index)}
+                        />
+                        Keep anyway
+                      </label>
+                    </div>
+                  ) : (
+                    <span className="text-green-700 dark:text-green-300">New</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

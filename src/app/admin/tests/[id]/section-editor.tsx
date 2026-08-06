@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { GripVertical } from "lucide-react";
 import {
   removeQuestionFromModule,
   reorderModuleQuestion,
@@ -112,6 +113,7 @@ export function SectionEditor({ section, modules }: Props) {
             key={m.id}
             mod={m}
             sectionLabel={sectionLabel}
+            sectionType={section.type}
             onOpenPanel={() => setPanelModuleId(m.id)}
             isLast={mIdx === modules.length - 1}
           />
@@ -139,21 +141,31 @@ export function SectionEditor({ section, modules }: Props) {
 function ModuleBlock({
   mod,
   sectionLabel,
+  sectionType,
   onOpenPanel,
   isLast,
 }: {
   mod: ModuleRow;
   sectionLabel: string;
+  sectionType: "READING_WRITING" | "MATH";
   onOpenPanel: () => void;
   isLast: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const empty = mod.questions.length === 0;
+  const expectedCount = sectionType === "READING_WRITING" ? 27 : 22;
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const difficultyMix = (["EASY", "MEDIUM", "HARD"] as const)
+    .map((difficulty) => ({
+      difficulty,
+      count: mod.questions.filter((question) => question.difficulty === difficulty).length,
+    }))
+    .filter((item) => item.count > 0);
 
-  function move(questionId: string, direction: "up" | "down") {
+  function move(questionId: string, targetIndex: number) {
     startTransition(async () => {
-      const res = await reorderModuleQuestion(mod.id, questionId, direction);
+      const res = await reorderModuleQuestion(mod.id, questionId, targetIndex);
       if (!res.ok) {
         alert(res.error ?? "Reorder failed");
         return;
@@ -186,8 +198,13 @@ function ModuleBlock({
             {mod.difficulty}
           </span>
           <span className="text-xs text-muted-foreground">
-            {mod.questions.length} question{mod.questions.length === 1 ? "" : "s"}
+            {mod.questions.length} / {expectedCount} questions
           </span>
+          {!empty && mod.questions.length === expectedCount && (
+            <span className="rounded-md border border-green-500/30 bg-green-50 px-2 py-0.5 text-xs text-green-800 dark:bg-green-950/20 dark:text-green-200">
+              Ready
+            </span>
+          )}
           {empty && (
             <span className="rounded-md border border-amber-400/40 bg-amber-50 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
               ⚠ No questions yet
@@ -208,6 +225,19 @@ function ModuleBlock({
           This module needs at least one question before the test can be started.
         </p>
       ) : (
+        <>
+        <div className="mb-2 flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+          {difficultyMix.map(({ difficulty, count }) => (
+            <span key={difficulty} className="rounded-full border border-border bg-muted px-2 py-0.5">
+              {difficulty}: {count}
+            </span>
+          ))}
+          {mod.questions.some((question) => question.difficulty === "MIXED") && (
+            <span className="rounded-full border border-border bg-muted px-2 py-0.5">
+              MIXED: {mod.questions.filter((question) => question.difficulty === "MIXED").length}
+            </span>
+          )}
+        </div>
         <ol className="space-y-1">
           {mod.questions.map((q, i) => {
             const isFirst = i === 0;
@@ -215,8 +245,18 @@ function ModuleBlock({
             return (
               <li
                 key={q.id}
-                className="flex items-start gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-accent/30"
+                draggable={!pending}
+                onDragStart={() => setDraggedId(q.id)}
+                onDragEnd={() => setDraggedId(null)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (draggedId && draggedId !== q.id) move(draggedId, i);
+                  setDraggedId(null);
+                }}
+                className="flex cursor-grab items-start gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-accent/30 active:cursor-grabbing"
               >
+                <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                 <span className="mt-0.5 w-6 shrink-0 text-right font-mono text-xs text-muted-foreground">
                   {i + 1}.
                 </span>
@@ -233,7 +273,7 @@ function ModuleBlock({
                 <div className="flex shrink-0 items-center gap-0.5">
                   <button
                     type="button"
-                    onClick={() => move(q.id, "up")}
+                    onClick={() => move(q.id, i - 1)}
                     disabled={pending || isFirst}
                     title="Move up"
                     className="rounded p-1 text-xs hover:bg-accent disabled:opacity-30"
@@ -242,7 +282,7 @@ function ModuleBlock({
                   </button>
                   <button
                     type="button"
-                    onClick={() => move(q.id, "down")}
+                    onClick={() => move(q.id, i + 1)}
                     disabled={pending || isLastQ}
                     title="Move down"
                     className="rounded p-1 text-xs hover:bg-accent disabled:opacity-30"
@@ -263,6 +303,7 @@ function ModuleBlock({
             );
           })}
         </ol>
+        </>
       )}
     </div>
   );

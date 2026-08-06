@@ -66,35 +66,46 @@ export async function bulkAssignQuestionsToModule(moduleId: string, questionIds:
   const cleanIds = Array.from(new Set(questionIds.filter((s) => typeof s === "string" && s.length > 0)));
   if (cleanIds.length === 0) return { ok: false as const, error: "No questions selected" };
 
-  await prisma.$transaction(
-    async (tx) => {
-      const existing = await tx.moduleQuestion.findMany({
+  const addedIds = await prisma.$transaction(async (tx) => {
+    const [module, existing, questions, max] = await Promise.all([
+      tx.module.findUnique({
+        where: { id: moduleId },
+        select: { section: { select: { type: true } } },
+      }),
+      tx.moduleQuestion.findMany({
         where: { moduleId, questionId: { in: cleanIds } },
         select: { questionId: true },
+      }),
+      tx.question.findMany({
+        where: { id: { in: cleanIds } },
+        select: { id: true, sectionType: true },
+      }),
+      tx.moduleQuestion.aggregate({ where: { moduleId }, _max: { order: true } }),
+    ]);
+    if (!module) return [];
+    const skip = new Set(existing.map((link) => link.questionId));
+    const eligible = questions.filter(
+      (question) =>
+        question.sectionType === module.section.type && !skip.has(question.id),
+    );
+    const startingOrder = max._max.order ?? 0;
+    if (eligible.length > 0) {
+      await tx.moduleQuestion.createMany({
+        data: eligible.map((question, index) => ({
+          moduleId,
+          questionId: question.id,
+          order: startingOrder + index + 1,
+        })),
       });
-      const skip = new Set(existing.map((e) => e.questionId));
-
-      const max = await tx.moduleQuestion.aggregate({
-        where: { moduleId },
-        _max: { order: true },
-      });
-      let next = (max._max.order ?? 0) + 1;
-
-      for (const qid of cleanIds) {
-        if (skip.has(qid)) continue;
-        await tx.moduleQuestion.create({
-          data: { moduleId, questionId: qid, order: next++ },
-        });
-      }
-    },
-    { timeout: 15000 },
-  );
+    }
+    return eligible.map((question) => question.id);
+  }, { timeout: 15_000 });
 
   revalidatePath("/admin/tests");
-  return { ok: true as const, addedCount: cleanIds.length };
+  return { ok: true as const, addedCount: addedIds.length, addedIds };
 }
 
-// ---------- Remove + re-sequence ----------
+// ---------- Remove ----------
 
 export async function removeQuestionFromModule(moduleId: string, questionId: string) {
   await requireAdmin();
@@ -102,84 +113,42 @@ export async function removeQuestionFromModule(moduleId: string, questionId: str
     return { ok: false as const, error: "Invalid id" };
   }
 
-  // Renumbering used to be a 2N-update loop inside the transaction, which on
-  // Vercel + Neon's pooler regularly exceeded Prisma's 5s transaction
-  // timeout for any large module. We collapse the work into two raw UPDATEs:
-  // one to park every row at a negative order (vacating the positive slots),
-  // and one ROW_NUMBER-driven update to renumber 1..N. Both are single
-  // round-trips regardless of module size.
-  await prisma.$transaction(
-    async (tx) => {
-      const target = await tx.moduleQuestion.findUnique({
-        where: { moduleId_questionId: { moduleId, questionId } },
-      });
-      if (!target) return;
-      await tx.moduleQuestion.delete({ where: { id: target.id } });
-
-      // Step 1: park every survivor at a negative order so the positive
-      // slots are vacated and the next pass can renumber freely without
-      // hitting the (moduleId, order) unique constraint.
-      await tx.$executeRaw`
-        UPDATE "ModuleQuestion"
-        SET "order" = -"order"
-        WHERE "moduleId" = ${moduleId}
-      `;
-
-      // Step 2: renumber to a clean 1..N preserving the original ascending
-      // order. Sorting by "order" DESC after the negation maps the smallest
-      // original order (most-positive negated value) to row number 1.
-      await tx.$executeRaw`
-        WITH ranked AS (
-          SELECT id, ROW_NUMBER() OVER (ORDER BY "order" DESC) AS new_order
-          FROM "ModuleQuestion"
-          WHERE "moduleId" = ${moduleId}
-        )
-        UPDATE "ModuleQuestion" mq
-        SET "order" = ranked.new_order::int
-        FROM ranked
-        WHERE mq.id = ranked.id
-      `;
-    },
-    { timeout: 15000 },
-  );
+  await prisma.moduleQuestion.deleteMany({ where: { moduleId, questionId } });
 
   revalidatePath("/admin/tests");
   return { ok: true as const };
 }
 
-// ---------- Reorder (swap with neighbor) ----------
+// ---------- Fractional reorder (one write) ----------
 
 export async function reorderModuleQuestion(
   moduleId: string,
   questionId: string,
-  direction: "up" | "down",
+  targetIndex: number,
 ) {
   await requireAdmin();
-  if (direction !== "up" && direction !== "down") {
-    return { ok: false as const, error: "Invalid direction" };
+  if (!Number.isInteger(targetIndex) || targetIndex < 0) {
+    return { ok: false as const, error: "Invalid target position" };
   }
-
-  await prisma.$transaction(
-    async (tx) => {
-      const all = await tx.moduleQuestion.findMany({
-        where: { moduleId },
-        orderBy: { order: "asc" },
-      });
-      const idx = all.findIndex((mq) => mq.questionId === questionId);
-      if (idx < 0) return;
-      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= all.length) return;
-
-      const a = all[idx];
-      const b = all[swapIdx];
-      // Three-step swap: park `a` at a negative sentinel value to free its slot,
-      // move `b` into `a`'s slot, then move `a` into `b`'s old slot.
-      await tx.moduleQuestion.update({ where: { id: a.id }, data: { order: -1 } });
-      await tx.moduleQuestion.update({ where: { id: b.id }, data: { order: a.order } });
-      await tx.moduleQuestion.update({ where: { id: a.id }, data: { order: b.order } });
-    },
-    { timeout: 15000 },
-  );
+  const all = await prisma.moduleQuestion.findMany({
+    where: { moduleId },
+    orderBy: { order: "asc" },
+  });
+  const target = all.find((link) => link.questionId === questionId);
+  if (!target) return { ok: false as const, error: "Question is not in this module" };
+  const remaining = all.filter((link) => link.id !== target.id);
+  const insertionIndex = Math.min(targetIndex, remaining.length);
+  const previous = remaining[insertionIndex - 1];
+  const next = remaining[insertionIndex];
+  const order =
+    previous && next
+      ? (previous.order + next.order) / 2
+      : previous
+        ? previous.order + 1024
+        : next
+          ? next.order - 1024
+          : 1024;
+  await prisma.moduleQuestion.update({ where: { id: target.id }, data: { order } });
 
   revalidatePath("/admin/tests");
   return { ok: true as const };

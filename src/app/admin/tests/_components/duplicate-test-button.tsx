@@ -68,9 +68,9 @@ export function DuplicateTestButton({ testId, originalTitle }: Props) {
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 shadow-elevated data-[state=open]:animate-slide-up">
           <Dialog.Title className="text-lg font-semibold">Duplicate test?</Dialog.Title>
           <Dialog.Description className="mt-2 text-sm text-muted-foreground">
-            Copies every section, module, and question assignment. The new
-            test starts as <span className="font-medium text-foreground">private</span>;
-            you can publish it after reviewing.
+            Copies every section, module, and question assignment. Questions
+            remain shared with the global bank; editing one affects both tests.
+            The new test starts as <span className="font-medium text-foreground">private</span>.
           </Dialog.Description>
           <div className="mt-4">
             <label className="flex flex-col gap-1.5 text-sm">

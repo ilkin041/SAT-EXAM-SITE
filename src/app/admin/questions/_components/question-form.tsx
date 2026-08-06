@@ -1,12 +1,22 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { QuestionPreview, type PreviewChoice } from "@/components/question-preview";
 import { ImageUploader } from "@/components/image-uploader";
 import { DeleteQuestionModal } from "@/components/delete-question-modal";
 import type { QuestionAssignment } from "../actions";
-import { createQuestion, updateQuestion } from "../actions";
+import {
+  createQuestion,
+  findLikelyDuplicateQuestion,
+  updateQuestion,
+} from "../actions";
+import {
+  isDomainForSection,
+  normalizeQuestionDomain,
+  QUESTION_DOMAINS,
+} from "@/lib/question-taxonomy";
 
 type Type = "MULTIPLE_CHOICE" | "STUDENT_PRODUCED_RESPONSE";
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "MIXED";
@@ -36,6 +46,7 @@ interface Props {
   initial?: Partial<FormValues>;
   /** Module assignments — passed straight into the delete modal so it skips its own fetch. */
   assignments?: QuestionAssignment[];
+  draftKey?: string;
 }
 
 const EMPTY_CHOICES: PreviewChoice[] = [
@@ -45,13 +56,19 @@ const EMPTY_CHOICES: PreviewChoice[] = [
   { label: "D", text: "" },
 ];
 
-export function QuestionForm({ mode, questionId, initial, assignments = [] }: Props) {
+export function QuestionForm({
+  mode,
+  questionId,
+  initial,
+  assignments = [],
+  draftKey,
+}: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const [values, setValues] = useState<FormValues>({
+  const initialValues: FormValues = {
     sectionType: initial?.sectionType ?? "READING_WRITING",
     type: initial?.type ?? "MULTIPLE_CHOICE",
     domain: initial?.domain ?? "",
@@ -66,10 +83,76 @@ export function QuestionForm({ mode, questionId, initial, assignments = [] }: Pr
     correctAnswer: initial?.correctAnswer ?? "A",
     acceptedAnswers: initial?.acceptedAnswers ?? [""],
     explanation: initial?.explanation ?? "",
-  });
+  };
+  const [values, setValues] = useState<FormValues>(initialValues);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialValues));
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [duplicate, setDuplicate] = useState<{ id: string; stem: string } | null>(null);
+  const localStorageKey = `sat-question-draft:${draftKey ?? questionId ?? "new"}`;
+  const serializedValues = JSON.stringify(values);
+  const dirty = serializedValues !== savedSnapshot;
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(localStorageKey);
+      if (saved) {
+        setValues(JSON.parse(saved) as FormValues);
+        setDraftRestored(true);
+      }
+    } catch {
+      // A malformed or unavailable local draft must never block authoring.
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, [localStorageKey]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    const timer = window.setTimeout(() => {
+      if (dirty) window.localStorage.setItem(localStorageKey, serializedValues);
+      else window.localStorage.removeItem(localStorageKey);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [dirty, draftLoaded, localStorageKey, serializedValues]);
+
+  useEffect(() => {
+    function guard(event: BeforeUnloadEvent) {
+      if (!dirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [dirty]);
+
+  useEffect(() => {
+    if (!values.stem.trim()) {
+      setDuplicate(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void findLikelyDuplicateQuestion({
+        stem: values.stem,
+        passage: values.passage || null,
+        excludeId: questionId,
+      }).then(setDuplicate);
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [questionId, values.passage, values.stem]);
 
   function update<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
+  }
+
+  function setSectionType(sectionType: SectionType) {
+    setValues((current) => ({
+      ...current,
+      sectionType,
+      domain: isDomainForSection(current.domain, sectionType)
+        ? current.domain
+        : QUESTION_DOMAINS[sectionType][0],
+    }));
   }
 
   function setChoice(idx: number, text: string) {
@@ -119,7 +202,7 @@ export function QuestionForm({ mode, questionId, initial, assignments = [] }: Pr
     const payload = {
       sectionType: values.sectionType,
       type: values.type,
-      domain: values.domain.trim(),
+      domain: normalizeQuestionDomain(values.domain) ?? QUESTION_DOMAINS[values.sectionType][0],
       skill: values.skill.trim() || null,
       difficulty: values.difficulty,
       passage: values.passage.trim() || null,
@@ -149,6 +232,9 @@ export function QuestionForm({ mode, questionId, initial, assignments = [] }: Pr
         setError(res.error);
         return;
       }
+      window.localStorage.removeItem(localStorageKey);
+      setSavedSnapshot(serializedValues);
+      setDraftRestored(false);
       if (mode === "create") {
         router.push(`/admin/questions/${res.id}`);
       } else {
@@ -167,16 +253,21 @@ export function QuestionForm({ mode, questionId, initial, assignments = [] }: Pr
     <form onSubmit={onSubmit} className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       {/* ------------ Editor ------------ */}
       <div className="space-y-5">
+        {draftRestored && (
+          <div className="rounded-md border border-blue-500/30 bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
+            Restored your unsaved local draft.
+          </div>
+        )}
         <Field label="Section">
           <div className="inline-flex rounded-lg border border-input bg-card p-1 text-sm">
             <SectionPill
               active={values.sectionType === "READING_WRITING"}
-              onClick={() => update("sectionType", "READING_WRITING")}
+              onClick={() => setSectionType("READING_WRITING")}
               label="English (R&W)"
             />
             <SectionPill
               active={values.sectionType === "MATH"}
-              onClick={() => update("sectionType", "MATH")}
+              onClick={() => setSectionType("MATH")}
               label="Math"
             />
           </div>
@@ -209,13 +300,17 @@ export function QuestionForm({ mode, questionId, initial, assignments = [] }: Pr
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Domain">
-            <input
+            <select
               value={values.domain}
               onChange={(e) => update("domain", e.target.value)}
               className={inputClass}
-              placeholder="e.g. Algebra"
               required
-            />
+            >
+              <option value="" disabled>Select a domain</option>
+              {QUESTION_DOMAINS[values.sectionType].map((domain) => (
+                <option key={domain} value={domain}>{domain}</option>
+              ))}
+            </select>
           </Field>
           <Field label="Skill (optional)">
             <input
@@ -238,6 +333,16 @@ export function QuestionForm({ mode, questionId, initial, assignments = [] }: Pr
             placeholder="<p>Passage text…</p>"
           />
         </Field>
+
+        {duplicate && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+            This passage and stem already exist. Review the{" "}
+            <Link href={`/admin/questions/${duplicate.id}`} className="font-medium underline">
+              existing question
+            </Link>{" "}
+            before saving another copy.
+          </div>
+        )}
 
         <Field
           label="Question stem (HTML + LaTeX)"

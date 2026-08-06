@@ -2,6 +2,8 @@ import { PrismaClient, Role, TestMode, SectionType, Difficulty, QuestionType } f
 import bcrypt from "bcryptjs";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { questionContentHash } from "../src/lib/question-content-hash";
+import { normalizeQuestionDomain } from "../src/lib/question-taxonomy";
 
 const prisma = new PrismaClient();
 
@@ -85,13 +87,15 @@ async function createTestFromPayload(payload: ImportPayload, createdById: string
 
       for (let i = 0; i < mod.questions.length; i++) {
         const q = mod.questions[i];
+        const domain = normalizeQuestionDomain(q.domain);
+        if (!domain) throw new Error(`Unknown SAT domain in seed: ${q.domain}`);
         // 1) Create the bank question (no module link yet).
         const createdQuestion = await prisma.question.create({
           data: {
             // Inherit section type from the section the seed is placing it in.
             sectionType: SectionType[section.type],
             type: QuestionType[q.type],
-            domain: q.domain,
+            domain,
             skill: q.skill,
             difficulty: Difficulty[q.difficulty],
             passage: q.passage ?? null,
@@ -101,6 +105,7 @@ async function createTestFromPayload(payload: ImportPayload, createdById: string
             correctAnswer: q.correctAnswer,
             acceptedAnswers: q.acceptedAnswers ? (q.acceptedAnswers as unknown as object) : undefined,
             explanation: q.explanation ?? null,
+            contentHash: questionContentHash(q),
           },
         });
         // 2) Link it into this module at the right order.

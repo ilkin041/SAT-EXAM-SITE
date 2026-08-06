@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  Copy,
   Pencil,
   Trash2,
   X,
@@ -18,11 +19,14 @@ import { useToast } from "@/components/toast";
 import {
   bulkAssignToModule,
   bulkDeleteQuestions,
+  bulkSetDomain,
   bulkSetDifficulty,
+  bulkSetSkill,
   type AssignableTest,
 } from "../actions";
 import { RowDeleteButton } from "./row-delete-button";
 import { cn } from "@/lib/utils";
+import { ALL_QUESTION_DOMAINS } from "@/lib/question-taxonomy";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "MIXED";
 
@@ -34,6 +38,7 @@ export interface QuestionRow {
   domain: string;
   difficulty: Difficulty;
   assignmentCount: number;
+  updatedAt: string;
 }
 
 interface Props {
@@ -56,6 +61,8 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [difficultyOpen, setDifficultyOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [metadataMode, setMetadataMode] = useState<"domain" | "skill" | null>(null);
+  const [metadataValue, setMetadataValue] = useState("");
 
   // Stale-selection cleanup: if rows change (filter applied), drop ids that
   // are no longer in view.
@@ -105,7 +112,7 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
     });
   }
 
-  function runBulkDifficulty(difficulty: "EASY" | "MEDIUM" | "HARD") {
+  function runBulkDifficulty(difficulty: Difficulty) {
     const ids = selectedIdsInView();
     startTransition(async () => {
       const res = await bulkSetDifficulty(ids, difficulty);
@@ -118,6 +125,31 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
       );
       clearSelection();
       setDifficultyOpen(false);
+      router.refresh();
+    });
+  }
+
+  function openMetadata(mode: "domain" | "skill") {
+    setMetadataValue(mode === "domain" ? ALL_QUESTION_DOMAINS[0] : "");
+    setMetadataMode(mode);
+  }
+
+  function runBulkMetadata() {
+    const ids = selectedIdsInView();
+    const mode = metadataMode;
+    if (!mode) return;
+    startTransition(async () => {
+      const res =
+        mode === "domain"
+          ? await bulkSetDomain(ids, metadataValue)
+          : await bulkSetSkill(ids, metadataValue);
+      if (!res.ok) {
+        toast(res.error || "Update failed", "error");
+        return;
+      }
+      toast(`Updated ${res.updated} question${res.updated === 1 ? "" : "s"}.`);
+      clearSelection();
+      setMetadataMode(null);
       router.refresh();
     });
   }
@@ -170,6 +202,12 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
               Change difficulty
               <ChevronDown className="h-3.5 w-3.5" />
             </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => openMetadata("domain")}>
+              Change domain
+            </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => openMetadata("skill")}>
+              Change skill
+            </Button>
             <Button
               type="button"
               variant="destructive"
@@ -220,6 +258,7 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
                 <th className="px-6 py-4 font-semibold">Domain</th>
                 <th className="px-6 py-4 font-semibold">Difficulty</th>
                 <th className="px-6 py-4 font-semibold">Used in</th>
+                <th className="px-6 py-4 font-semibold">Updated</th>
                 <th className="px-6 py-4 w-12" />
               </tr>
             </thead>
@@ -276,8 +315,19 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
                         </Badge>
                       )}
                     </td>
+                    <td className="px-6 py-4 text-xs text-muted-foreground">
+                      {new Date(r.updatedAt).toLocaleDateString()}
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/admin/questions/new?clone=${r.id}`}
+                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
+                          aria-label="Clone"
+                          title="Clone question"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Link>
                         <Link
                           href={`/admin/questions/${r.id}`}
                           className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
@@ -380,11 +430,58 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
               >
                 <Badge variant="destructive">Hard</Badge>
               </Button>
+              <Button
+                onClick={() => runBulkDifficulty("MIXED")}
+                variant="secondary"
+                disabled={pending}
+                className="justify-start"
+              >
+                <Badge variant="muted">Mixed</Badge>
+              </Button>
             </div>
             <div className="mt-5 flex justify-end">
               <Button variant="ghost" onClick={() => setDifficultyOpen(false)}>
                 Cancel
               </Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <Dialog.Root open={metadataMode !== null} onOpenChange={(open) => !open && setMetadataMode(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 shadow-elevated">
+            <Dialog.Title className="text-lg font-semibold">
+              Change {metadataMode} for {selectedCount} question{selectedCount === 1 ? "" : "s"}
+            </Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-muted-foreground">
+              This replaces the current {metadataMode} on every selected question.
+            </Dialog.Description>
+            <div className="mt-4">
+              {metadataMode === "domain" ? (
+                <select
+                  value={metadataValue}
+                  onChange={(event) => setMetadataValue(event.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {ALL_QUESTION_DOMAINS.map((domain) => (
+                    <option key={domain} value={domain}>{domain}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={metadataValue}
+                  onChange={(event) => setMetadataValue(event.target.value)}
+                  placeholder="Leave blank to clear skill"
+                  maxLength={200}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              )}
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setMetadataMode(null)}>Cancel</Button>
+              <Button onClick={runBulkMetadata} loading={pending}>Apply</Button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

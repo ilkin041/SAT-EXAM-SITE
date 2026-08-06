@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isDomainForSection, normalizeQuestionDomain } from "@/lib/question-taxonomy";
 
 // ---------- Shared import schema ----------
 
@@ -12,7 +13,14 @@ export const questionSchema = z
     /** Required for bank-only imports; derived from the section for full-test imports. */
     sectionType: z.enum(["READING_WRITING", "MATH"]).optional(),
     type: z.enum(["MULTIPLE_CHOICE", "STUDENT_PRODUCED_RESPONSE"]),
-    domain: z.string().min(1),
+    domain: z.string().min(1).transform((value, ctx) => {
+      const domain = normalizeQuestionDomain(value);
+      if (!domain) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Unknown SAT domain" });
+        return z.NEVER;
+      }
+      return domain;
+    }),
     skill: z.string().optional().nullable(),
     difficulty: z.enum(["EASY", "MEDIUM", "HARD", "MIXED"]),
     passage: z.string().optional().nullable(),
@@ -101,6 +109,27 @@ export const importSchema = z
     sections: z.array(sectionSchema).min(1),
   })
   .superRefine((payload, ctx) => {
+    payload.sections.forEach((section, sectionIndex) => {
+      section.modules.forEach((module, moduleIndex) => {
+        module.questions.forEach((question, questionIndex) => {
+          const sectionType = question.sectionType ?? section.type;
+          if (question.sectionType && question.sectionType !== section.type) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Question sectionType must match its containing ${section.type} section.`,
+              path: ["sections", sectionIndex, "modules", moduleIndex, "questions", questionIndex, "sectionType"],
+            });
+          }
+          if (!isDomainForSection(question.domain, sectionType)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Domain "${question.domain}" does not belong to ${sectionType}.`,
+              path: ["sections", sectionIndex, "modules", moduleIndex, "questions", questionIndex, "domain"],
+            });
+          }
+        });
+      });
+    });
     // Adaptive tests: each section's Module 2 needs BOTH an EASY and a HARD variant.
     if (payload.test.mode === "ADAPTIVE") {
       payload.sections.forEach((s, si) => {
@@ -157,11 +186,19 @@ const bankQuestionSchema = questionSchema.superRefine((q, ctx) => {
       path: ["sectionType"],
     });
   }
+  if (q.sectionType && !isDomainForSection(q.domain, q.sectionType)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Domain "${q.domain}" does not belong to ${q.sectionType}.`,
+      path: ["domain"],
+    });
+  }
 });
 
 export const bankImportSchema = z.object({
   import: z.literal("questions"),
   questions: z.array(bankQuestionSchema).min(1, "questions array cannot be empty"),
+  keepDuplicateIndices: z.array(z.number().int().nonnegative()).optional().default([]),
 });
 
 export type BankImportPayload = z.infer<typeof bankImportSchema>;

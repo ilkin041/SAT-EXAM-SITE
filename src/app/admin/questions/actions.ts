@@ -5,6 +5,11 @@ import { revalidatePath, unstable_cache } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { questionContentHash } from "@/lib/question-content-hash";
+import {
+  isDomainForSection,
+  normalizeQuestionDomain,
+} from "@/lib/question-taxonomy";
 
 const choiceSchema = z.object({
   label: z.enum(["A", "B", "C", "D"]),
@@ -16,7 +21,14 @@ const choiceSchema = z.object({
 const baseSchema = z.object({
   sectionType: z.enum(["READING_WRITING", "MATH"]),
   type: z.enum(["MULTIPLE_CHOICE", "STUDENT_PRODUCED_RESPONSE"]),
-  domain: z.string().min(1, "Domain is required"),
+  domain: z.string().min(1, "Domain is required").transform((value, ctx) => {
+    const domain = normalizeQuestionDomain(value);
+    if (!domain) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose a valid SAT domain" });
+      return z.NEVER;
+    }
+    return domain;
+  }),
   skill: z.string().optional().nullable(),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD", "MIXED"]),
   passage: z.string().optional().nullable(),
@@ -50,6 +62,10 @@ function validate(input: QuestionInput) {
     return { ok: false as const, error: parsed.error.issues.map((i) => i.message).join("; ") };
   }
   const data = parsed.data;
+
+  if (!isDomainForSection(data.domain, data.sectionType)) {
+    return { ok: false as const, error: "The selected domain does not belong to this section." };
+  }
 
   if (data.type === "MULTIPLE_CHOICE") {
     if (!data.choices || data.choices.length !== 4) {
@@ -98,6 +114,7 @@ export async function createQuestion(input: QuestionInput) {
           ? (data.acceptedAnswers as unknown as object)
           : undefined,
       explanation: data.explanation ?? null,
+      contentHash: questionContentHash({ stem: data.stem, passage: data.passage }),
     },
   });
 
@@ -161,6 +178,7 @@ export async function updateQuestion(id: string, input: QuestionInput) {
           ? (data.acceptedAnswers as unknown as Prisma.InputJsonValue)
           : Prisma.DbNull,
       explanation: data.explanation ?? null,
+      contentHash: questionContentHash({ stem: data.stem, passage: data.passage }),
     },
   });
 
@@ -215,6 +233,24 @@ export async function getQuestionAssignments(id: string) {
 
 export type QuestionAssignment = Awaited<ReturnType<typeof getQuestionAssignments>>[number];
 
+export async function findLikelyDuplicateQuestion(input: {
+  stem: string;
+  passage?: string | null;
+  excludeId?: string;
+}) {
+  await requireAdmin();
+  if (!input.stem.trim()) return null;
+  const contentHash = questionContentHash(input);
+  return prisma.question.findFirst({
+    where: {
+      contentHash,
+      ...(input.excludeId ? { id: { not: input.excludeId } } : {}),
+    },
+    select: { id: true, stem: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
 // ---------- Bulk operations ----------
 
 const bulkIdsSchema = z
@@ -251,14 +287,14 @@ export async function bulkDeleteQuestions(ids: string[]) {
  */
 export async function bulkSetDifficulty(
   ids: string[],
-  difficulty: "EASY" | "MEDIUM" | "HARD",
+  difficulty: "EASY" | "MEDIUM" | "HARD" | "MIXED",
 ) {
   await requireAdmin();
   const parsed = bulkIdsSchema.safeParse(ids);
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid selection" };
   }
-  if (!["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
+  if (!["EASY", "MEDIUM", "HARD", "MIXED"].includes(difficulty)) {
     return { ok: false as const, error: "Invalid difficulty" };
   }
   try {
@@ -271,6 +307,52 @@ export async function bulkSetDifficulty(
   } catch (err) {
     return { ok: false as const, error: (err as Error).message || "Bulk update failed" };
   }
+}
+
+export async function bulkSetDomain(ids: string[], requestedDomain: string) {
+  await requireAdmin();
+  const parsed = bulkIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid selection" };
+  }
+  const domain = normalizeQuestionDomain(requestedDomain);
+  if (!domain) return { ok: false as const, error: "Choose a valid SAT domain" };
+
+  const questions = await prisma.question.findMany({
+    where: { id: { in: parsed.data } },
+    select: { sectionType: true },
+  });
+  if (questions.some((question) => !isDomainForSection(domain, question.sectionType))) {
+    return {
+      ok: false as const,
+      error: "The selected questions include a section that does not use this domain.",
+    };
+  }
+
+  const result = await prisma.question.updateMany({
+    where: { id: { in: parsed.data } },
+    data: { domain },
+  });
+  revalidatePath("/admin/questions");
+  return { ok: true as const, updated: result.count };
+}
+
+export async function bulkSetSkill(ids: string[], skill: string) {
+  await requireAdmin();
+  const parsed = bulkIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid selection" };
+  }
+  const normalizedSkill = skill.trim();
+  if (normalizedSkill.length > 200) {
+    return { ok: false as const, error: "Skill must be 200 characters or fewer" };
+  }
+  const result = await prisma.question.updateMany({
+    where: { id: { in: parsed.data } },
+    data: { skill: normalizedSkill || null },
+  });
+  revalidatePath("/admin/questions");
+  return { ok: true as const, updated: result.count };
 }
 
 /**
