@@ -7,6 +7,14 @@ import {
   getQuestionAssignments,
   type QuestionAssignment,
 } from "@/app/admin/questions/actions";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+} from "@/components/ui/modal";
 import { useToast } from "./toast";
 
 interface Props {
@@ -24,6 +32,11 @@ interface Props {
  * the question is assigned to so the admin sees the blast radius before
  * confirming. The checklist is informational only — there's no per-row choice;
  * the whole question is either kept or deleted.
+ *
+ * On `Modal` since T1.5. The hand-rolled version it replaced had no focus trap
+ * — Tab walked out of the panel into the page behind it — and re-implemented
+ * Esc as a `window` keydown listener, which fired for every mounted instance
+ * whether or not it was the top layer.
  */
 export function DeleteQuestionModal({
   open,
@@ -67,16 +80,6 @@ export function DeleteQuestionModal({
     };
   }, [open, questionId, initialAssignments]);
 
-  // Esc closes when the modal is open and we're not mid-delete.
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !pending) onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, pending, onClose]);
-
   function onConfirm() {
     if (!questionId) return;
     setError(null);
@@ -93,40 +96,38 @@ export function DeleteQuestionModal({
     });
   }
 
-  if (!open || !questionId) return null;
+  if (!questionId) return null;
 
   const empty = assignments && assignments.length === 0;
 
   return (
-    <div
-      className="fixed inset-0 z-[80] flex animate-in fade-in items-center justify-center bg-black/50 backdrop-blur-sm"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !pending) onClose();
+    <Modal
+      open={open}
+      onOpenChange={(next) => {
+        // Nothing dismisses a delete that is already in flight.
+        if (!next && !pending) onClose();
       }}
     >
-      <div
-        role="dialog"
-        aria-labelledby="delete-q-title"
-        className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl"
+      <ModalContent
+        variant="destructive"
+        size="lg"
+        dismissable={!pending}
+        title="Delete this question?"
+        description={
+          assignments === null
+            ? "Checking which tests use this question…"
+            : empty
+              ? "This question is not assigned to any test. It will be permanently deleted from the question bank."
+              : "This question is currently assigned to the modules below. Removing it will also remove it from those tests."
+        }
       >
-        <h2 id="delete-q-title" className="text-lg font-semibold">
-          Delete this question?
-        </h2>
-
-        {loadingAssignments && !assignments ? (
-          <p className="mt-3 text-sm text-muted-foreground">Loading assignments…</p>
-        ) : empty ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            This question is not assigned to any test. It will be permanently deleted from
-            the question bank.
-          </p>
-        ) : (
-          <>
-            <p className="mt-3 text-sm text-muted-foreground">
-              This question is currently assigned to the following modules. Removing it
-              will also remove it from those tests.
+        <ModalBody>
+          {loadingAssignments && !assignments ? (
+            <p className="text-body text-muted-foreground">
+              Loading assignments…
             </p>
-            <ul className="mt-4 max-h-64 space-y-2 overflow-y-auto rounded-md border border-border bg-muted/30 p-3 text-sm">
+          ) : empty ? null : (
+            <ul className="space-y-2 rounded-lg border border-border bg-paper-sunk p-3 text-body">
               {(assignments ?? []).map((a) => (
                 <li key={a.id} className="flex items-start gap-2">
                   <input
@@ -135,7 +136,7 @@ export function DeleteQuestionModal({
                     readOnly
                     disabled
                     aria-label="Affected module"
-                    className="mt-0.5 shrink-0 cursor-not-allowed accent-destructive"
+                    className="mt-1 shrink-0 cursor-not-allowed accent-destructive"
                   />
                   <span>
                     <span className="font-medium">{a.testTitle}</span>{" "}
@@ -148,34 +149,29 @@ export function DeleteQuestionModal({
                 </li>
               ))}
             </ul>
-          </>
-        )}
+          )}
 
-        {error && (
-          <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+          {error && (
+            <Alert variant="destructive" live title="Delete failed" className="mt-4">
+              {error}
+            </Alert>
+          )}
+        </ModalBody>
 
-        <div className="mt-6 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={pending}
-            className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-accent disabled:opacity-60"
-          >
+        <ModalFooter>
+          <Button variant="secondary" onClick={onClose} disabled={pending}>
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="destructive"
             onClick={onConfirm}
-            disabled={pending || loadingAssignments}
-            className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-60"
+            loading={pending}
+            disabled={loadingAssignments}
           >
             {pending ? "Deleting…" : "Delete permanently"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }

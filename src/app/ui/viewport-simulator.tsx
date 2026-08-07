@@ -38,6 +38,13 @@ export function ViewportSimulator({ section }: { section: string }) {
                 <iframe
                   title={`${section} at ${width}px`}
                   src={`/ui/frame?section=${section}`}
+                  // Three frames per section, and T1.5 took the gallery from
+                  // nine sections to fifteen. Forty-five simultaneous document
+                  // loads exhausted the dev server's socket pool outright —
+                  // ERR_INSUFFICIENT_RESOURCES, and the frames below the fold
+                  // rendered blank. They are below the fold by definition, so
+                  // defer them until they are scrolled near.
+                  loading="lazy"
                   style={{
                     width,
                     height: FRAME_HEIGHT,

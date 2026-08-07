@@ -251,9 +251,9 @@ colour alone, keyboard-traversable modals, no horizontal scroll at 360px on full
 
 ### Radix packages
 
-Installed: `react-dialog`, `react-dropdown-menu`, `react-label`, `react-select`, `react-slot`.
-**Not installed:** `react-tabs`, `react-tooltip`, `react-accordion`, `react-progress`. Phase 1 adds
-these — budget for it.
+Installed: `react-dialog`, `react-dropdown-menu`, `react-label`, `react-select`, `react-slot`,
+`react-tabs`, `react-tooltip`. **Not installed:** `react-accordion`, `react-progress`. Phase 1 adds
+those — budget for it.
 
 **`package.json` pins `@radix-ui/react-dismissable-layer` through `overrides`. Do not remove it**
 without checking the symptom it fixes. Radix keeps its layer stack in a module-level React context,
@@ -263,12 +263,15 @@ believes it is the topmost: one Escape dismisses a Select *and* the Dialog aroun
 will not merge them, because each parent pins its own. Outside-click layering keeps working
 throughout, which is what makes the split easy to miss — only the Escape path reads the shared
 stack. Any new Radix package needs this checked: `npm ls @radix-ui/react-dismissable-layer --all`.
+T1.5 checked it after adding `react-tabs` and `react-tooltip`: tooltip pulls the layer and dedupes
+onto the override, tabs does not use it at all. One stack.
 
-### Existing primitives (9, in `src/components/ui/`)
+### Existing primitives (15, in `src/components/ui/`)
 
 `Button` (107 LOC, 6 variants, 4 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
 · `Select` (sizes sm/default, error state, leading icon, clearable) · `Table` · `DataTable` ·
-`EmptyState` · `PageHeader` (admin only) · `StatCard`. Everything else in the plan is greenfield.
+`Modal` · `Sheet` · `Tabs` · `Tooltip` · `Alert` · `SegmentedControl` · `EmptyState` ·
+`PageHeader` (admin only) · `StatCard`. Everything else in the plan is greenfield.
 
 `Select` carries one rule worth knowing before using it: Radix rejects an item value of `""`, so the
 wrapper translates it to a private sentinel and back. A call site writes `value=""` for the "All …"
@@ -293,6 +296,28 @@ hand-rolled tables onto them:
   and it needs no new params. Two tables on one page need different `paramPrefix` values.
   Client-mode sorting falls back to the text a `cell` renders, which is wrong for a date or a
   badge: give those columns a `sortValue`.
+
+The T1.5 six carry their own rules:
+
+- **`Modal` and `Sheet` both require a `title` prop.** Not a slot — a dialog with no accessible
+  name is a bug you can forget to make, and Radix only warns. `Sheet` has `hideTitle` for the
+  visually-hidden case. `Modal`'s `dismissable={false}` removes Esc, click-outside **and** the ✕
+  together; it is for a flow where dismissing loses something unrecoverable (a one-time secret, a
+  request in flight), not for making a message harder to ignore.
+- **`Tooltip` is supplementary. Nothing may live only inside one.** It brings its own provider, so
+  it works without touching a layout — necessary, since every `layout.tsx` here is a server
+  component. Two behaviours to know: a *touch* gesture makes it tap-to-toggle (Radix Tooltip is
+  hover/focus only and shows nothing on a tap), classified per gesture from `pointerType` rather
+  than from `(hover: none)` at mount; and `<TooltipTrigger disabled>` wraps the child in a
+  focusable span, which is the only way a tooltip on a disabled control ever opens.
+- **`SegmentedControl` is a `radiogroup`, not tabs.** Use it when it sets a value and nothing below
+  is a panel. Fully controlled, two to four options — past four the labels stop fitting at 360px
+  and the answer is `Select`.
+- **`Tabs` `variant="pill" tone="inverted"` reproduces the `AdminNavLinks` treatment class for
+  class**, so that nav can move onto it later. It has not moved: those are links, and links are not
+  tabs.
+- **`Alert` is not a live region by default.** Pass `live` only when it appears in response to
+  something the reader just did; the role then follows the variant.
 
 ---
 

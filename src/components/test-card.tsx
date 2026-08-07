@@ -3,10 +3,21 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowRight, PlayCircle, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalTrigger,
+} from "@/components/ui/modal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/components/toast";
 
 interface Props {
@@ -71,17 +82,30 @@ export function TestCard({
               In progress
             </Badge>
           )}
-          {/* TODO(T1.5): swap the native `title` for the real `Tooltip`. */}
-          <Badge
-            variant={mode === "ADAPTIVE" ? "purple" : "info"}
-            title={
-              mode === "ADAPTIVE"
-                ? "Adaptive: the second module's difficulty is set by how you do on the first, like the real Digital SAT."
-                : "Linear: every student sees the same questions in the same order, whatever they score."
-            }
-          >
-            {mode}
-          </Badge>
+          {/*
+            The badge is the trigger, so it has to be focusable and it has to
+            say what it is: "ADAPTIVE" alone is a mode name, not a definition,
+            and the definition is the only thing the tooltip carries. A
+            keyboard user reaches it with Tab, a phone with a tap.
+          */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="rounded-full">
+                <Badge variant={mode === "ADAPTIVE" ? "purple" : "info"}>
+                  {mode}
+                </Badge>
+                <span className="sr-only">
+                  {mode === "ADAPTIVE" ? "Adaptive" : "Linear"} test — what this
+                  means
+                </span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {mode === "ADAPTIVE"
+                ? "The second module's difficulty is set by how you do on the first, like the real Digital SAT."
+                : "Every student sees the same questions in the same order, whatever they score."}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -118,46 +142,46 @@ export function TestCard({
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           </Button>
-          <Dialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <Dialog.Trigger asChild>
+          <Modal open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <ModalTrigger asChild>
               <Button variant="secondary" className="sm:w-auto hover-lift active-press">
                 <RotateCcw className="h-4 w-4" />
                 Start fresh
               </Button>
-            </Dialog.Trigger>
-            <Dialog.Portal>
-              <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm data-[state=open]:animate-fade-in" />
-              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 shadow-elevated data-[state=open]:animate-slide-up">
-                <Dialog.Title className="text-lg font-semibold">
-                  Start a new attempt?
-                </Dialog.Title>
-                <Dialog.Description className="mt-2 text-sm text-muted-foreground">
+            </ModalTrigger>
+            <ModalContent
+              variant="destructive"
+              dismissable={!pending}
+              title="Start a new attempt?"
+            >
+              <ModalBody>
+                <p className="text-body text-muted-foreground">
                   Your in-progress attempt for{" "}
                   <span className="font-medium text-foreground">{title}</span>{" "}
                   will be marked as abandoned and you&apos;ll begin a fresh
                   attempt. This can&apos;t be undone.
-                </Dialog.Description>
-                <div className="mt-6 flex justify-end gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setConfirmOpen(false)}
-                    disabled={pending}
-                    className="hover-lift active-press"
-                  >
-                    Keep my progress
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    loading={pending}
-                    onClick={startFresh}
-                    className="hover-lift active-press"
-                  >
-                    {pending ? "Starting…" : "Start fresh"}
-                  </Button>
-                </div>
-              </Dialog.Content>
-            </Dialog.Portal>
-          </Dialog.Root>
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  variant="secondary"
+                  onClick={() => setConfirmOpen(false)}
+                  disabled={pending}
+                  className="hover-lift active-press"
+                >
+                  Keep my progress
+                </Button>
+                <Button
+                  variant="destructive"
+                  loading={pending}
+                  onClick={startFresh}
+                  className="hover-lift active-press"
+                >
+                  {pending ? "Starting…" : "Start fresh"}
+                </Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
         </div>
       ) : (
         // TODO(T1.8): move to the `soft` variant once it exists. Five
