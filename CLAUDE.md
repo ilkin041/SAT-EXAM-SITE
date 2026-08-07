@@ -264,17 +264,35 @@ will not merge them, because each parent pins its own. Outside-click layering ke
 throughout, which is what makes the split easy to miss — only the Escape path reads the shared
 stack. Any new Radix package needs this checked: `npm ls @radix-ui/react-dismissable-layer --all`.
 
-### Existing primitives (7, in `src/components/ui/`)
+### Existing primitives (9, in `src/components/ui/`)
 
 `Button` (107 LOC, 6 variants, 4 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
-· `Select` (sizes sm/default, error state, leading icon, clearable) · `EmptyState` · `PageHeader`
-(admin only) · `StatCard`. Everything else in the plan is greenfield.
+· `Select` (sizes sm/default, error state, leading icon, clearable) · `Table` · `DataTable` ·
+`EmptyState` · `PageHeader` (admin only) · `StatCard`. Everything else in the plan is greenfield.
 
 `Select` carries one rule worth knowing before using it: Radix rejects an item value of `""`, so the
 wrapper translates it to a private sentinel and back. A call site writes `value=""` for the "All …"
 row exactly as it did with `<option>`, and **"nothing selected" is `undefined`, not `""`** — that is
 what shows the placeholder. Passing `name` renders a mirror input so GET filter forms and server
 actions still receive the value; there is no native `<select>` left in the app.
+
+`Table` and `DataTable` (T1.4) carry three rules worth knowing before T1.9 migrates the 13
+hand-rolled tables onto them:
+
+- **`stickyHeader` caps the scroll container at `max-h-[70vh]`.** The wrapper that keeps a wide
+  table off the *page's* horizontal scrollbar is by CSS a vertical scrollport too, so an unbounded
+  one has its top edge exactly where the header already is and nothing appears to stick. Override
+  the cap through `containerClassName`, do not remove it.
+- **The table uses `border-separate`, and row rules live on the cells, not a `divide-y`.** A
+  collapsed table owns every border and drops the header's the moment it detaches. `<tr>` cannot
+  carry a border in the separate model — put row styling on `TD`, or on `TBody` via an arbitrary
+  variant, as `TBody` already does for hover.
+- **`DataTable` state lives in the URL, not the component.** `?q=` `?sort=` `?dir=` `?page=`, named
+  by `dataTableParams(prefix)` so a server page reads the same keys. `mode="server"` takes one page
+  plus a `total` and does no filtering itself — that is the `/admin/questions` 100-per-page shape,
+  and it needs no new params. Two tables on one page need different `paramPrefix` values.
+  Client-mode sorting falls back to the text a `cell` renders, which is wrong for a date or a
+  badge: give those columns a `sortValue`.
 
 ---
 
