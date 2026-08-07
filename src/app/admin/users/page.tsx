@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 
 export const metadata = { title: "Users — Admin" };
-
-// TODO(T1.3): remove when the Select primitive lands and replaces the raw
-// <select> elements on this page.
-// eslint-disable-next-line sat/no-class-constants
-const SELECT_CLS =
-  "h-10 rounded-md border border-input bg-card px-3 text-body transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 interface SearchParams {
   q?: string;
@@ -66,11 +66,14 @@ export default async function UsersPage({
               className="pl-9"
             />
           </div>
-          <select name="role" defaultValue={sp.role ?? ""} className={SELECT_CLS}>
-            <option value="">All roles</option>
-            <option value="STUDENT">Students</option>
-            <option value="ADMIN">Admins</option>
-          </select>
+          <Select name="role" defaultValue={sp.role ?? ""} className="sm:w-44">
+            <SelectTrigger aria-label="Role" />
+            <SelectContent>
+              <SelectItem value="">All roles</SelectItem>
+              <SelectItem value="STUDENT">Students</SelectItem>
+              <SelectItem value="ADMIN">Admins</SelectItem>
+            </SelectContent>
+          </Select>
           <Button type="submit">Filter</Button>
         </div>
       </form>

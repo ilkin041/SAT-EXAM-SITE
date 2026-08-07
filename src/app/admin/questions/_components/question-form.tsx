@@ -6,6 +6,12 @@ import Link from "next/link";
 import { QuestionPreview, type PreviewChoice } from "@/components/question-preview";
 import { ImageUploader } from "@/components/image-uploader";
 import { DeleteQuestionModal } from "@/components/delete-question-modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import type { QuestionAssignment } from "../actions";
 import {
   createQuestion,
@@ -275,42 +281,50 @@ export function QuestionForm({
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Question type">
-            <select
+            <Select
               value={values.type}
-              onChange={(e) => update("type", e.target.value as Type)}
-              className={inputClass}
+              onValueChange={(v) => update("type", v as Type)}
             >
-              <option value="MULTIPLE_CHOICE">Multiple choice</option>
-              <option value="STUDENT_PRODUCED_RESPONSE">Student-produced response</option>
-            </select>
+              <SelectTrigger aria-label="Question type" />
+              <SelectContent>
+                <SelectItem value="MULTIPLE_CHOICE">Multiple choice</SelectItem>
+                <SelectItem value="STUDENT_PRODUCED_RESPONSE">Student-produced response</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
           <Field label="Difficulty">
-            <select
+            <Select
               value={values.difficulty}
-              onChange={(e) => update("difficulty", e.target.value as Difficulty)}
-              className={inputClass}
+              onValueChange={(v) => update("difficulty", v as Difficulty)}
             >
-              <option value="EASY">Easy</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HARD">Hard</option>
-              <option value="MIXED">Mixed</option>
-            </select>
+              <SelectTrigger aria-label="Difficulty" />
+              <SelectContent>
+                <SelectItem value="EASY">Easy</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="HARD">Hard</SelectItem>
+                <SelectItem value="MIXED">Mixed</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Domain">
-            <select
-              value={values.domain}
-              onChange={(e) => update("domain", e.target.value)}
-              className={inputClass}
+            <Select
+              name="domain"
               required
+              // `undefined`, not `""`: an unset domain is the placeholder
+              // state, not a selected empty row. See select.tsx.
+              value={values.domain || undefined}
+              onValueChange={(v) => update("domain", v)}
             >
-              <option value="" disabled>Select a domain</option>
-              {QUESTION_DOMAINS[values.sectionType].map((domain) => (
-                <option key={domain} value={domain}>{domain}</option>
-              ))}
-            </select>
+              <SelectTrigger aria-label="Domain" placeholder="Select a domain" />
+              <SelectContent>
+                {QUESTION_DOMAINS[values.sectionType].map((domain) => (
+                  <SelectItem key={domain} value={domain}>{domain}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           <Field label="Skill (optional)">
             <input

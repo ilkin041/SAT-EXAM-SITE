@@ -6,6 +6,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScoreTrend } from "@/components/score-trend";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { StatCard } from "@/components/ui/stat-card";
 import { computeAttemptScorePoint } from "@/lib/analytics";
 import {
@@ -186,18 +192,20 @@ export default async function GroupDetailsPage({
           <div className="mb-4 rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
             <h3 className="mb-2 text-body font-semibold">Assign Test</h3>
             <form action={assignTestToGroup.bind(null, group.id)} className="flex gap-2">
-              <select
-                name="testId"
-                required
-                className="flex-1 rounded-xl border border-input/80 bg-card px-3 py-1.5 text-body focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">Select a test to assign...</option>
-                {unassignedTests.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title}
-                  </option>
-                ))}
-              </select>
+              <Select name="testId" required className="flex-1">
+                <SelectTrigger
+                  size="sm"
+                  aria-label="Test to assign"
+                  placeholder="Select a test to assign…"
+                />
+                <SelectContent>
+                  {unassignedTests.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button type="submit" size="sm">Assign</Button>
             </form>
           </div>

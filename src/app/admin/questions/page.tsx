@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { listAssignableModules } from "./actions";
 import { QuestionsTable, type QuestionRow } from "./_components/questions-table";
 import { ALL_QUESTION_DOMAINS } from "@/lib/question-taxonomy";
@@ -22,11 +28,6 @@ interface SearchParams {
 }
 
 const PAGE_SIZE = 100;
-// TODO(T1.3): remove when the Select primitive lands and replaces the raw
-// <select> elements on this page.
-// eslint-disable-next-line sat/no-class-constants
-const SELECT_CLS =
-  "h-10 rounded-xl border border-input/80 bg-card px-3 text-body transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
 
 export default async function QuestionsPage({
   searchParams,
@@ -108,31 +109,43 @@ export default async function QuestionsPage({
               className="pl-9 rounded-xl border-input/80 focus:border-ring"
             />
           </div>
-          <select name="section" defaultValue={section ?? ""} className={SELECT_CLS}>
-            <option value="">All sections</option>
-            <option value="READING_WRITING">English (R&amp;W)</option>
-            <option value="MATH">Math</option>
-          </select>
-          <select name="type" defaultValue={type ?? ""} className={SELECT_CLS}>
-            <option value="">All types</option>
-            <option value="MULTIPLE_CHOICE">Multiple choice</option>
-            <option value="STUDENT_PRODUCED_RESPONSE">Student-produced</option>
-          </select>
-          <select name="difficulty" defaultValue={difficulty ?? ""} className={SELECT_CLS}>
-            <option value="">All difficulties</option>
-            <option value="EASY">Easy</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HARD">Hard</option>
-            <option value="MIXED">Mixed</option>
-          </select>
-          <select name="domain" defaultValue={domain ?? ""} className={SELECT_CLS}>
-            <option value="">All domains</option>
-            {ALL_QUESTION_DOMAINS.map((domainOption) => (
-              <option key={domainOption} value={domainOption}>
-                {domainOption}
-              </option>
-            ))}
-          </select>
+          <Select name="section" defaultValue={section ?? ""}>
+            <SelectTrigger aria-label="Section" />
+            <SelectContent>
+              <SelectItem value="">All sections</SelectItem>
+              <SelectItem value="READING_WRITING">English (R&amp;W)</SelectItem>
+              <SelectItem value="MATH">Math</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select name="type" defaultValue={type ?? ""}>
+            <SelectTrigger aria-label="Question type" />
+            <SelectContent>
+              <SelectItem value="">All types</SelectItem>
+              <SelectItem value="MULTIPLE_CHOICE">Multiple choice</SelectItem>
+              <SelectItem value="STUDENT_PRODUCED_RESPONSE">Student-produced</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select name="difficulty" defaultValue={difficulty ?? ""}>
+            <SelectTrigger aria-label="Difficulty" />
+            <SelectContent>
+              <SelectItem value="">All difficulties</SelectItem>
+              <SelectItem value="EASY">Easy</SelectItem>
+              <SelectItem value="MEDIUM">Medium</SelectItem>
+              <SelectItem value="HARD">Hard</SelectItem>
+              <SelectItem value="MIXED">Mixed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select name="domain" defaultValue={domain ?? ""}>
+            <SelectTrigger aria-label="Domain" />
+            <SelectContent>
+              <SelectItem value="">All domains</SelectItem>
+              {ALL_QUESTION_DOMAINS.map((domainOption) => (
+                <SelectItem key={domainOption} value={domainOption}>
+                  {domainOption}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="flex items-center gap-2">
             <Button type="submit" size="default" className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary hover-lift active-press transition-all duration-200">Filter</Button>
             {hasFilter && (

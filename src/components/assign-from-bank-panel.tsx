@@ -8,6 +8,12 @@ import {
   assignQuestionToModule,
   bulkAssignQuestionsToModule,
 } from "@/app/admin/tests/module-question-actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface BankRow {
@@ -200,36 +206,32 @@ export function AssignFromBankPanel({
             autoFocus
           />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <select
-              value={sectionType}
-              onChange={(e) => setSectionType(e.target.value)}
-              className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
-              title="Section"
-            >
-              <option value="">All sections</option>
-              <option value="READING_WRITING">English (R&amp;W)</option>
-              <option value="MATH">Math</option>
-            </select>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
-            >
-              <option value="">All types</option>
-              <option value="MULTIPLE_CHOICE">Multiple choice</option>
-              <option value="STUDENT_PRODUCED_RESPONSE">Student-produced</option>
-            </select>
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
-            >
-              <option value="">All difficulties</option>
-              <option value="EASY">Easy</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HARD">Hard</option>
-              <option value="MIXED">Mixed</option>
-            </select>
+            <Select value={sectionType} onValueChange={setSectionType}>
+              <SelectTrigger size="sm" aria-label="Section" />
+              <SelectContent>
+                <SelectItem value="">All sections</SelectItem>
+                <SelectItem value="READING_WRITING">English (R&amp;W)</SelectItem>
+                <SelectItem value="MATH">Math</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger size="sm" aria-label="Question type" />
+              <SelectContent>
+                <SelectItem value="">All types</SelectItem>
+                <SelectItem value="MULTIPLE_CHOICE">Multiple choice</SelectItem>
+                <SelectItem value="STUDENT_PRODUCED_RESPONSE">Student-produced</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={difficulty} onValueChange={setDifficulty}>
+              <SelectTrigger size="sm" aria-label="Difficulty" />
+              <SelectContent>
+                <SelectItem value="">All difficulties</SelectItem>
+                <SelectItem value="EASY">Easy</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="HARD">Hard</SelectItem>
+                <SelectItem value="MIXED">Mixed</SelectItem>
+              </SelectContent>
+            </Select>
             <input
               value={domain}
               onChange={(e) => setDomain(e.target.value)}

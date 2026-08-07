@@ -4,6 +4,7 @@ import { ButtonSection, ButtonSpecimens } from "./button-section";
 import { EmptyStateSection, EmptyStateSpecimens } from "./empty-state-section";
 import { InputSection, InputSpecimens } from "./input-section";
 import { PageHeaderSection, PageHeaderSpecimens } from "./page-header-section";
+import { SelectSection, SelectSpecimens } from "./select-section";
 import { StatCardSection, StatCardSpecimens } from "./stat-card-section";
 
 /**
@@ -30,6 +31,7 @@ export const GALLERY: GalleryEntry[] = [
   { id: "button", title: "Button", Section: ButtonSection, Specimens: ButtonSpecimens },
   { id: "badge", title: "Badge", Section: BadgeSection, Specimens: BadgeSpecimens },
   { id: "input", title: "Input", Section: InputSection, Specimens: InputSpecimens },
+  { id: "select", title: "Select", Section: SelectSection, Specimens: SelectSpecimens },
   {
     id: "stat-card",
     title: "StatCard",

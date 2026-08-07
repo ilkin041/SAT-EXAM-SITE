@@ -24,6 +24,12 @@ import {
   bulkSetSkill,
   type AssignableTest,
 } from "../actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { RowDeleteButton } from "./row-delete-button";
 import { cn } from "@/lib/utils";
 import { ALL_QUESTION_DOMAINS } from "@/lib/question-taxonomy";
@@ -460,15 +466,17 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
             </Dialog.Description>
             <div className="mt-4">
               {metadataMode === "domain" ? (
-                <select
-                  value={metadataValue}
-                  onChange={(event) => setMetadataValue(event.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                <Select
+                  value={metadataValue || undefined}
+                  onValueChange={setMetadataValue}
                 >
-                  {ALL_QUESTION_DOMAINS.map((domain) => (
-                    <option key={domain} value={domain}>{domain}</option>
-                  ))}
-                </select>
+                  <SelectTrigger aria-label="Domain" placeholder="Select a domain" />
+                  <SelectContent>
+                    {ALL_QUESTION_DOMAINS.map((domain) => (
+                      <SelectItem key={domain} value={domain}>{domain}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <input
                   value={metadataValue}

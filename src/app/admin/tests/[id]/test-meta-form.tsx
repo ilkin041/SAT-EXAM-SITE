@@ -3,6 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateTest } from "../actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 
 interface Initial {
   id: string;
@@ -69,14 +75,16 @@ export function TestMetaForm({ initial }: { initial: Initial }) {
 
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">Mode</span>
-        <select
+        <Select
           value={mode}
-          onChange={(e) => setMode(e.target.value as "ADAPTIVE" | "LINEAR")}
-          className={inputClass}
+          onValueChange={(v) => setMode(v as "ADAPTIVE" | "LINEAR")}
         >
-          <option value="ADAPTIVE">Adaptive</option>
-          <option value="LINEAR">Linear</option>
-        </select>
+          <SelectTrigger aria-label="Mode" />
+          <SelectContent>
+            <SelectItem value="ADAPTIVE">Adaptive</SelectItem>
+            <SelectItem value="LINEAR">Linear</SelectItem>
+          </SelectContent>
+        </Select>
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">

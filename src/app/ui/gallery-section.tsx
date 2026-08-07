@@ -54,7 +54,12 @@ function ThemePane({
     <div
       className={cn(
         theme,
-        "min-w-0 overflow-hidden rounded-xl border border-border bg-background",
+        // `text-foreground` is not decoration: `.light`/`.dark` only redefine
+        // the tokens, and colour is inherited, so without it every specimen in
+        // the dark pane drew the *page's* foreground — dark text on a dark
+        // sheet. `body` does this job for the real app; a nested theme needs
+        // its own.
+        "min-w-0 overflow-hidden rounded-xl border border-border bg-background text-foreground",
       )}
     >
       <div className="border-b border-border px-4 py-2">

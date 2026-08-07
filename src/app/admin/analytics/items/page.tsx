@@ -8,6 +8,12 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { StatCard } from "@/components/ui/stat-card";
 
 export const metadata = { title: "Item analysis — Admin" };
@@ -179,21 +185,32 @@ export default async function ItemAnalysisPage({
 
       <form method="get" className="my-6 grid gap-3 rounded-2xl border border-border/80 bg-card p-4 shadow-sm md:grid-cols-[1fr_auto_auto_auto_auto]">
         <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search stem, domain, or skill" />
-        <select name="testId" defaultValue={testId ?? ""} className={selectClass}>
-          <option value="">All tests</option>
-          {tests.map((test) => <option key={test.id} value={test.id}>{test.title}</option>)}
-        </select>
-        <select name="section" defaultValue={section ?? ""} className={selectClass}>
-          <option value="">All sections</option>
-          <option value="READING_WRITING">R&amp;W</option>
-          <option value="MATH">Math</option>
-        </select>
-        <select name="flag" defaultValue={flag ?? ""} className={selectClass}>
-          <option value="">All flags</option>
-          <option value="TOO_EASY">Too easy</option>
-          <option value="TOO_HARD">Too hard</option>
-          <option value="DISTRACTOR_OUTDRAWS_KEY">Distractor outdraws key</option>
-        </select>
+        <Select name="testId" defaultValue={testId ?? ""} className="md:w-56">
+          <SelectTrigger aria-label="Test" />
+          <SelectContent>
+            <SelectItem value="">All tests</SelectItem>
+            {tests.map((test) => (
+              <SelectItem key={test.id} value={test.id}>{test.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select name="section" defaultValue={section ?? ""} className="md:w-44">
+          <SelectTrigger aria-label="Section" />
+          <SelectContent>
+            <SelectItem value="">All sections</SelectItem>
+            <SelectItem value="READING_WRITING">R&amp;W</SelectItem>
+            <SelectItem value="MATH">Math</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select name="flag" defaultValue={flag ?? ""} className="md:w-56">
+          <SelectTrigger aria-label="Flag" />
+          <SelectContent>
+            <SelectItem value="">All flags</SelectItem>
+            <SelectItem value="TOO_EASY">Too easy</SelectItem>
+            <SelectItem value="TOO_HARD">Too hard</SelectItem>
+            <SelectItem value="DISTRACTOR_OUTDRAWS_KEY">Distractor outdraws key</SelectItem>
+          </SelectContent>
+        </Select>
         <Button type="submit">Filter</Button>
       </form>
 
@@ -291,8 +308,6 @@ export default async function ItemAnalysisPage({
     </>
   );
 }
-
-const selectClass = "h-10 rounded-xl border border-input bg-card px-3 text-body";
 
 function plainText(html: string) {
   return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} })

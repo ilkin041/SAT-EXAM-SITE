@@ -12,6 +12,12 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 
 export const metadata = { title: "Attempts — Admin" };
 
@@ -107,9 +113,6 @@ export default async function AdminAttemptsPage({
     return s ? `?${s}` : "";
   };
 
-const SELECT_CLS =
-  "h-10 rounded-xl border border-input/80 bg-card px-3 text-body transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
-
 return (
   <>
     <PageHeader
@@ -140,21 +143,27 @@ return (
             className="pl-9 rounded-xl border-input/80 focus:border-ring"
           />
         </div>
-        <select name="status" defaultValue={statusFilter ?? ""} className={SELECT_CLS}>
-          <option value="">All statuses</option>
-          <option value="IN_PROGRESS">In progress</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="ABANDONED">Abandoned</option>
-          <option value="EXPIRED">Expired</option>
-        </select>
-        <select name="testId" defaultValue={testIdFilter ?? ""} className={SELECT_CLS}>
-          <option value="">All tests</option>
-          {tests.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.title}
-            </option>
-          ))}
-        </select>
+        <Select name="status" defaultValue={statusFilter ?? ""} className="sm:w-44">
+          <SelectTrigger aria-label="Attempt status" />
+          <SelectContent>
+            <SelectItem value="">All statuses</SelectItem>
+            <SelectItem value="IN_PROGRESS">In progress</SelectItem>
+            <SelectItem value="COMPLETED">Completed</SelectItem>
+            <SelectItem value="ABANDONED">Abandoned</SelectItem>
+            <SelectItem value="EXPIRED">Expired</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select name="testId" defaultValue={testIdFilter ?? ""} className="sm:w-56">
+          <SelectTrigger aria-label="Test" />
+          <SelectContent>
+            <SelectItem value="">All tests</SelectItem>
+            {tests.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button type="submit" className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary hover-lift active-press transition-all duration-200">Filter</Button>
       </div>
     </form>
