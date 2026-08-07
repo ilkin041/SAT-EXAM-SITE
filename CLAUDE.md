@@ -61,11 +61,11 @@ Every rule is `error` or `off`, never `warn`, so `--max-warnings=0` keeps the ra
 suppression must name the task that removes it: `// TODO(T4.1): …` above the
 `// eslint-disable-next-line`.
 
-Current debt for the design rules: **7 inline suppressions in 7 files** — T1.2 (StatCard shimmer),
-T1.3 (two `SELECT_CLS`), T4.1 (the auth dot lattice, 4×) — plus two
-file-scoped overrides in `.eslintrc.js` for T6.1 (`test-interface.tsx` hook deps) and T10.2
-(`review-client.tsx` `<img>`), both used because an inline comment there is not possible or not
-allowed. It only goes down.
+Current debt for the design rules: **2 inline suppressions in 2 files** — T1.3 (two `SELECT_CLS`)
+— plus two file-scoped overrides in `.eslintrc.js` for T6.1 (`test-interface.tsx` hook deps) and
+T10.2 (`review-client.tsx` `<img>`), both used because an inline comment there is not possible or
+not allowed. T0.7 cleared five: the StatCard shimmer and the auth dot lattice (4×) both moved into
+`globals.css`, where a colour is not a violation. It only goes down.
 
 ---
 
@@ -153,8 +153,9 @@ Marketing sections `py-16 md:py-24` max. App pages `py-10`. Density comes from c
 ### Motion
 
 One orchestrated load sequence per page, not `animate-fade-in` on every card. Scroll reveal once per
-section. **`float`, `pulse-glow`, `gradient-shift`, `shimmer` are infinite loops running for everyone
-right now** — the global `prefers-reduced-motion` block lands in T0.1.
+section. The global `prefers-reduced-motion` block landed in T0.1 and stops every infinite
+decorative loop (`float`, `pulse-glow`, `shimmer`, `timer-critical-pulse`). `gradient-shift` is gone
+entirely — T0.7 removed its only user, the landing page's 15s `animated-gradient-bg`.
 
 ### Colour
 
@@ -164,9 +165,10 @@ No raw hex or `rgb()`/`hsla()` in `.tsx`. No `style={{ color }}`.
 four hardcoded colours (`#f4f5f7`, `#1a237e`, `#121212`, `#1a1a1a`) are correct. Lint rules must
 exempt that directory.
 
-Known violations to fix elsewhere: the four auth pages' `rgba(255,255,255,0.8)` dot lattice (same
-code copy-pasted 4×), `stat-card.tsx:52` (`hsla(228,60%,50%,0.03)`). The `admin-nav.tsx` hex is
-gone — T0.6 replaced it with `--brand-navy-light`.
+No known violations outside the exempt directory. T0.6 replaced the `admin-nav.tsx` hex with
+`--brand-navy-light`; T0.7 cleared the last two — the auth dot lattice is now the `.dot-lattice`
+utility behind `<DotLattice />`, and the StatCard shimmer is the `.shimmer-sweep` utility reading
+`--primary`.
 
 ---
 

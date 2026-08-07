@@ -14,6 +14,13 @@ import {
 } from "lucide-react";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
+import { ScrolledHeader } from "@/components/scrolled-header";
+
+export const metadata = {
+  title: "Digital SAT Practice — Bluebook-style practice tests",
+  description:
+    "Full-length, timed Digital SAT practice tests with adaptive module routing, 200–800 scaled scoring, per-domain breakdowns and a full answer review.",
+};
 
 export default async function Home() {
   const session = await auth();
@@ -22,7 +29,7 @@ export default async function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* ----- Header ----- */}
-      <header className="sticky top-0 z-50 border-b border-border/40 glass">
+      <ScrolledHeader>
         <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2.5 text-sm font-bold">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
@@ -49,12 +56,12 @@ export default async function Home() {
             )}
           </div>
         </div>
-      </header>
+      </ScrolledHeader>
 
       {/* ----- Hero ----- */}
       <section className="relative overflow-hidden">
-        {/* Animated gradient mesh background */}
-        <div className="absolute inset-0 animated-gradient-bg" aria-hidden />
+        {/* One static bloom, replacing the 15s gradient pan and two blurred orbs. */}
+        <div className="hero-bloom pointer-events-none absolute inset-0" aria-hidden />
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.015]"
           style={{
@@ -63,10 +70,6 @@ export default async function Home() {
           }}
           aria-hidden
         />
-
-        {/* Decorative blurred orbs */}
-        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/10 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-violet-500/[0.08] blur-3xl" aria-hidden />
 
         <div className="container relative mx-auto grid max-w-6xl gap-12 px-4 py-24 lg:grid-cols-2 lg:items-center lg:py-32">
           <div>
@@ -83,7 +86,7 @@ export default async function Home() {
               </span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+            <p className="mt-6 max-w-[52ch] text-[1.0625rem] leading-relaxed text-muted-foreground">
               Full-length adaptive practice tests with the same format as the real exam.
               Detailed scoring, domain breakdowns, and an answer-review interface students
               actually want to use.
@@ -168,7 +171,7 @@ export default async function Home() {
             <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
               Everything you need
             </h2>
-            <p className="mt-3 text-muted-foreground">
+            <p className="mx-auto mt-3 max-w-[52ch] text-[1.0625rem] leading-relaxed text-muted-foreground">
               A focused, distraction-free testing interface backed by the tooling a tutor needs.
             </p>
           </div>
@@ -208,7 +211,7 @@ export default async function Home() {
             <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
               Three easy steps
             </h2>
-            <p className="mt-3 text-muted-foreground">
+            <p className="mx-auto mt-3 max-w-[52ch] text-[1.0625rem] leading-relaxed text-muted-foreground">
               From sign-up to your first scored attempt in minutes.
             </p>
           </div>
@@ -256,7 +259,7 @@ export default async function Home() {
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               Ready to boost your SAT score?
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <p className="mx-auto mt-4 max-w-[52ch] text-[1.0625rem] leading-relaxed text-muted-foreground">
               Join students already practicing with full-length, timed practice tests.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -295,14 +298,23 @@ export default async function Home() {
             <span className="font-semibold text-foreground">SAT Practice</span>
             <span className="text-xs text-muted-foreground">— Built for SAT preparation.</span>
           </div>
-          <div className="flex items-center gap-5 text-sm text-muted-foreground">
+          <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
             <Link href="/login" className="transition-colors hover:text-foreground">
               Log in
             </Link>
             <Link href="/signup" className="transition-colors hover:text-foreground">
               Sign up
             </Link>
-          </div>
+            <Link href="/privacy" className="transition-colors hover:text-foreground">
+              Privacy
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-foreground">
+              Terms
+            </Link>
+            <Link href="/contact" className="transition-colors hover:text-foreground">
+              Contact
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>

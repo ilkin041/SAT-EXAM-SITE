@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScoreTrend } from "@/components/score-trend";
+import { AbandonedRows } from "./abandoned-rows";
 import { computeAttemptScorePoint } from "@/lib/analytics";
 import {
   computeAttemptRoutes,
@@ -17,6 +18,21 @@ import {
 } from "@/lib/scoring";
 
 export const metadata = { title: "Dashboard — SAT Practice" };
+
+/** Named so `HistoryAttempt` below can be derived from the query's own shape. */
+function fetchAttempts(userId: string) {
+  return prisma.testAttempt.findMany({
+    where: { userId },
+    orderBy: { startedAt: "desc" },
+    take: 10,
+    include: {
+      test: { select: { title: true } },
+      moduleResults: {
+        include: { module: { include: { section: { select: { type: true } } } } },
+      },
+    },
+  });
+}
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -40,17 +56,7 @@ export default async function DashboardPage() {
         },
       },
     }),
-    prisma.testAttempt.findMany({
-      where: { userId: user.id },
-      orderBy: { startedAt: "desc" },
-      take: 10,
-      include: {
-        test: { select: { title: true } },
-        moduleResults: {
-          include: { module: { include: { section: { select: { type: true } } } } },
-        },
-      },
-    }),
+    fetchAttempts(user.id),
     // Map of testId → most-recent IN_PROGRESS attemptId for this user. Used
     // by the dashboard test cards to switch from "Start test" → "Continue".
     prisma.testAttempt.findMany({
@@ -66,6 +72,12 @@ export default async function DashboardPage() {
   }
 
   const displayName = user.name?.trim() || user.email?.split("@")[0] || "there";
+
+  // Abandoned attempts are noise in the history table — they carry no score and
+  // no action. They keep their place in the count but collapse behind a
+  // disclosure row at the bottom.
+  const abandonedAttempts = attempts.filter((a) => a.status === "ABANDONED");
+  const activeAttempts = attempts.filter((a) => a.status !== "ABANDONED");
 
   // Pre-calculate completed attempts for stats
   const completedAttempts = attempts.filter((a) => a.status === "COMPLETED");
@@ -226,88 +238,15 @@ export default async function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
-                    {attempts.map((a) => {
-                      const liveResults = a.moduleResults.filter(
-                        (r) => r.module && r.module.section,
-                      );
-                      const moduleResults = liveResults.map((r) => ({
-                        sectionType: r.module.section.type,
-                        correctCount: r.correctCount,
-                        totalCount: r.totalCount,
-                        moduleId: r.moduleId,
-                        routedTo: r.routedTo,
-                        moduleNumber: r.module.moduleNumber,
-                        difficulty: r.module.difficulty,
-                      }));
-                      const raw = computeRawScores(moduleResults);
-                      const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
-                      const scoreFidelity = getScoreFidelity(raw);
-                      const isDone = a.status === "COMPLETED";
-                      return (
-                        <tr key={a.id} className="transition-colors hover:bg-muted/30">
-                          <td className="px-6 py-4 font-semibold text-foreground">{a.test.title}</td>
-                          <td className="px-6 py-4">
-                            <Badge
-                              variant={
-                                a.status === "COMPLETED"
-                                  ? "success"
-                                  : a.status === "IN_PROGRESS"
-                                    ? "warning"
-                                    : "muted"
-                              }
-                              className={a.status === "IN_PROGRESS" ? "animate-pulse" : undefined}
-                            >
-                              {a.status === "IN_PROGRESS"
-                                ? "In progress"
-                                : a.status === "COMPLETED"
-                                  ? "Completed"
-                                  : a.status === "EXPIRED"
-                                    ? "Expired"
-                                    : "Abandoned"}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 text-center tabular-nums">
-                            {isDone && scoreFidelity !== "INCOMPLETE" ? (
-                              <span className="inline-flex items-center justify-center font-extrabold px-3 py-1 rounded-full bg-primary/10 text-primary text-xs border border-primary/20 shadow-xs">
-                                {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground font-medium">—</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-xs text-muted-foreground">
-                            {a.startedAt.toLocaleDateString(undefined, {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {isDone ? (
-                              <Button asChild variant="secondary" size="sm" className="hover-lift active-press shadow-xs">
-                                <Link href={`/results/${a.id}`}>View results</Link>
-                              </Button>
-                            ) : a.status === "IN_PROGRESS" ? (
-                              <Button
-                                asChild
-                                size="sm"
-                                className="bg-gradient-warm text-white border-transparent hover:opacity-95 hover:glow-warm active-press transition-all duration-200"
-                              >
-                                <Link href={`/test/attempt/${a.id}`}>
-                                  Continue test
-                                </Link>
-                              </Button>
-                            ) : (
-                              <Button asChild variant="secondary" size="sm" disabled className="opacity-50">
-                                <Link href={`/results/${a.id}`}>
-                                  {a.status === "EXPIRED" ? "Expired" : "Abandoned"}
-                                </Link>
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {activeAttempts.map(renderAttemptRow)}
+                    {abandonedAttempts.length > 0 && (
+                      <AbandonedRows
+                        count={abandonedAttempts.length}
+                        columnCount={HISTORY_COLUMN_COUNT}
+                      >
+                        {abandonedAttempts.map(renderAttemptRow)}
+                      </AbandonedRows>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -316,5 +255,96 @@ export default async function DashboardPage() {
         </section>
       </main>
     </>
+  );
+}
+
+/** Columns in the practice-history table — drives the disclosure row's colSpan. */
+const HISTORY_COLUMN_COUNT = 5;
+
+type HistoryAttempt = Awaited<ReturnType<typeof fetchAttempts>>[number];
+
+/**
+ * One row of the practice-history table. Extracted so the active attempts and
+ * the collapsed abandoned ones render through the same code path.
+ */
+function renderAttemptRow(a: HistoryAttempt) {
+  const liveResults = a.moduleResults.filter(
+    (r) => r.module && r.module.section,
+  );
+  const moduleResults = liveResults.map((r) => ({
+    sectionType: r.module.section.type,
+    correctCount: r.correctCount,
+    totalCount: r.totalCount,
+    moduleId: r.moduleId,
+    routedTo: r.routedTo,
+    moduleNumber: r.module.moduleNumber,
+    difficulty: r.module.difficulty,
+  }));
+  const raw = computeRawScores(moduleResults);
+  const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
+  const scoreFidelity = getScoreFidelity(raw);
+  const isDone = a.status === "COMPLETED";
+
+  return (
+    <tr key={a.id} className="transition-colors hover:bg-muted/30">
+      <td className="px-6 py-4 font-semibold text-foreground">{a.test.title}</td>
+      <td className="px-6 py-4">
+        <Badge
+          variant={
+            a.status === "COMPLETED"
+              ? "success"
+              : a.status === "IN_PROGRESS"
+                ? "warning"
+                : "muted"
+          }
+          className={a.status === "IN_PROGRESS" ? "animate-pulse" : undefined}
+        >
+          {a.status === "IN_PROGRESS"
+            ? "In progress"
+            : a.status === "COMPLETED"
+              ? "Completed"
+              : a.status === "EXPIRED"
+                ? "Expired"
+                : "Abandoned"}
+        </Badge>
+      </td>
+      <td className="px-6 py-4 text-center tabular-nums">
+        {isDone && scoreFidelity !== "INCOMPLETE" ? (
+          <span className="inline-flex items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-extrabold text-primary shadow-xs">
+            {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
+          </span>
+        ) : (
+          <span className="font-medium text-muted-foreground">—</span>
+        )}
+      </td>
+      <td className="px-6 py-4 text-xs text-muted-foreground">
+        {a.startedAt.toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })}
+      </td>
+      <td className="px-6 py-4 text-right">
+        {isDone ? (
+          <Button asChild variant="secondary" size="sm" className="hover-lift active-press shadow-xs">
+            <Link href={`/results/${a.id}`}>View results</Link>
+          </Button>
+        ) : a.status === "IN_PROGRESS" ? (
+          <Button
+            asChild
+            size="sm"
+            className="bg-gradient-warm text-white border-transparent hover:opacity-95 hover:glow-warm active-press transition-all duration-200"
+          >
+            <Link href={`/test/attempt/${a.id}`}>Continue test</Link>
+          </Button>
+        ) : (
+          <Button asChild variant="secondary" size="sm" disabled className="opacity-50">
+            <Link href={`/results/${a.id}`}>
+              {a.status === "EXPIRED" ? "Expired" : "Abandoned"}
+            </Link>
+          </Button>
+        )}
+      </td>
+    </tr>
   );
 }

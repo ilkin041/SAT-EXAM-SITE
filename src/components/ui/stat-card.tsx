@@ -48,13 +48,7 @@ export function StatCard({
     >
       {/* Subtle gradient shimmer on hover */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        style={{
-          // TODO(T1.2): remove when StatCard is rebuilt as a Phase 1 primitive.
-          // The shimmer hardcodes the primary hue instead of reading --primary.
-          // eslint-disable-next-line sat/no-inline-color-style, sat/no-raw-color
-          background: "linear-gradient(135deg, transparent 40%, hsla(228, 60%, 50%, 0.03) 50%, transparent 60%)",
-        }}
+        className="shimmer-sweep pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         aria-hidden
       />
 

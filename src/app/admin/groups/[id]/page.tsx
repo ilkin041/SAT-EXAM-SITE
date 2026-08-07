@@ -15,6 +15,21 @@ import {
   removeTestFromGroup,
 } from "../actions";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const group = await prisma.group.findUnique({
+    where: { id },
+    select: { name: true },
+  });
+  return {
+    title: group ? `${group.name} — Groups — Admin` : "Group — Admin",
+  };
+}
+
 export default async function GroupDetailsPage({
   params,
 }: {

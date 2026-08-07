@@ -206,7 +206,7 @@
 /* =========================================================================
  * Reduced motion — global kill switch
  *
- * `float`, `pulse-glow`, `gradient-shift`, `shimmer` and `timer-critical-pulse`
+ * `float`, `pulse-glow`, `shimmer` and `timer-critical-pulse`
  * are infinite loops. Everything decorative stops here; the states they signal
  * are carried by colour and size instead (see `.animate-timer-critical`).
  * ========================================================================= */
@@ -218,16 +218,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-
-  /*
-   * `animated-gradient-bg` is sized 400% so it has room to pan. With the pan
-   * stopped it would freeze on one corner of the ramp; drop it back to a
-   * normal-sized static gradient instead.
-   */
-  .animated-gradient-bg,
-  .dark .animated-gradient-bg {
-    background-size: 100% 100% !important;
   }
 }
 
@@ -279,6 +269,52 @@
     background: var(--gradient-hero);
   }
 
+  /*
+   * Static hero bloom. Replaces the 15s `animated-gradient-bg` pan plus two
+   * blurred orbs with one element that never animates, so there is nothing
+   * for the reduced-motion block to switch off.
+   */
+  .hero-bloom {
+    background:
+      radial-gradient(
+        60% 55% at 18% 0%,
+        hsl(var(--primary) / 0.1),
+        transparent 70%
+      ),
+      radial-gradient(
+        50% 50% at 88% 12%,
+        hsl(var(--ring) / 0.07),
+        transparent 72%
+      );
+  }
+
+  /*
+   * Dot lattice for the auth pages' brand panel. Lives in CSS so the white
+   * stays out of `.tsx` — this replaces the `rgba(255,255,255,0.8)` that was
+   * copy-pasted across all four auth pages behind an eslint suppression.
+   */
+  .dot-lattice {
+    background-image: radial-gradient(
+      circle,
+      hsl(0 0% 100% / 0.8) 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+  }
+
+  /*
+   * Diagonal hover sweep for `StatCard`. Reads `--primary` instead of the
+   * hardcoded `hsla(228, 60%, 50%, 0.03)` it replaces.
+   */
+  .shimmer-sweep {
+    background: linear-gradient(
+      135deg,
+      transparent 40%,
+      hsl(var(--primary) / 0.03) 50%,
+      transparent 60%
+    );
+  }
+
   /* Glow shadows */
   .glow-primary {
     box-shadow: var(--glow-primary);
@@ -320,29 +356,6 @@
   }
 
   /* Animated gradient background (for hero, auth backgrounds) */
-  .animated-gradient-bg {
-    background: linear-gradient(
-      -45deg,
-      hsl(228 45% 96%),
-      hsl(250 40% 94%),
-      hsl(220 35% 96%),
-      hsl(240 45% 95%)
-    );
-    background-size: 400% 400%;
-    animation: gradient-shift 15s ease infinite;
-  }
-
-  .dark .animated-gradient-bg {
-    background: linear-gradient(
-      -45deg,
-      hsl(224 45% 7%),
-      hsl(250 35% 10%),
-      hsl(224 40% 8%),
-      hsl(240 30% 9%)
-    );
-    background-size: 400% 400%;
-    animation: gradient-shift 15s ease infinite;
-  }
 }
 
 /* =========================================================================
@@ -359,13 +372,6 @@
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 8px 0 hsla(228, 60%, 50%, 0.15); }
   50% { box-shadow: 0 0 20px 4px hsla(228, 60%, 50%, 0.3); }
-}
-
-/* Slow gradient position shift for animated backgrounds */
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
 }
 
 /* Shimmer loading / attention effect */

@@ -71,13 +71,29 @@ export function TestCard({
               In progress
             </Badge>
           )}
-          <Badge variant={mode === "ADAPTIVE" ? "purple" : "info"}>{mode}</Badge>
+          {/* TODO(T1.5): swap the native `title` for the real `Tooltip`. */}
+          <Badge
+            variant={mode === "ADAPTIVE" ? "purple" : "info"}
+            title={
+              mode === "ADAPTIVE"
+                ? "Adaptive: the second module's difficulty is set by how you do on the first, like the real Digital SAT."
+                : "Linear: every student sees the same questions in the same order, whatever they score."
+            }
+          >
+            {mode}
+          </Badge>
         </div>
       </div>
 
-      {description && (
-        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground leading-relaxed">{description}</p>
-      )}
+      {/*
+        Always occupies two lines, described or not. Only one seeded test has a
+        description, and rendering the paragraph conditionally left the meta row
+        and CTA at different heights across a row of cards.
+        `2.84rem` = 2 × text-sm (0.875rem) × leading-relaxed (1.625).
+      */}
+      <p className="mt-2 line-clamp-2 min-h-[2.84rem] text-sm leading-relaxed text-muted-foreground">
+        {description}
+      </p>
 
       <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
@@ -144,10 +160,11 @@ export function TestCard({
           </Dialog.Root>
         </div>
       ) : (
-        <Button
-          asChild
-          className="mt-4 w-full bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary active-press transition-all duration-200"
-        >
+        // TODO(T1.8): move to the `soft` variant once it exists. Five
+        // full-width gradient bars dominated the dashboard, so this is
+        // `secondary` in the meantime — the card's left accent strip already
+        // carries the primary gradient.
+        <Button asChild variant="secondary" className="mt-4 w-full active-press">
           <Link href={`/test/${testId}/start`} className="flex items-center justify-center gap-1.5">
             Start test
             <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />

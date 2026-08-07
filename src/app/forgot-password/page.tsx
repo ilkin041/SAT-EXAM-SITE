@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GraduationCap, KeyRound } from "lucide-react";
+import { DotLattice } from "@/components/dot-lattice";
 import { ForgotPasswordForm } from "./forgot-form";
 
 export const metadata = { title: "Forgot password — SAT Practice" };
@@ -10,17 +11,7 @@ export default function ForgotPasswordPage() {
       {/* Left decorative panel */}
       <div className="relative hidden w-1/2 overflow-hidden lg:block">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-violet-600" />
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            // TODO(T4.1): remove with the auth-page rework. This dot lattice is
-            // copy-pasted across all four auth pages and hardcodes white.
-            // eslint-disable-next-line sat/no-inline-color-style, sat/no-raw-color
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-          aria-hidden
-        />
+        <DotLattice />
         <div className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" aria-hidden />
         <div className="absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-violet-400/20 blur-3xl" aria-hidden />
 

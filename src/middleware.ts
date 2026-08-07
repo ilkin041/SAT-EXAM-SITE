@@ -21,6 +21,10 @@ const PUBLIC_PATHS = [
   "/practice",
   "/forgot-password",
   "/reset-password",
+  // Linked from the marketing footer, so they must resolve logged out.
+  "/privacy",
+  "/terms",
+  "/contact",
 ];
 
 const PUBLIC_PREFIXES = [

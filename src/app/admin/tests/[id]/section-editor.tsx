@@ -270,6 +270,7 @@ function ModuleBlock({
                     onClick={() => move(q.id, i - 1)}
                     disabled={pending || isFirst}
                     title="Move up"
+                    aria-label={`Move question ${i + 1} up`}
                     className="rounded p-1 text-xs hover:bg-accent disabled:opacity-30"
                   >
                     ↑
@@ -279,6 +280,7 @@ function ModuleBlock({
                     onClick={() => move(q.id, i + 1)}
                     disabled={pending || isLastQ}
                     title="Move down"
+                    aria-label={`Move question ${i + 1} down`}
                     className="rounded p-1 text-xs hover:bg-accent disabled:opacity-30"
                   >
                     ↓
@@ -288,6 +290,7 @@ function ModuleBlock({
                     onClick={() => remove(q.id)}
                     disabled={pending}
                     title="Remove from module"
+                    aria-label={`Remove question ${i + 1} from this module`}
                     className="rounded p-1 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-30"
                   >
                     ✕
