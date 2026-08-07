@@ -23,6 +23,10 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
+  "//overrides": "Radix's layer stack lives in a module-level React context, so two copies of react-dismissable-layer means two stacks that cannot see each other. react-select pulled 1.1.19 alongside react-dialog's 1.1.11, and a Select open inside a Dialog then had each think it was the top layer — one Escape dismissed both. npm dedupe will not merge them because each parent pins its own. Keep this until every Radix package agrees on a version on its own.",
+  "overrides": {
+    "@radix-ui/react-dismissable-layer": "1.1.19"
+  },
   "dependencies": {
     "@auth/core": "^0.41.2",
     "@auth/prisma-adapter": "^2.7.4",
