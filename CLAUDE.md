@@ -61,11 +61,13 @@ Every rule is `error` or `off`, never `warn`, so `--max-warnings=0` keeps the ra
 suppression must name the task that removes it: `// TODO(T4.1): …` above the
 `// eslint-disable-next-line`.
 
-Current debt for the design rules: **2 inline suppressions in 2 files** — T1.3 (two `SELECT_CLS`)
-— plus two file-scoped overrides in `.eslintrc.js` for T6.1 (`test-interface.tsx` hook deps) and
-T10.2 (`review-client.tsx` `<img>`), both used because an inline comment there is not possible or
-not allowed. T0.7 cleared five: the StatCard shimmer and the auth dot lattice (4×) both moved into
-`globals.css`, where a colour is not a violation. It only goes down.
+Current debt for the design rules: **zero inline suppressions** — only two file-scoped overrides
+remain in `.eslintrc.js`, for T6.1 (`test-interface.tsx` hook deps) and T10.2
+(`review-client.tsx` `<img>`), both used because an inline comment there is not possible or not
+allowed. T0.7 cleared five: the StatCard shimmer and the auth dot lattice (4×) both moved into
+`globals.css`, where a colour is not a violation. T1.3 cleared the last two, the `SELECT_CLS`
+pair — along with a third class constant the rule never saw, a function-scoped `selectClass` in
+`admin/analytics/items/page.tsx`. It only goes down.
 
 ---
 
@@ -249,14 +251,30 @@ colour alone, keyboard-traversable modals, no horizontal scroll at 360px on full
 
 ### Radix packages
 
-Installed: `react-dialog`, `react-dropdown-menu`, `react-label`, `react-slot`.
-**Not installed:** `react-select`, `react-tabs`, `react-tooltip`, `react-accordion`,
-`react-progress`. Phase 1 adds these — budget for it.
+Installed: `react-dialog`, `react-dropdown-menu`, `react-label`, `react-select`, `react-slot`.
+**Not installed:** `react-tabs`, `react-tooltip`, `react-accordion`, `react-progress`. Phase 1 adds
+these — budget for it.
 
-### Existing primitives (6, in `src/components/ui/`)
+**`package.json` pins `@radix-ui/react-dismissable-layer` through `overrides`. Do not remove it**
+without checking the symptom it fixes. Radix keeps its layer stack in a module-level React context,
+so two copies of that package are two stacks that cannot see each other, and every layer then
+believes it is the topmost: one Escape dismisses a Select *and* the Dialog around it. Adding
+`react-select` created exactly that split (1.1.19 against `react-dialog`'s 1.1.11) and `npm dedupe`
+will not merge them, because each parent pins its own. Outside-click layering keeps working
+throughout, which is what makes the split easy to miss — only the Escape path reads the shared
+stack. Any new Radix package needs this checked: `npm ls @radix-ui/react-dismissable-layer --all`.
+
+### Existing primitives (7, in `src/components/ui/`)
 
 `Button` (107 LOC, 6 variants, 4 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
-· `EmptyState` · `PageHeader` (admin only) · `StatCard`. Everything else in the plan is greenfield.
+· `Select` (sizes sm/default, error state, leading icon, clearable) · `EmptyState` · `PageHeader`
+(admin only) · `StatCard`. Everything else in the plan is greenfield.
+
+`Select` carries one rule worth knowing before using it: Radix rejects an item value of `""`, so the
+wrapper translates it to a private sentinel and back. A call site writes `value=""` for the "All …"
+row exactly as it did with `<option>`, and **"nothing selected" is `undefined`, not `""`** — that is
+what shows the placeholder. Passing `name` renders a mirror input so GET filter forms and server
+actions still receive the value; there is no native `<select>` left in the app.
 
 ---
 
