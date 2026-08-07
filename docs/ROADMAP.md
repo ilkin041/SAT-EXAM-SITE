@@ -43,35 +43,41 @@ Recon found twelve errors. The corrections:
 Phase 0 → 1 → 2, then 3–11 roughly in order. Phase 7 cannot start before T7.1 is green.
 Phase 8 cannot start before T2.2.
 
+## Progress
+
+A task is done when it is committed on `master`, so the `Done` column carries the commit — the
+roadmap and `git log` cannot drift apart that way. Only phases with completed work have the column.
+**12 of 65 done:** Phase 0 complete, Phase 1 through T1.5.
+
 ---
 
 ## Phase 0 — Repairs · `prompts/A-repairs-design-system.md`
 
 Things producing no styles or failing WCAG **today**.
 
-| ID | Task |
-|---|---|
-| T0.1 | Restore `:focus-visible` + add global `prefers-reduced-motion` |
-| T0.2 | Repair dead Tailwind classes, add `fontFamily.mono`, map accent tokens |
-| T0.3 | Theme-flash blocking script + tri-state `ThemeToggle` |
-| T0.4 | Create ESLint config + guardrails (with test-dir exemption) |
-| T0.5 | `loading.tsx` / `error.tsx` / `not-found.tsx` + `Skeleton` |
-| T0.6 | Shared-chrome gradient fix — biggest single budget win |
-| T0.7 | Remaining quick wins |
+| ID | Task | Done |
+|---|---|---|
+| T0.1 | Restore `:focus-visible` + add global `prefers-reduced-motion` | `f68569c` |
+| T0.2 | Repair dead Tailwind classes, add `fontFamily.mono`, map accent tokens | `2037478` |
+| T0.3 | Theme-flash blocking script + tri-state `ThemeToggle` | `ba4389c` |
+| T0.4 | Create ESLint config + guardrails (with test-dir exemption) | `c9b6a26` |
+| T0.5 | `loading.tsx` / `error.tsx` / `not-found.tsx` + `Skeleton` | `97f86ee` |
+| T0.6 | Shared-chrome gradient fix — biggest single budget win | `8e1cfe2` |
+| T0.7 | Remaining quick wins | `40245f3` |
 
 ## Phase 1 — Design system · `prompts/A-repairs-design-system.md`
 
-| ID | Task |
-|---|---|
-| T1.1 | Tokens, type scale, IBM Plex Mono, `.tabular` / `.eyebrow` |
-| T1.2 | `/ui` gallery (needs a middleware whitelist entry) |
-| T1.3 | `Select` + retire 3 `SELECT_CLS` declarations |
-| T1.4 | `Table` + `DataTable` |
-| T1.5 | `Modal`, `Tabs`, `Tooltip`, `Alert`, `SegmentedControl`, `Sheet` |
-| T1.6 | `Pagination`, `Avatar`, `Field`, `Separator`, `Accordion` |
-| T1.7 | `Progress`, `ScoreDial`, `DomainBar` |
-| T1.8 | `Button` soft/xs + page-level gradient sweep |
-| T1.9 | Migrate 13 tables to `DataTable`; resolve zustand |
+| ID | Task | Done |
+|---|---|---|
+| T1.1 | Tokens, type scale, IBM Plex Mono, `.tabular` / `.eyebrow` | `6f6974a` |
+| T1.2 | `/ui` gallery (needs a middleware whitelist entry) | `f90f278` |
+| T1.3 | `Select` + retire 3 `SELECT_CLS` declarations | `04ab3f9` |
+| T1.4 | `Table` + `DataTable` | `5a092b1` |
+| T1.5 | `Modal`, `Tabs`, `Tooltip`, `Alert`, `SegmentedControl`, `Sheet` | `fdc84f6` |
+| T1.6 | `Pagination`, `Avatar`, `Field`, `Separator`, `Accordion` | |
+| T1.7 | `Progress`, `ScoreDial`, `DomainBar` | |
+| T1.8 | `Button` soft/xs + page-level gradient sweep | |
+| T1.9 | Migrate 13 tables to `DataTable`; resolve zustand | |
 
 ## Phase 2 — Foundations that unblock · `prompts/B-foundations-landing-auth.md`
 
