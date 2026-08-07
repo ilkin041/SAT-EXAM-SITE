@@ -42,17 +42,17 @@ export default async function TestDetailPage({
         <div>
           <Link
             href="/admin/tests"
-            className="text-xs text-muted-foreground hover:underline"
+            className="text-caption text-muted-foreground hover:underline"
           >
             ← All tests
           </Link>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{test.title}</h1>
+          <h1 className="mt-1 text-h1">{test.title}</h1>
         </div>
         <DeleteTestButton id={test.id} />
       </div>
 
       <section className="mb-10 rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-medium">Test settings</h2>
+        <h2 className="mb-4 text-h3">Test settings</h2>
         <TestMetaForm
           initial={{
             id: test.id,
@@ -66,7 +66,7 @@ export default async function TestDetailPage({
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-medium">Structure</h2>
+        <h2 className="mb-4 text-h3">Structure</h2>
         <div className="space-y-6">
           {test.sections.map((section) => (
             <SectionEditor

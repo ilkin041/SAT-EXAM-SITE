@@ -97,7 +97,7 @@ export default async function GroupDetailsPage({
       <div className="mb-4">
         <Link
           href="/admin/groups"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-body text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Groups
@@ -122,17 +122,17 @@ export default async function GroupDetailsPage({
       <div className="grid gap-8 lg:grid-cols-2">
         {/* --- STUDENTS --- */}
         <section>
-          <h2 className="mb-4 text-xl font-bold tracking-tight">Students</h2>
+          <h2 className="mb-4 text-h3">Students</h2>
           
           <div className="mb-4 rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
-            <h3 className="mb-2 text-sm font-semibold">Add Student</h3>
+            <h3 className="mb-2 text-body font-semibold">Add Student</h3>
             <form action={addStudentToGroup.bind(null, group.id)} className="flex gap-2">
               <input
                 type="email"
                 name="email"
                 required
                 placeholder="Student email address"
-                className="flex-1 rounded-xl border border-input/80 bg-card px-3 py-1.5 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                className="flex-1 rounded-xl border border-input/80 bg-card px-3 py-1.5 text-body focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <Button type="submit" size="sm">Add</Button>
             </form>
@@ -146,8 +146,8 @@ export default async function GroupDetailsPage({
             />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <table className="w-full text-body">
+                <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Name / Email</th>
                     <th className="px-4 py-3 text-center font-semibold">Completed</th>
@@ -160,10 +160,10 @@ export default async function GroupDetailsPage({
                     <tr key={u.id} className="transition-colors hover:bg-muted/30">
                       <td className="px-4 py-3">
                         <div className="font-medium text-foreground">{u.name || "—"}</div>
-                        <div className="text-xs text-muted-foreground">{u.email}</div>
+                        <div className="text-caption text-muted-foreground">{u.email}</div>
                       </td>
-                      <td className="px-4 py-3 text-center tabular-nums">{u.attempts.length}</td>
-                      <td className="px-4 py-3 text-center font-semibold tabular-nums">{memberAverages.get(u.id) ?? "—"}</td>
+                      <td className="px-4 py-3 text-center tabular">{u.attempts.length}</td>
+                      <td className="px-4 py-3 text-center font-semibold tabular">{memberAverages.get(u.id) ?? "—"}</td>
                       <td className="px-4 py-3 text-right">
                         <form action={removeStudentFromGroup.bind(null, group.id, u.id)}>
                           <Button type="submit" variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive">
@@ -181,15 +181,15 @@ export default async function GroupDetailsPage({
 
         {/* --- TESTS --- */}
         <section>
-          <h2 className="mb-4 text-xl font-bold tracking-tight">Assigned Tests</h2>
+          <h2 className="mb-4 text-h3">Assigned Tests</h2>
           
           <div className="mb-4 rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
-            <h3 className="mb-2 text-sm font-semibold">Assign Test</h3>
+            <h3 className="mb-2 text-body font-semibold">Assign Test</h3>
             <form action={assignTestToGroup.bind(null, group.id)} className="flex gap-2">
               <select
                 name="testId"
                 required
-                className="flex-1 rounded-xl border border-input/80 bg-card px-3 py-1.5 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                className="flex-1 rounded-xl border border-input/80 bg-card px-3 py-1.5 text-body focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="">Select a test to assign...</option>
                 {unassignedTests.map((t) => (
@@ -210,8 +210,8 @@ export default async function GroupDetailsPage({
             />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <table className="w-full text-body">
+                <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Test Title</th>
                     <th className="px-4 py-3" />

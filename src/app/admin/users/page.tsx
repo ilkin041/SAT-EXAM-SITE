@@ -13,7 +13,7 @@ export const metadata = { title: "Users — Admin" };
 // <select> elements on this page.
 // eslint-disable-next-line sat/no-class-constants
 const SELECT_CLS =
-  "h-10 rounded-md border border-input bg-card px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "h-10 rounded-md border border-input bg-card px-3 text-body transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 interface SearchParams {
   q?: string;
@@ -94,8 +94,8 @@ export default async function UsersPage({
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <table className="w-full text-body">
+            <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Name</th>
                 <th className="px-4 py-2.5 font-medium">Email</th>
@@ -124,10 +124,10 @@ export default async function UsersPage({
                       {u.role}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                  <td className="px-4 py-3 text-right tabular text-muted-foreground">
                     {u._count.attempts}
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                  <td className="px-4 py-3 text-caption text-muted-foreground">
                     {u.createdAt.toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-right">

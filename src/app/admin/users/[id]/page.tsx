@@ -55,19 +55,19 @@ export default async function UserDetailPage({
     <>
       <Link
         href="/admin/users"
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-caption text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Back to users
       </Link>
       <header className="mt-2 mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-h3 text-primary-foreground">
             {(user.name?.[0] ?? user.email[0]).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{display}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <h1 className="text-h2">{display}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
               <Badge variant={user.role === "ADMIN" ? "info" : "muted"}>
                 {user.role}
               </Badge>
@@ -104,15 +104,15 @@ export default async function UserDetailPage({
 
       {/* ----- Recent attempts ----- */}
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">Recent attempts</h2>
+        <h2 className="mb-3 text-h3">Recent attempts</h2>
         {user.attempts.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-body text-muted-foreground">
             This user hasn&apos;t started any attempts yet.
           </p>
         ) : (
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <table className="w-full text-body">
+              <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Test</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
@@ -161,7 +161,7 @@ export default async function UserDetailPage({
                                 : "Abandoned"}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                      <td className="px-4 py-3 text-right tabular">
                         {isDone && scoreFidelity !== "INCOMPLETE" ? (
                           <span className="font-semibold">
                             {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
@@ -170,7 +170,7 @@ export default async function UserDetailPage({
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                      <td className="px-4 py-3 text-caption text-muted-foreground">
                         {a.startedAt.toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -189,13 +189,13 @@ export default async function UserDetailPage({
 
       {/* ----- Danger zone ----- */}
       <section className="mt-12">
-        <h2 className="mb-3 text-lg font-semibold tracking-tight text-destructive">
+        <h2 className="mb-3 text-h3 text-destructive">
           Danger zone
         </h2>
         <div className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm font-semibold">Reset password</div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <div className="text-body font-semibold">Reset password</div>
+            <p className="mt-0.5 text-caption text-muted-foreground">
               Generate a one-time temporary password you can share with this
               student. Any existing password reset links are invalidated.
             </p>

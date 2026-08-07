@@ -43,7 +43,7 @@ export default async function PreTestPage({
   if (!test) {
     return (
       <main className="container mx-auto max-w-2xl px-4 py-16">
-        <p className="text-sm text-muted-foreground">Test not found.</p>
+        <p className="text-body text-muted-foreground">Test not found.</p>
       </main>
     );
   }
@@ -78,18 +78,18 @@ export default async function PreTestPage({
     <main className="container mx-auto max-w-3xl px-4 py-12">
       <Link
         href={backHref}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-body text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to {session?.user ? "dashboard" : "free samples"}
       </Link>
 
       <header className="mt-4">
-        <h1 className="text-4xl font-semibold tracking-tight">{test.title}</h1>
+        <h1 className="text-display">{test.title}</h1>
         {test.description && (
-          <p className="mt-2 text-sm text-muted-foreground">{test.description}</p>
+          <p className="mt-2 text-body text-muted-foreground">{test.description}</p>
         )}
-        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-body text-muted-foreground">
           <Badge variant={test.mode === "ADAPTIVE" ? "info" : "muted"}>
             {test.mode}
           </Badge>
@@ -131,13 +131,13 @@ export default async function PreTestPage({
                   <Icon className="h-5 w-5" aria-hidden />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold">{label}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-body font-semibold">{label}</div>
+                  <div className="text-caption text-muted-foreground">
                     {s.modules.length} modules · {totalQ} questions
                   </div>
                 </div>
               </div>
-              <div className="text-right text-xs text-muted-foreground">
+              <div className="text-right text-caption text-muted-foreground">
                 <div className="font-medium text-foreground">{totalMin} min</div>
                 <div>per section</div>
               </div>
@@ -148,8 +148,8 @@ export default async function PreTestPage({
 
       {/* ----- Rules card ----- */}
       <section className="mt-8 rounded-xl border border-border bg-card p-6 shadow-card">
-        <h2 className="text-base font-semibold">Before you begin</h2>
-        <ul className="mt-4 space-y-3 text-sm">
+        <h2 className="text-h3">Before you begin</h2>
+        <ul className="mt-4 space-y-3 text-body">
           <Rule
             icon={Timer}
             label="Timer"
@@ -174,7 +174,7 @@ export default async function PreTestPage({
       </section>
 
       {/* ----- Important note ----- */}
-      <div className="mt-6 flex items-start gap-3 rounded-xl border border-blue-500/30 bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
+      <div className="mt-6 flex items-start gap-3 rounded-xl border border-blue-500/30 bg-blue-50 p-4 text-body text-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
         <span>
           Your browser will be asked to enter <strong>fullscreen</strong>. Leaving fullscreen or
@@ -184,12 +184,12 @@ export default async function PreTestPage({
 
       {/* ----- Begin button or empty-modules warning ----- */}
       {emptyModules.length > 0 ? (
-        <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-50 p-4 text-body text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <div>
             <div className="font-medium">This test isn&apos;t ready to start.</div>
-            <p className="mt-1 text-xs">The following modules have no questions yet:</p>
-            <ul className="mt-2 list-disc pl-5 text-xs">
+            <p className="mt-1 text-caption">The following modules have no questions yet:</p>
+            <ul className="mt-2 list-disc pl-5 text-caption">
               {emptyModules.map((m) => (
                 <li key={m}>{m}</li>
               ))}
@@ -199,27 +199,27 @@ export default async function PreTestPage({
       ) : (
         <div className="mt-8">
           <BeginButton testId={testId} />
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 text-caption text-muted-foreground">
             Keyboard shortcuts: A/B/C/D choose an answer,{" "}
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
+            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-eyebrow">
               ←
             </kbd>{" "}
             /{" "}
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
+            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-eyebrow">
               →
             </kbd>{" "}
             navigate,{" "}
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
+            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-eyebrow">
               M
             </kbd>{" "}
             marks for review,{" "}
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
+            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-eyebrow">
               E
             </kbd>{" "}
             toggles the answer eliminator.
           </p>
           {displayName && (
-            <p className="mt-6 text-xs text-muted-foreground">
+            <p className="mt-6 text-caption text-muted-foreground">
               Signed in as <span className="font-medium text-foreground">{displayName}</span>
             </p>
           )}

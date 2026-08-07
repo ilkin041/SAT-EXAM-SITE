@@ -75,12 +75,12 @@ export default async function EditQuestionPage({
 
   return (
     <>
-      <h1 className="mb-6 text-3xl font-semibold tracking-tight">Edit question</h1>
+      <h1 className="mb-6 text-h1">Edit question</h1>
 
       {liveAttemptCount > 0 && (
         <div
           role="alert"
-          className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200"
+          className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-50 p-4 text-body text-amber-900 dark:bg-amber-950/20 dark:text-amber-200"
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <div>
@@ -89,7 +89,7 @@ export default async function EditQuestionPage({
               {liveAttemptCount === 1 ? " is" : "s are"} currently taking a
               test that includes this question.
             </div>
-            <p className="mt-1 text-xs">
+            <p className="mt-1 text-caption">
               Any changes you save will only affect future attempts —
               grading keys already loaded by ongoing attempts are frozen.
               Avoid editing until they finish because a reload can still show
@@ -114,16 +114,16 @@ export default async function EditQuestionPage({
       />
 
       <section className="mt-10 rounded-lg border border-border bg-card p-5">
-        <h2 className="mb-3 text-sm font-semibold">
+        <h2 className="mb-3 text-body font-semibold">
           Assigned to {question.moduleAssignments.length} module
           {question.moduleAssignments.length === 1 ? "" : "s"}
         </h2>
         {question.moduleAssignments.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Not assigned to any module yet. Open a test's detail page to add it.
           </p>
         ) : (
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-1 text-body">
             {question.moduleAssignments.map((mq) => {
               const sectionLabel =
                 mq.module.section.type === "READING_WRITING" ? "R&W" : "Math";

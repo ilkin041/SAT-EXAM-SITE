@@ -108,7 +108,7 @@ export default async function AdminAttemptsPage({
   };
 
 const SELECT_CLS =
-  "h-10 rounded-xl border border-input/80 bg-card px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
+  "h-10 rounded-xl border border-input/80 bg-card px-3 text-body transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
 
 return (
   <>
@@ -159,7 +159,7 @@ return (
       </div>
     </form>
 
-    <p className="mb-3 text-xs text-muted-foreground font-medium">
+    <p className="mb-3 text-caption text-muted-foreground font-medium">
       {total} attempt{total === 1 ? "" : "s"}
       {total > PAGE_SIZE && ` · page ${page} of ${totalPages}`}
     </p>
@@ -173,8 +173,8 @@ return (
     ) : (
       <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm animate-fade-in">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <table className="w-full text-body">
+            <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-6 py-4 font-semibold">Student</th>
                 <th className="px-6 py-4 font-semibold">Test Name</th>
@@ -198,31 +198,31 @@ return (
                       )}
                     </Link>
                     {a.user?.name && a.user.email && (
-                      <div className="text-xs text-muted-foreground font-medium">{a.user.email}</div>
+                      <div className="text-caption text-muted-foreground font-medium">{a.user.email}</div>
                     )}
                   </td>
                   <td className="px-6 py-4 font-medium text-foreground">{a.test.title}</td>
                   <td className="px-6 py-4">
                     <StatusPill status={a.status} />
                   </td>
-                  <td className="px-6 py-4 text-center font-extrabold text-foreground tabular-nums">
+                  <td className="px-6 py-4 text-center font-extrabold text-foreground tabular">
                     {a.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE" ? (
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs border border-primary/20 shadow-xs font-extrabold">
+                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-primary/10 text-primary text-caption border border-primary/20 shadow-xs font-extrabold">
                         {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
                       </span>
                     ) : "—"}
                   </td>
-                  <td className="px-6 py-4 text-center font-semibold text-muted-foreground tabular-nums">
+                  <td className="px-6 py-4 text-center font-semibold text-muted-foreground tabular">
                     {a.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE"
                       ? scaled.readingWriting
                       : "—"}
                   </td>
-                  <td className="px-6 py-4 text-center font-semibold text-muted-foreground tabular-nums">
+                  <td className="px-6 py-4 text-center font-semibold text-muted-foreground tabular">
                     {a.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE"
                       ? scaled.math
                       : "—"}
                   </td>
-                  <td className="px-6 py-4 text-xs text-muted-foreground">
+                  <td className="px-6 py-4 text-caption text-muted-foreground">
                     {a.startedAt.toLocaleString(undefined, {
                       year: 'numeric',
                       month: 'short',
@@ -240,7 +240,7 @@ return (
     )}
 
     {totalPages > 1 && (
-      <nav className="mt-6 flex items-center justify-between text-sm animate-fade-in">
+      <nav className="mt-6 flex items-center justify-between text-body animate-fade-in">
         {page > 1 ? (
           <Button asChild variant="secondary" size="sm" className="hover-lift active-press">
             <Link href={`/admin/attempts${qs({ page: String(page - 1) })}`}>
@@ -280,7 +280,7 @@ const labels: Record<AttemptStatus, string> = {
 };
 return (
   <span
-    className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold ${styles[status]}`}
+    className={`inline-block rounded-full border px-2.5 py-0.5 text-caption font-semibold ${styles[status]}`}
   >
     {labels[status]}
   </span>

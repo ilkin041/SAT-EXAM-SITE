@@ -26,7 +26,7 @@ const PAGE_SIZE = 100;
 // <select> elements on this page.
 // eslint-disable-next-line sat/no-class-constants
 const SELECT_CLS =
-  "h-10 rounded-xl border border-input/80 bg-card px-3 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
+  "h-10 rounded-xl border border-input/80 bg-card px-3 text-body transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-input/100";
 
 export default async function QuestionsPage({
   searchParams,
@@ -172,7 +172,7 @@ export default async function QuestionsPage({
         <>
           <QuestionsTable rows={rows} assignableTests={assignableTests} />
           <nav
-            className="mt-5 flex items-center justify-between gap-4 text-sm"
+            className="mt-5 flex items-center justify-between gap-4 text-body"
             aria-label="Question bank pagination"
           >
             <p className="text-muted-foreground">
@@ -190,7 +190,7 @@ export default async function QuestionsPage({
                   Previous
                 </Link>
               </Button>
-              <span className="px-2 text-xs font-medium text-muted-foreground">
+              <span className="px-2 text-caption font-medium text-muted-foreground">
                 Page {page} of {totalPages}
               </span>
               <Button asChild variant="secondary" size="sm" disabled={page >= totalPages}>

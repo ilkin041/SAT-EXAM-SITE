@@ -118,20 +118,30 @@ counts are in `docs/gradient-audit.md`. `/dashboard` has 6, `/` has 5 — both o
 | `--accent-warm` (amber) | Time, pacing, in-progress. Never decorative |
 | `success` (emerald) | Correct, completed, mastered |
 | `destructive` | Incorrect, destructive actions, offline |
+| `--ink` / `--paper` / `--paper-sunk` | Editorial pair: highest-contrast text, its sheet, a recessed well within it. Inverted (not dimmed) in dark; `paper-sunk` recedes in both. Available as `text-ink`, `bg-paper`, `bg-paper-sunk` |
 
 Shared chrome is already clean (T0.6): `AdminNav` is down to its one navy bar, and `StudentNav`,
 `UserMenu` and `PageHeader` carry none. What is left is page-level and belongs to T1.8.
 
-### Numbers are mono — TARGET (T1.1)
+### Numbers are mono
 
-`tailwind.config.ts` currently has **no `fontFamily.mono`**, so all 24 existing `font-mono` usages
-fall back to browser default. After T1.1: every number is IBM Plex Mono with `tabular-nums` via the
-`.tabular` utility — timers, scores, counts, percentages, dates, table figures. Eyebrow labels use
-`.eyebrow` (mono, uppercase, 0.08em).
+IBM Plex Mono (400/500/600, latin) is loaded in `src/app/layout.tsx` as `--font-mono` and wired
+into `fontFamily.mono`. Every number is `.tabular` — timers, scores, counts, percentages, dates,
+table figures. Eyebrow labels use `.eyebrow` (mono, uppercase, 0.08em, 11px). Both utilities live
+in `globals.css`.
 
-### Type scale — TARGET (T1.1)
+`font-mono` on its own is still correct for things that are *code* rather than *quantities* — `<kbd>`
+keys, error digests, the JSON import textarea, raw event logs. Those now render in Plex Mono too;
+they just do not want `tabular-nums` or tighter tracking.
 
-None of these exist yet. After T1.1, use them and do not invent sizes:
+The frozen test interface (`src/app/test/attempt/**`) still hand-rolls `font-mono tabular-nums`.
+That is deliberate — it is off-limits outside a Phase 7 task.
+
+### Type scale
+
+Eight rungs, defined as custom properties in `globals.css` and bound into Tailwind utilities in
+`tailwind.config.ts`. Each utility carries size, weight, tracking and line-height together, so a
+heading is one class. Use them and do not invent sizes:
 
 ```
 --text-display  clamp(2.5rem, 4.5vw + 1rem, 4rem)    800 / -0.035em / 0.95
@@ -144,7 +154,15 @@ None of these exist yet. After T1.1, use them and do not invent sizes:
 --text-eyebrow  0.6875rem                             mono 600 / 0.08em / uppercase
 ```
 
+Class names are `text-display`, `text-h1`, `text-h2`, `text-h3`, `text-body-lg`, `text-body`,
+`text-caption`, `text-eyebrow`. The four display rungs are fluid `clamp()`, so **do not add
+responsive size variants** — `text-h1 md:text-h1-something` is not a thing, and `sm:text-4xl` next
+to a rung defeats the clamp. Do not restate weight or tracking either; the rung owns them.
+
 Marketing body is `--text-body-lg` at `max-w-[52ch]`. App body is `--text-body`.
+
+No page file uses a raw `text-*` size any more. Components under `src/components/` and the client
+islands have **not** been swept — that is follow-on work, not a licence to add new raw sizes.
 
 ### Spacing
 

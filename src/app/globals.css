@@ -3,6 +3,32 @@
 @tailwind utilities;
 
 /* =========================================================================
+ * GRADIENT BUDGET — one gradient element per viewport.
+ *
+ * A gradient is a signature, not a texture. The moment a second one enters the
+ * frame both stop meaning anything, so each page gets exactly one and has to
+ * spend it. Per-route counts live in `docs/gradient-audit.md`.
+ *
+ *   --gradient-primary   The single primary CTA on a page, OR the score gauge,
+ *                        OR the hero signature. Never two at once.
+ *   --gradient-accent    UNASSIGNED. Was reserved for AI features; the AI
+ *                        feature was removed 2026-08-06. Do not silently
+ *                        reuse it — ask before assigning.
+ *   --gradient-warm      Resume / in-progress / time pressure only.
+ *   --brand-navy         Admin chrome only.
+ *
+ * The solid accents carry meaning on the same terms:
+ *
+ *   --accent-warm        Time, pacing, in-progress. Never decorative.
+ *   --success            Correct, completed, mastered.
+ *   --destructive        Incorrect, destructive actions, offline.
+ *
+ * Shared chrome is clean as of T0.6 — `AdminNav` keeps its one navy bar and
+ * `StudentNav` / `UserMenu` / `PageHeader` carry none. What remains is
+ * page-level and belongs to T1.8.
+ * ========================================================================= */
+
+/* =========================================================================
  * Design tokens — SAT Practice Platform
  *
  * Color system built around a refined indigo-navy primary with vibrant
@@ -20,6 +46,11 @@
     --foreground: 224 50% 10%;         /* primary text — rich near-black */
     --card: 0 0% 100%;                 /* card surface — pure white */
     --card-foreground: 224 50% 10%;
+
+    /* Editorial pair — highest-contrast text, its sheet, and a recessed well */
+    --ink: 222 47% 11%;
+    --paper: 228 33% 98%;
+    --paper-sunk: 228 20% 95%;
 
     /* Brand primary — refined indigo ~ #3b52b5 */
     --primary: 228 52% 47%;
@@ -59,6 +90,56 @@
     /* Radius */
     --radius: 0.75rem;
 
+    /* ---- Type scale ----
+     *
+     * Eight steps. The size, weight, tracking and line-height of each are one
+     * decision, made here; `tailwind.config.ts` binds all four into a single
+     * utility (`text-h1`, `text-body`, …) so a heading never has to restate
+     * them. Do not invent a ninth step and do not reach for `text-3xl` in a
+     * page file.
+     *
+     * The four display sizes are fluid: `clamp()` on a `vw` term means the
+     * scale is continuous between 360px and the container cap, with no
+     * breakpoint where type jumps. Body sizes are fixed — prose that reflows
+     * its own size while you read it is worse, not better.
+     */
+    --text-display: clamp(2.5rem, 4.5vw + 1rem, 4rem);
+    --text-display-weight: 800;
+    --text-display-tracking: -0.035em;
+    --text-display-leading: 0.95;
+
+    --text-h1: clamp(2rem, 2.5vw + 1rem, 2.75rem);
+    --text-h1-weight: 800;
+    --text-h1-tracking: -0.03em;
+    --text-h1-leading: 1.05;
+
+    --text-h2: clamp(1.5rem, 1.5vw + 0.75rem, 2rem);
+    --text-h2-weight: 700;
+    --text-h2-tracking: -0.02em;
+    --text-h2-leading: 1.15;
+
+    --text-h3: 1.25rem;
+    --text-h3-weight: 700;
+    --text-h3-tracking: -0.01em;
+    --text-h3-leading: 1.3;
+
+    --text-body-lg: 1.0625rem;         /* marketing prose, at max-w-[52ch] */
+    --text-body-lg-weight: 400;
+    --text-body-lg-leading: 1.65;
+
+    --text-body: 0.9375rem;            /* app prose */
+    --text-body-weight: 400;
+    --text-body-leading: 1.6;
+
+    --text-caption: 0.8125rem;
+    --text-caption-weight: 500;
+    --text-caption-leading: 1.45;
+
+    --text-eyebrow: 0.6875rem;
+    --text-eyebrow-weight: 600;
+    --text-eyebrow-tracking: 0.08em;
+    --text-eyebrow-leading: 1.4;
+
     /* ---- Gradient tokens ---- */
     --gradient-primary: linear-gradient(135deg, hsl(228 60% 50%), hsl(250 70% 58%));
     --gradient-accent: linear-gradient(135deg, hsl(250 80% 62%), hsl(280 70% 55%));
@@ -91,6 +172,16 @@
     --foreground: 220 25% 93%;
     --card: 224 40% 9%;                /* blue-tinted dark card */
     --card-foreground: 220 25% 93%;
+
+    /*
+     * Dark inverts the pair rather than dimming it: ink becomes the lightest
+     * value on the page and paper the darkest surface a reader looks at.
+     * `paper-sunk` stays *below* paper in both themes — a well recedes, which
+     * in dark means darker, not lighter.
+     */
+    --ink: 220 30% 96%;
+    --paper: 224 42% 8%;
+    --paper-sunk: 224 45% 5%;
 
     --primary: 228 70% 65%;
     --primary-foreground: 224 45% 6%;
@@ -225,6 +316,32 @@
  * Utility classes — Gradients, Glass, Glow
  * ========================================================================= */
 @layer utilities {
+  /*
+   * Every number in the product wears this. Mono so a digit occupies the same
+   * width as any other digit, `tabular-nums` so the proportional figures some
+   * faces default to cannot sneak back in, and tighter tracking because mono
+   * digits are already wide and a score should read as one quantity rather
+   * than a row of characters. Timers, scores, counts, percentages, dates,
+   * table figures — if it is a number the reader compares or watches change,
+   * it is `.tabular`.
+   *
+   * A column of these stops shifting horizontally as it counts down or updates,
+   * which is the entire point on the exam timer.
+   */
+  .tabular {
+    @apply font-mono tabular-nums tracking-tight;
+  }
+
+  /*
+   * Section label above a heading. Mono, uppercase, and widely tracked, which
+   * is what keeps it legible at 11px — uppercase at that size without extra
+   * tracking sets solid. It is a label, never a heading: it carries no
+   * document structure, so it goes in a <p> or <span>, not an <h*>.
+   */
+  .eyebrow {
+    @apply font-mono text-eyebrow uppercase;
+  }
+
   /* Gradient text */
   .text-gradient-primary {
     background: var(--gradient-primary);

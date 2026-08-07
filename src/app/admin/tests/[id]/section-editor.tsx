@@ -251,7 +251,7 @@ function ModuleBlock({
                 className="flex cursor-grab items-start gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-accent/30 active:cursor-grabbing"
               >
                 <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="mt-0.5 w-6 shrink-0 text-right font-mono text-xs text-muted-foreground">
+                <span className="mt-0.5 w-6 shrink-0 text-right text-caption tabular text-muted-foreground">
                   {i + 1}.
                 </span>
                 <Link

@@ -41,10 +41,10 @@ export default async function AdminDashboard() {
 
       <section className="mt-10 animate-fade-in">
         <div className="mb-4 flex items-baseline justify-between border-b border-border/40 pb-3">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">Recent Attempts</h2>
+          <h2 className="text-h3 text-foreground">Recent Attempts</h2>
           <Link
             href="/admin/attempts"
-            className="text-xs font-semibold text-primary hover:underline"
+            className="text-caption font-semibold text-primary hover:underline"
           >
             View all attempts →
           </Link>
@@ -59,8 +59,8 @@ export default async function AdminDashboard() {
         ) : (
           <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <table className="w-full text-body">
+                <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-6 py-4 font-semibold">Student</th>
                     <th className="px-6 py-4 font-semibold">Test Name</th>
@@ -102,7 +102,7 @@ export default async function AdminDashboard() {
                                 : "Abandoned"}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                      <td className="px-6 py-4 text-caption text-muted-foreground">
                         {a.startedAt.toLocaleString(undefined, {
                           year: 'numeric',
                           month: 'short',

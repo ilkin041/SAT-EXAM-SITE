@@ -54,8 +54,8 @@ export default async function TestsPage() {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm animate-fade-in">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <table className="w-full text-body">
+              <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-6 py-4 font-semibold">Title</th>
                   <th className="px-6 py-4 font-semibold">Mode</th>
@@ -91,13 +91,13 @@ export default async function TestsPage() {
                           {t.isPublic ? "Public" : "Private"}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 text-center tabular-nums text-muted-foreground font-medium">
+                      <td className="px-6 py-4 text-center tabular text-muted-foreground font-medium">
                         {totalQ}
                       </td>
-                      <td className="px-6 py-4 text-center tabular-nums text-muted-foreground font-medium">
+                      <td className="px-6 py-4 text-center tabular text-muted-foreground font-medium">
                         {t._count.attempts}
                       </td>
-                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                      <td className="px-6 py-4 text-caption text-muted-foreground">
                         {t.createdAt.toLocaleDateString(undefined, {
                           year: 'numeric',
                           month: 'short',

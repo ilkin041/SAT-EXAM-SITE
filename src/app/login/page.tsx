@@ -21,16 +21,16 @@ export default function LoginPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 shadow-lg backdrop-blur-sm">
             <GraduationCap className="h-7 w-7" aria-hidden />
           </div>
-          <h2 className="mt-6 text-3xl font-bold tracking-tight">
+          <h2 className="mt-6 text-h1">
             Welcome back to
             <br />
             SAT Practice
           </h2>
-          <p className="mt-4 max-w-sm text-base leading-relaxed text-white/70">
+          <p className="mt-4 max-w-sm text-body-lg text-white/70">
             Your personalized SAT prep platform. Practice with full-length tests,
             track your scores, and improve every day.
           </p>
-          <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium backdrop-blur-sm">
+          <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-body font-medium backdrop-blur-sm">
             <Sparkles className="h-4 w-4" aria-hidden />
             200–800 scaled scoring
           </div>
@@ -42,7 +42,7 @@ export default function LoginPage() {
         <div className="w-full max-w-[420px]">
           <Link
             href="/"
-            className="mb-8 inline-flex items-center gap-2.5 text-sm font-bold text-foreground transition-colors hover:text-primary"
+            className="mb-8 inline-flex items-center gap-2.5 text-body font-bold text-foreground transition-colors hover:text-primary"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
               <GraduationCap className="h-4 w-4" aria-hidden />
@@ -52,8 +52,8 @@ export default function LoginPage() {
 
           <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-elevated">
             <div className="mb-6">
-              <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <h1 className="text-h2">Welcome back</h1>
+              <p className="mt-2 text-body text-muted-foreground">
                 Sign in to access your dashboard.
               </p>
             </div>
@@ -62,7 +62,7 @@ export default function LoginPage() {
               <LoginForm />
             </Suspense>
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
+            <p className="mt-6 text-center text-body text-muted-foreground">
               Don&apos;t have an account?{" "}
               <Link className="font-semibold text-primary hover:underline" href="/signup">
                 Sign up

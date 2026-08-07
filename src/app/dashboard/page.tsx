@@ -114,13 +114,13 @@ export default async function DashboardPage() {
 
           <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="max-w-xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-primary/10 text-primary mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-caption font-semibold bg-primary/10 text-primary mb-3">
                 Student Dashboard
               </span>
-              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+              <h1 className="text-h1 text-foreground">
                 Welcome back, <span className="text-gradient-primary">{displayName}</span>
               </h1>
-              <p className="mt-2.5 text-sm md:text-base text-muted-foreground leading-relaxed">
+              <p className="mt-2.5 text-body-lg text-muted-foreground">
                 {completedCount === 0
                   ? "Kickstart your prep today! Choose one of the available practice tests below to benchmark your score."
                   : `You are making steady progress! You have completed ${completedCount} test${completedCount === 1 ? "" : "s"}. Analyze your attempts to fine-tune your performance.`}
@@ -131,22 +131,22 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-3 gap-3 min-w-[280px] md:min-w-[360px]">
               {/* Stat 1: Completed */}
               <div className="glass rounded-2xl p-4 border border-border/40 text-center shadow-xs">
-                <span className="block text-2xl md:text-3xl font-extrabold text-foreground">{completedCount}</span>
-                <span className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1">Tests Done</span>
+                <span className="block text-h2 tabular text-foreground">{completedCount}</span>
+                <span className="block eyebrow text-muted-foreground mt-1">Tests Done</span>
               </div>
               {/* Stat 2: Avg Score */}
               <div className="glass rounded-2xl p-4 border border-border/40 text-center shadow-xs">
-                <span className="block text-2xl md:text-3xl font-extrabold text-gradient-primary">
+                <span className="block text-h2 tabular text-gradient-primary">
                   {avgScore !== null ? avgScore : "—"}
                 </span>
-                <span className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1">Avg Score</span>
+                <span className="block eyebrow text-muted-foreground mt-1">Avg Score</span>
               </div>
               {/* Stat 3: Best Score */}
               <div className="glass rounded-2xl p-4 border border-border/40 text-center shadow-xs">
-                <span className="block text-2xl md:text-3xl font-extrabold text-gradient-accent">
+                <span className="block text-h2 tabular text-gradient-accent">
                   {bestScore !== null ? bestScore : "—"}
                 </span>
-                <span className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1">Best Score</span>
+                <span className="block eyebrow text-muted-foreground mt-1">Best Score</span>
               </div>
             </div>
           </div>
@@ -166,7 +166,7 @@ export default async function DashboardPage() {
 
         <section className="mb-14">
           <div className="mb-4 border-b border-border/40 pb-3">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Progress over time</h2>
+            <h2 className="text-h3 text-foreground">Progress over time</h2>
           </div>
           <ScoreTrend points={fullLengthPoints} />
         </section>
@@ -174,8 +174,8 @@ export default async function DashboardPage() {
         {/* ----- Available tests ----- */}
         <section className="mb-14">
           <div className="mb-6 flex items-baseline justify-between border-b border-border/40 pb-3">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Available Practice Tests</h2>
-            <span className="text-xs font-semibold text-muted-foreground bg-secondary px-3 py-1 rounded-full border border-border/20">
+            <h2 className="text-h3 text-foreground">Available Practice Tests</h2>
+            <span className="text-caption font-semibold text-muted-foreground bg-secondary px-3 py-1 rounded-full border border-border/20">
               {tests.length} Total
             </span>
           </div>
@@ -212,8 +212,8 @@ export default async function DashboardPage() {
         {/* ----- Past attempts ----- */}
         <section className="mb-6">
           <div className="mb-6 flex items-baseline justify-between border-b border-border/40 pb-3">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">My Practice History</h2>
-            <span className="text-xs font-semibold text-muted-foreground bg-secondary px-3 py-1 rounded-full border border-border/20">
+            <h2 className="text-h3 text-foreground">My Practice History</h2>
+            <span className="text-caption font-semibold text-muted-foreground bg-secondary px-3 py-1 rounded-full border border-border/20">
               {attempts.length} Attempt{attempts.length === 1 ? "" : "s"}
             </span>
           </div>
@@ -227,8 +227,8 @@ export default async function DashboardPage() {
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <table className="w-full text-body">
+                  <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="px-6 py-4 font-semibold">Test Name</th>
                       <th className="px-6 py-4 font-semibold">Status</th>
@@ -308,16 +308,16 @@ function renderAttemptRow(a: HistoryAttempt) {
                 : "Abandoned"}
         </Badge>
       </td>
-      <td className="px-6 py-4 text-center tabular-nums">
+      <td className="px-6 py-4 text-center tabular">
         {isDone && scoreFidelity !== "INCOMPLETE" ? (
-          <span className="inline-flex items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-extrabold text-primary shadow-xs">
+          <span className="inline-flex items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-caption font-extrabold text-primary shadow-xs">
             {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
           </span>
         ) : (
           <span className="font-medium text-muted-foreground">—</span>
         )}
       </td>
-      <td className="px-6 py-4 text-xs text-muted-foreground">
+      <td className="px-6 py-4 text-caption text-muted-foreground">
         {a.startedAt.toLocaleDateString(undefined, {
           year: "numeric",
           month: "short",

@@ -138,8 +138,8 @@ export function ReviewClient({ attemptId, testTitle, items }: Props) {
         <h1 className="text-2xl font-semibold tracking-tight">Review answers</h1>
         <div className="text-sm text-muted-foreground">
           Question{" "}
-          <span className="font-semibold text-foreground tabular-nums">{index + 1}</span>{" "}
-          of <span className="tabular-nums">{total}</span>
+          <span className="font-semibold text-foreground tabular">{index + 1}</span>{" "}
+          of <span className="tabular">{total}</span>
         </div>
       </header>
 
@@ -189,7 +189,7 @@ export function ReviewClient({ attemptId, testTitle, items }: Props) {
       {/* ----- Time spent ----- */}
       <p className="mt-4 text-center text-xs text-muted-foreground">
         You spent{" "}
-        <span className="font-medium text-foreground tabular-nums">
+        <span className="font-medium text-foreground tabular">
           {formatDuration(item.timeSpentSeconds)}
         </span>{" "}
         on this question.
@@ -230,7 +230,7 @@ export function ReviewClient({ attemptId, testTitle, items }: Props) {
             type="button"
             onClick={() => setIndex(i)}
             className={cn(
-              "h-7 w-7 rounded-md border text-xs font-medium tabular-nums transition-colors",
+              "h-7 w-7 rounded-md border text-xs font-medium tabular transition-colors",
               i === index
                 ? "border-primary bg-primary text-primary-foreground"
                 : !it.studentResponse
@@ -410,10 +410,10 @@ function SprAnswerBoxes({
             : "border-border bg-card",
         )}
       >
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="eyebrow text-muted-foreground">
           Your answer
         </div>
-        <div className="mt-2 font-mono text-lg">
+        <div className="mt-2 text-h3 tabular">
           {studentAnswered ? (
             studentResponse
           ) : (
@@ -422,10 +422,10 @@ function SprAnswerBoxes({
         </div>
       </div>
       <div className="rounded-lg border-2 border-green-500/40 bg-green-50/60 p-4 dark:bg-green-950/20">
-        <div className="text-xs font-semibold uppercase tracking-wide text-green-800 dark:text-green-300">
+        <div className="eyebrow text-green-800 dark:text-green-300">
           Correct answer
         </div>
-        <div className="mt-2 font-mono text-lg text-green-900 dark:text-green-200">
+        <div className="mt-2 text-h3 tabular text-green-900 dark:text-green-200">
           {correctDisplay}
         </div>
       </div>

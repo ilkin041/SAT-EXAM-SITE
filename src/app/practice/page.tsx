@@ -38,13 +38,13 @@ export default async function PracticePage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background">
       <div className="container mx-auto max-w-5xl px-4 py-14">
-        <Link href="/" className="text-sm font-semibold text-primary hover:underline">← Back home</Link>
+        <Link href="/" className="text-body font-semibold text-primary hover:underline">← Back home</Link>
         <header className="mt-8 max-w-3xl">
           <Badge variant="info">Free sample</Badge>
-          <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+          <h1 className="mt-4 text-display">
             Experience the test before creating an account
           </h1>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+          <p className="mt-4 text-body-lg text-muted-foreground">
             Take a timed public practice test in the same interface used by enrolled students.
             Your anonymous session is bound to this browser with a signed, HTTP-only cookie.
           </p>
@@ -57,7 +57,7 @@ export default async function PracticePage() {
         </section>
 
         <section className="mt-12">
-          <h2 className="text-xl font-bold">Available samples</h2>
+          <h2 className="text-h3">Available samples</h2>
           {readyTests.length === 0 ? (
             <div className="mt-4">
               <EmptyState icon={BookOpen} title="No sample is ready" description="A public test will appear here after all of its modules contain questions." />
@@ -85,11 +85,11 @@ export default async function PracticePage() {
                   <article key={test.id} className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                       <Badge variant={test.mode === "ADAPTIVE" ? "purple" : "muted"}>{test.mode}</Badge>
-                      <span className="text-xs text-muted-foreground">~{minutes} min</span>
+                      <span className="text-caption text-muted-foreground">~{minutes} min</span>
                     </div>
-                    <h3 className="mt-4 text-xl font-bold">{test.title}</h3>
-                    {test.description && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{test.description}</p>}
-                    <p className="mt-4 text-xs text-muted-foreground">{servedQuestions} questions served across {test.sections.length} sections</p>
+                    <h3 className="mt-4 text-h3">{test.title}</h3>
+                    {test.description && <p className="mt-2 line-clamp-3 text-body text-muted-foreground">{test.description}</p>}
+                    <p className="mt-4 text-caption text-muted-foreground">{servedQuestions} questions served across {test.sections.length} sections</p>
                     <Button asChild className="mt-5 w-full">
                       <Link href={`/test/${test.id}/start`}>
                         View sample details <ArrowRight className="h-4 w-4" />
@@ -102,7 +102,7 @@ export default async function PracticePage() {
           )}
         </section>
 
-        <p className="mt-10 text-sm text-muted-foreground">
+        <p className="mt-10 text-body text-muted-foreground">
           Want saved progress across devices and access to assigned private tests?{" "}
           <Link href="/signup" className="font-semibold text-primary hover:underline">Create an account</Link>.
         </p>
@@ -124,7 +124,7 @@ function Feature({
     <div className="rounded-xl border border-border/70 bg-card/80 p-4">
       <Icon className="h-5 w-5 text-primary" aria-hidden />
       <div className="mt-3 font-semibold">{title}</div>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
+      <p className="mt-1 text-caption leading-relaxed text-muted-foreground">{text}</p>
     </div>
   );
 }

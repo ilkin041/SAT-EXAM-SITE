@@ -229,7 +229,7 @@ export function AnnotatedPassage({ passageHtml, attemptId, questionId }: Props) 
           <Highlighter className="h-4 w-4" aria-hidden />
           Select passage text to highlight it or attach a note.
         </span>
-        {annotations.length > 0 && <span className="font-bold tabular-nums">{annotations.length} saved</span>}
+        {annotations.length > 0 && <span className="font-bold tabular">{annotations.length} saved</span>}
       </div>
       <div
         ref={wrapperRef}

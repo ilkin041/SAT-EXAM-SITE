@@ -8,10 +8,13 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-sans)", '"Plus Jakarta Sans"', "Inter", "system-ui", "sans-serif"],
-        // System mono stack. Tailwind ships no `fontFamily.mono` unless you
-        // declare one, so until this existed every `font-mono` in the app fell
-        // back to the browser default. T1.1 prepends the real face.
+        // IBM Plex Mono, loaded in `src/app/layout.tsx`. Tailwind ships no
+        // `fontFamily.mono` unless you declare one, so before T0.2 every
+        // `font-mono` in the app fell back to the browser default and before
+        // T1.1 it fell back to the system stack below. The system stack is kept
+        // as the fallback chain for the `display: swap` window.
         mono: [
+          "var(--font-mono)",
           "ui-monospace",
           "SFMono-Regular",
           "Menlo",
@@ -20,6 +23,81 @@ const config: Config = {
           '"Liberation Mono"',
           '"Courier New"',
           "monospace",
+        ],
+      },
+      /*
+       * The type scale (T1.1). Eight steps, no more — `text-3xl` and friends
+       * still exist because they are Tailwind defaults, but nothing in a page
+       * file should reach for them. Each utility carries size, weight, tracking
+       * and line-height together, so a heading is one class rather than four,
+       * and every facet reads from the custom properties in `globals.css` so
+       * there is exactly one source of truth.
+       *
+       * Marketing body is `text-body-lg` at `max-w-[52ch]`. App body is
+       * `text-body`. `text-eyebrow` is mono/uppercase — prefer the `.eyebrow`
+       * utility, which bundles the family and casing too.
+       */
+      fontSize: {
+        display: [
+          "var(--text-display)",
+          {
+            lineHeight: "var(--text-display-leading)",
+            letterSpacing: "var(--text-display-tracking)",
+            fontWeight: "var(--text-display-weight)",
+          },
+        ],
+        h1: [
+          "var(--text-h1)",
+          {
+            lineHeight: "var(--text-h1-leading)",
+            letterSpacing: "var(--text-h1-tracking)",
+            fontWeight: "var(--text-h1-weight)",
+          },
+        ],
+        h2: [
+          "var(--text-h2)",
+          {
+            lineHeight: "var(--text-h2-leading)",
+            letterSpacing: "var(--text-h2-tracking)",
+            fontWeight: "var(--text-h2-weight)",
+          },
+        ],
+        h3: [
+          "var(--text-h3)",
+          {
+            lineHeight: "var(--text-h3-leading)",
+            letterSpacing: "var(--text-h3-tracking)",
+            fontWeight: "var(--text-h3-weight)",
+          },
+        ],
+        "body-lg": [
+          "var(--text-body-lg)",
+          {
+            lineHeight: "var(--text-body-lg-leading)",
+            fontWeight: "var(--text-body-lg-weight)",
+          },
+        ],
+        body: [
+          "var(--text-body)",
+          {
+            lineHeight: "var(--text-body-leading)",
+            fontWeight: "var(--text-body-weight)",
+          },
+        ],
+        caption: [
+          "var(--text-caption)",
+          {
+            lineHeight: "var(--text-caption-leading)",
+            fontWeight: "var(--text-caption-weight)",
+          },
+        ],
+        eyebrow: [
+          "var(--text-eyebrow)",
+          {
+            lineHeight: "var(--text-eyebrow-leading)",
+            letterSpacing: "var(--text-eyebrow-tracking)",
+            fontWeight: "var(--text-eyebrow-weight)",
+          },
         ],
       },
       colors: {
@@ -65,6 +143,16 @@ const config: Config = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        // Editorial pair. `ink` is the highest-contrast text colour on a page,
+        // `paper` the sheet it sits on, `paper-sunk` a recessed well within it
+        // (table stripes, code blocks, inset panels). Mapped here rather than
+        // left as bare custom properties — T0.2 already had to clean up tokens
+        // that existed in CSS but resolved to nothing as a class.
+        ink: "hsl(var(--ink))",
+        paper: {
+          DEFAULT: "hsl(var(--paper))",
+          sunk: "hsl(var(--paper-sunk))",
         },
         // Anchor brand color — distinct from --primary so nav surfaces can
         // sit darker than the primary button background without recoloring

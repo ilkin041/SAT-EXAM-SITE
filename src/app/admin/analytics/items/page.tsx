@@ -172,7 +172,7 @@ export default async function ItemAnalysisPage({
       </div>
 
       {legacyAttemptCount > 0 && (
-        <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50/60 px-4 py-3 text-xs text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+        <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50/60 px-4 py-3 text-caption text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
           {legacyAttemptCount} historical completed attempt{legacyAttemptCount === 1 ? "" : "s"} predate immutable question snapshots. Their exposure denominator uses the recorded modules served; correctness still comes from the saved Answer row. New attempts use snapshots throughout.
         </p>
       )}
@@ -201,8 +201,8 @@ export default async function ItemAnalysisPage({
         <EmptyState icon={BarChart3} title="No analyzable items" description="Complete attempts or broaden the current filters." />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border/80 bg-card shadow-sm">
-          <table className="w-full min-w-[980px] text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <table className="w-full min-w-[980px] text-body">
+            <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Question</th>
                 <th className="px-4 py-3">Taxonomy</th>
@@ -219,22 +219,22 @@ export default async function ItemAnalysisPage({
                     <Link href={`/admin/questions/${question.id}`} className="font-semibold text-primary hover:underline">
                       {plainText(question.stem).slice(0, 150) || "Untitled question"}
                     </Link>
-                    <div className="mt-1 text-xs text-muted-foreground">
+                    <div className="mt-1 text-caption text-muted-foreground">
                       {[...(testTitlesByQuestion.get(question.id) ?? [])].join(", ")}
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-xs">
+                  <td className="px-4 py-4 text-caption">
                     <div className="font-medium">{question.domain}</div>
                     <div className="text-muted-foreground">{question.skill || "No skill"} · {question.difficulty}</div>
                   </td>
-                  <td className="px-4 py-4 text-center tabular-nums">{analysis.exposures}</td>
+                  <td className="px-4 py-4 text-center tabular">{analysis.exposures}</td>
                   <td className="px-4 py-4 text-center">
-                    <div className="font-bold tabular-nums">{Math.round(analysis.pValue * 100)}%</div>
-                    <div className="text-xs text-muted-foreground">{analysis.correct}/{analysis.exposures}</div>
+                    <div className="font-bold tabular">{Math.round(analysis.pValue * 100)}%</div>
+                    <div className="text-caption text-muted-foreground">{analysis.correct}/{analysis.exposures}</div>
                   </td>
-                  <td className="px-4 py-4 text-center tabular-nums">
+                  <td className="px-4 py-4 text-center tabular">
                     {analysis.averageTimeSeconds === null ? "—" : `${analysis.averageTimeSeconds}s`}
-                    <div className="text-xs text-muted-foreground">{analysis.timedResponses} timed</div>
+                    <div className="text-caption text-muted-foreground">{analysis.timedResponses} timed</div>
                   </td>
                   <td className="max-w-sm px-4 py-4">
                     <div className="flex flex-wrap gap-1">
@@ -244,7 +244,7 @@ export default async function ItemAnalysisPage({
                         </Badge>
                       ))}
                     </div>
-                    <details className="mt-2 text-xs">
+                    <details className="mt-2 text-caption">
                       <summary className="cursor-pointer font-semibold text-primary">Response frequencies</summary>
                       <div className="mt-2 space-y-1">
                         {analysis.responses.map((response) => (
@@ -252,7 +252,7 @@ export default async function ItemAnalysisPage({
                             <span className={response.isKey ? "font-bold text-emerald-700" : "text-muted-foreground"}>
                               {response.response}{response.isKey ? " (key)" : ""}
                             </span>
-                            <span className="tabular-nums">{response.count} · {response.percentage}%</span>
+                            <span className="tabular">{response.count} · {response.percentage}%</span>
                           </div>
                         ))}
                       </div>
@@ -274,7 +274,7 @@ export default async function ItemAnalysisPage({
               <Link href={pageHref(currentPage - 1)}>Previous</Link>
             </Button>
           )}
-          <span className="text-xs text-muted-foreground">Page {currentPage} of {totalPages}</span>
+          <span className="text-caption text-muted-foreground">Page {currentPage} of {totalPages}</span>
           {currentPage >= totalPages ? (
             <Button variant="secondary" size="sm" disabled>Next</Button>
           ) : (
@@ -285,14 +285,14 @@ export default async function ItemAnalysisPage({
         </div>
       )}
 
-      <p className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
+      <p className="mt-6 flex items-center gap-2 text-caption text-muted-foreground">
         <Clock className="h-3.5 w-3.5" /> Flags require at least five completed-attempt exposures: p ≥ 0.90 is too easy; p ≤ 0.30 is too hard.
       </p>
     </>
   );
 }
 
-const selectClass = "h-10 rounded-xl border border-input bg-card px-3 text-sm";
+const selectClass = "h-10 rounded-xl border border-input bg-card px-3 text-body";
 
 function plainText(html: string) {
   return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} })

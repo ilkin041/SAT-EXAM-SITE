@@ -122,7 +122,7 @@ export default async function ResultsPage({
     <main className="container mx-auto max-w-4xl px-4 py-10 animate-fade-in">
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-all duration-150 hover:text-primary active-press mb-6"
+        className="inline-flex items-center gap-1.5 text-body font-semibold text-muted-foreground transition-all duration-150 hover:text-primary active-press mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to dashboard
@@ -130,15 +130,15 @@ export default async function ResultsPage({
 
       <header className="mb-8 flex flex-col gap-2 md:flex-row md:items-center md:justify-between border-b border-border/40 pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{attempt.test.title}</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
+          <h1 className="text-h1 text-foreground">{attempt.test.title}</h1>
+          <p className="mt-1.5 text-body text-muted-foreground">
             Practice Test Score Report
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="success">Completed</Badge>
           {attempt.completedAt && (
-            <span className="text-xs text-muted-foreground font-medium">
+            <span className="text-caption text-muted-foreground font-medium">
               Completed on {attempt.completedAt.toLocaleDateString(undefined, {
                 year: 'numeric',
                 month: 'short',
@@ -151,8 +151,8 @@ export default async function ResultsPage({
 
       {scoreFidelity === "INCOMPLETE" ? (
         <section className="mb-10 rounded-2xl border border-amber-500/30 bg-amber-50/60 p-6 text-center dark:bg-amber-950/20">
-          <h2 className="text-lg font-bold text-foreground">No complete SAT score available</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h2 className="text-h3 text-foreground">No complete SAT score available</h2>
+          <p className="mt-2 text-body text-muted-foreground">
             This attempt does not contain scored results for both sections. Raw module
             performance remains available to administrators, but a 400–1600 total would
             be misleading.
@@ -164,7 +164,7 @@ export default async function ResultsPage({
         <div className="absolute -left-16 -top-16 h-36 w-36 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
         <div className="absolute -right-16 -bottom-16 h-36 w-36 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
 
-        <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold bg-primary/10 text-primary mb-6">
+        <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-caption font-semibold bg-primary/10 text-primary mb-6">
           <Award className="h-4 w-4" />
           {scoreFidelity === "ESTIMATE" ? "Estimated Performance" : "Overall Performance"}
         </span>
@@ -191,24 +191,24 @@ export default async function ResultsPage({
             />
           </svg>
           <div className="text-center z-10">
-            <span className="block text-5xl font-black tracking-tight text-foreground tabular-nums">
+            <span className="block text-display text-foreground tabular">
               {scaled.total}
             </span>
-            <span className="text-sm font-bold text-muted-foreground mt-0.5 block">/ 1600</span>
+            <span className="text-body font-bold text-muted-foreground mt-0.5 block">/ 1600</span>
           </div>
         </div>
 
         {scoreFidelity === "FULL_LENGTH" ? (
         <div className="mt-6 flex flex-col items-center">
           <span className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-4 py-1 text-xs font-bold border shadow-xs transition-colors",
+            "inline-flex items-center gap-1.5 rounded-full px-4 py-1 text-caption font-bold border shadow-xs transition-colors",
             tierPillStyle(scaled.total / 1600)
           )}>
             {tierLabel(scaled.total / 1600)}
           </span>
         </div>
         ) : (
-          <p className="mt-6 max-w-xl rounded-xl border border-amber-500/25 bg-amber-50/70 px-4 py-3 text-center text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          <p className="mt-6 max-w-xl rounded-xl border border-amber-500/25 bg-amber-50/70 px-4 py-3 text-center text-caption text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
             Estimate from a short test. Proportional scaling has fewer score points than
             a full 54-question R&amp;W and 44-question Math test, so no performance tier is assigned.
           </p>
@@ -236,7 +236,7 @@ export default async function ResultsPage({
       {/* ---------- Domain breakdown ---------- */}
       <section className="mb-10">
         <div className="mb-4 border-b border-border/40 pb-2">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">Performance by Domain</h2>
+          <h2 className="text-h3 text-foreground">Performance by Domain</h2>
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <DomainTable
@@ -250,7 +250,7 @@ export default async function ResultsPage({
       {/* ---------- Difficulty breakdown ---------- */}
       <section className="mb-10">
         <div className="mb-4 border-b border-border/40 pb-2">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">
+          <h2 className="text-h3 text-foreground">
             Performance by Difficulty
           </h2>
         </div>
@@ -260,7 +260,7 @@ export default async function ResultsPage({
       {/* ---------- Time management ---------- */}
       <section className="mb-12">
         <div className="mb-4 border-b border-border/40 pb-2">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">Time Analysis</h2>
+          <h2 className="text-h3 text-foreground">Time Analysis</h2>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
@@ -290,7 +290,7 @@ export default async function ResultsPage({
             accentColor="amber"
           />
         </div>
-        <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-4 text-xs text-muted-foreground leading-relaxed">
+        <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-4 text-caption text-muted-foreground leading-relaxed">
           💡 <span className="font-semibold text-foreground">SAT pacing strategy:</span> Try to average under{" "}
           <span className="font-semibold text-foreground">1:10</span> per Reading &amp; Writing question and under{" "}
           <span className="font-semibold text-foreground">1:35</span> per Math question.
@@ -344,17 +344,17 @@ function SectionScore({
   return (
     <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs hover:border-primary/20 hover:shadow-sm transition-all duration-200">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+        <div className="flex items-center gap-2 text-body font-bold text-muted-foreground">
           <Icon className="h-4 w-4 text-primary" aria-hidden />
           {label}
         </div>
-        <span className="text-[11px] font-bold text-muted-foreground bg-secondary px-2.5 py-0.5 rounded-full border border-border/20">
+        <span className="text-eyebrow font-bold text-muted-foreground bg-secondary px-2.5 py-0.5 rounded-full border border-border/20">
           {raw}
         </span>
       </div>
       <div className="mt-3 flex items-baseline gap-1.5">
-        <span className="text-4xl font-extrabold tabular-nums tracking-tight text-foreground">{value}</span>
-        <span className="text-sm font-semibold text-muted-foreground">/ 800</span>
+        <span className="text-h1 tabular text-foreground">{value}</span>
+        <span className="text-body font-semibold text-muted-foreground">/ 800</span>
       </div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted/60">
         <div
@@ -374,7 +374,7 @@ function DifficultyTable({
   const rows = stats.filter((s) => s.total > 0);
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-card/40 p-6 text-sm text-center text-muted-foreground">
+      <div className="rounded-2xl border border-dashed border-border bg-card/40 p-6 text-body text-center text-muted-foreground">
         No question difficulties mapped for this attempt.
       </div>
     );
@@ -397,9 +397,9 @@ function DifficultyTable({
   return (
     <div className="rounded-2xl border border-border/80 bg-card p-5 md:p-6 shadow-xs hover:shadow-sm transition-all duration-200">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
-            <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-border/60 text-left text-caption uppercase tracking-wide text-muted-foreground">
               <th className="pb-3.5 font-semibold">Difficulty</th>
               <th className="pb-3.5 text-center font-semibold">Correct</th>
               <th className="pb-3.5 text-center font-semibold">Total</th>
@@ -416,18 +416,18 @@ function DifficultyTable({
                   <td className="py-4">
                     <span
                       className={cn(
-                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border",
+                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-caption font-semibold border",
                         cfg.badge,
                       )}
                     >
                       {cfg.label}
                     </span>
                   </td>
-                  <td className="py-4 text-center tabular-nums font-medium text-foreground">{r.correct}</td>
-                  <td className="py-4 text-center tabular-nums text-muted-foreground font-medium">
+                  <td className="py-4 text-center tabular font-medium text-foreground">{r.correct}</td>
+                  <td className="py-4 text-center tabular text-muted-foreground font-medium">
                     {r.total}
                   </td>
-                  <td className="py-4 text-center font-bold tabular-nums text-foreground">{pct}%</td>
+                  <td className="py-4 text-center font-bold tabular text-foreground">{pct}%</td>
                   <td className="py-4 pl-6 min-w-[120px]">
                     <div className="h-2 overflow-hidden rounded-full bg-muted/65">
                       <div
@@ -443,7 +443,7 @@ function DifficultyTable({
         </table>
       </div>
       {hint && (
-        <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50/50 px-4 py-3 text-xs text-amber-800 dark:bg-amber-950/20 dark:text-amber-200 leading-relaxed">
+        <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50/50 px-4 py-3 text-caption text-amber-800 dark:bg-amber-950/20 dark:text-amber-200 leading-relaxed">
           {hint}
         </p>
       )}
@@ -484,9 +484,9 @@ function DomainTable({
 }) {
   return (
     <div className="rounded-2xl border border-border/80 bg-card p-5 md:p-6 shadow-xs hover:shadow-sm transition-all duration-200">
-      <h3 className="mb-4 text-sm font-bold text-foreground">{title}</h3>
+      <h3 className="mb-4 text-body font-bold text-foreground">{title}</h3>
       {stats.length === 0 ? (
-        <p className="text-xs text-muted-foreground py-2">No domain data logged for this attempt.</p>
+        <p className="text-caption text-muted-foreground py-2">No domain data logged for this attempt.</p>
       ) : (
         <ul className="space-y-4">
           {stats.map((s) => {
@@ -500,10 +500,10 @@ function DomainTable({
                     ? "bg-amber-500"
                     : "bg-destructive";
             return (
-              <li key={s.domain} className="text-sm">
+              <li key={s.domain} className="text-body">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <span className="truncate font-medium text-foreground">{s.domain}</span>
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground font-semibold">
+                  <span className="shrink-0 text-caption tabular text-muted-foreground font-semibold">
                     {s.correct} / {s.total}{" "}
                     <span className="ml-1 font-bold text-foreground">{pct}%</span>
                   </span>
