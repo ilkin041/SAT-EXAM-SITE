@@ -1,11 +1,16 @@
 import type * as React from "react";
+import { AccordionSection, AccordionSpecimens } from "./accordion-section";
 import { AlertSection, AlertSpecimens } from "./alert-section";
+import { AvatarSection, AvatarSpecimens } from "./avatar-section";
 import { BadgeSection, BadgeSpecimens } from "./badge-section";
 import { ButtonSection, ButtonSpecimens } from "./button-section";
 import { DataTableSection, DataTableSpecimens } from "./data-table-section";
 import { EmptyStateSection, EmptyStateSpecimens } from "./empty-state-section";
+import { FieldSection, FieldSpecimens } from "./field-section";
 import { InputSection, InputSpecimens } from "./input-section";
 import { ModalSection, ModalSpecimens } from "./modal-section";
+import { PaginationSection, PaginationSpecimens } from "./pagination-section";
+import { SeparatorSection, SeparatorSpecimens } from "./separator-section";
 import { PageHeaderSection, PageHeaderSpecimens } from "./page-header-section";
 import {
   SegmentedControlSection,
@@ -41,7 +46,15 @@ export interface GalleryEntry {
 export const GALLERY: GalleryEntry[] = [
   { id: "button", title: "Button", Section: ButtonSection, Specimens: ButtonSpecimens },
   { id: "badge", title: "Badge", Section: BadgeSection, Specimens: BadgeSpecimens },
+  { id: "avatar", title: "Avatar", Section: AvatarSection, Specimens: AvatarSpecimens },
+  {
+    id: "separator",
+    title: "Separator",
+    Section: SeparatorSection,
+    Specimens: SeparatorSpecimens,
+  },
   { id: "input", title: "Input", Section: InputSection, Specimens: InputSpecimens },
+  { id: "field", title: "Field", Section: FieldSection, Specimens: FieldSpecimens },
   { id: "select", title: "Select", Section: SelectSection, Specimens: SelectSpecimens },
   {
     id: "segmented-control",
@@ -50,6 +63,12 @@ export const GALLERY: GalleryEntry[] = [
     Specimens: SegmentedControlSpecimens,
   },
   { id: "tabs", title: "Tabs", Section: TabsSection, Specimens: TabsSpecimens },
+  {
+    id: "accordion",
+    title: "Accordion",
+    Section: AccordionSection,
+    Specimens: AccordionSpecimens,
+  },
   { id: "alert", title: "Alert", Section: AlertSection, Specimens: AlertSpecimens },
   {
     id: "tooltip",
@@ -65,6 +84,12 @@ export const GALLERY: GalleryEntry[] = [
     title: "DataTable",
     Section: DataTableSection,
     Specimens: DataTableSpecimens,
+  },
+  {
+    id: "pagination",
+    title: "Pagination",
+    Section: PaginationSection,
+    Specimens: PaginationSpecimens,
   },
   {
     id: "stat-card",

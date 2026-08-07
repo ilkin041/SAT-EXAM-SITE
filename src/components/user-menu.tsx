@@ -5,21 +5,23 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { LogOut, ChevronDown, Settings } from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface Props {
+  /** Seeds the avatar hue. Stable per account, unlike the name. */
+  id: string | null | undefined;
   name: string | null | undefined;
   email: string | null | undefined;
 }
 
 /**
- * User pill in the top-right of the student nav. Shows an avatar circle with
- * the first letter of the user's name (or email), the display name, and a
- * dropdown chevron. Opens a small menu with a sign-out item.
+ * User pill in the top-right of the student nav. Shows the user's `Avatar`,
+ * their display name, and a dropdown chevron. Opens a small menu with a
+ * sign-out item.
  */
-export function UserMenu({ name, email }: Props) {
+export function UserMenu({ id, name, email }: Props) {
   const display = name?.trim() || email || "Account";
-  const initial = (name?.[0] ?? email?.[0] ?? "?").toUpperCase();
   const [signing, setSigning] = useState(false);
 
   return (
@@ -31,9 +33,7 @@ export function UserMenu({ name, email }: Props) {
         )}
         aria-label="Open account menu"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm">
-          {initial}
-        </span>
+        <Avatar size="sm" seed={id} name={name} email={email} />
         <span className="hidden max-w-[160px] truncate text-xs font-medium text-foreground sm:inline">
           {display}
         </span>

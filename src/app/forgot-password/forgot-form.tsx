@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 export function ForgotPasswordForm() {
@@ -31,36 +32,23 @@ export function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <div
-        role="status"
-        className="flex items-start gap-3 rounded-md border border-green-500/30 bg-green-50 px-4 py-3 text-sm text-green-900 dark:bg-green-950/20 dark:text-green-200"
-      >
-        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-        <div>
-          <div className="font-medium">Check your email</div>
-          <p className="mt-1 text-xs">
-            If an account exists for <span className="font-medium">{email}</span>, we&apos;ve
-            sent a password reset link. The link expires in 1 hour.
-          </p>
-        </div>
-      </div>
+      <Alert variant="success" title="Check your email" live>
+        If an account exists for{" "}
+        <span className="font-medium text-foreground">{email}</span>, we&apos;ve
+        sent a password reset link. The link expires in 1 hour.
+      </Alert>
     );
   }
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       {error && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <span>{error}</span>
-        </div>
+        <Alert variant="destructive" live>
+          {error}
+        </Alert>
       )}
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-foreground">Email</span>
+      <Field label="Email">
         <Input
           type="email"
           autoComplete="email"
@@ -69,7 +57,7 @@ export function ForgotPasswordForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
         />
-      </label>
+      </Field>
 
       <Button type="submit" loading={pending} className="mt-2 w-full">
         {pending ? "Sending…" : "Send reset link"}

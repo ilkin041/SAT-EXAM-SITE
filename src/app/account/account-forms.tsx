@@ -2,33 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordField } from "@/components/password-field";
 import { useToast } from "@/components/toast";
-import { cn } from "@/lib/utils";
-
-interface Strength {
-  score: 1 | 2 | 3;
-  label: string;
-  color: string;
-}
-
-function scorePassword(pw: string): Strength | null {
-  if (pw.length === 0) return null;
-  let s = 0;
-  if (pw.length >= 8) s += 1;
-  if (pw.length >= 12) s += 1;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw) && /\d/.test(pw)) s += 1;
-  if (/[^A-Za-z0-9]/.test(pw)) s += 1;
-  const score = Math.min(3, Math.max(1, Math.floor(s / 1.5))) as 1 | 2 | 3;
-  const map: Record<1 | 2 | 3, Strength> = {
-    1: { score, label: "Weak", color: "bg-destructive" },
-    2: { score, label: "Medium", color: "bg-amber-500" },
-    3: { score, label: "Strong", color: "bg-green-600" },
-  };
-  return map[score];
-}
 
 // ---------- Name ----------
 
@@ -76,16 +55,15 @@ export function ChangeNameForm({ initialName }: { initialName: string }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
       {error && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <span>{error}</span>
-        </div>
+        <Alert variant="destructive" live>
+          {error}
+        </Alert>
       )}
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-foreground">Name</span>
+
+      <Field
+        label="Name"
+        hint="Used in the welcome message and the navigation menu."
+      >
         <Input
           type="text"
           autoComplete="name"
@@ -94,10 +72,8 @@ export function ChangeNameForm({ initialName }: { initialName: string }) {
           onChange={(e) => setName(e.target.value)}
           placeholder="Your name"
         />
-        <span className="text-xs text-muted-foreground">
-          Used in the welcome message and the navigation menu.
-        </span>
-      </label>
+      </Field>
+
       <div>
         <Button type="submit" loading={pending} disabled={pending}>
           {pending ? "Saving…" : "Save"}
@@ -114,13 +90,9 @@ export function ChangePasswordForm() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const strength = scorePassword(next);
   const mismatch = confirm.length > 0 && confirm !== next;
 
   function reset() {
@@ -170,65 +142,37 @@ export function ChangePasswordForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       {error && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <span>{error}</span>
-        </div>
+        <Alert variant="destructive" live>
+          {error}
+        </Alert>
       )}
 
       <PasswordField
         label="Current password"
         autoComplete="current-password"
+        required
         value={current}
-        onChange={setCurrent}
-        show={showCurrent}
-        onToggleShow={() => setShowCurrent((v) => !v)}
+        onValueChange={setCurrent}
       />
 
-      <div>
-        <PasswordField
-          label="New password"
-          autoComplete="new-password"
-          value={next}
-          onChange={setNext}
-          show={showNew}
-          onToggleShow={() => setShowNew((v) => !v)}
-          minLength={8}
-        />
-        {strength ? (
-          <div className="mt-2 flex items-center gap-2">
-            <div className="flex flex-1 gap-1">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "h-1 flex-1 rounded-full transition-colors",
-                    strength.score >= i ? strength.color : "bg-muted",
-                  )}
-                />
-              ))}
-            </div>
-            <span className="text-xs text-muted-foreground">{strength.label}</span>
-          </div>
-        ) : (
-          <span className="mt-1.5 block text-xs text-muted-foreground">
-            Minimum 8 characters.
-          </span>
-        )}
-      </div>
+      <PasswordField
+        label="New password"
+        autoComplete="new-password"
+        required
+        minLength={8}
+        strength
+        hint={next.length === 0 ? "Minimum 8 characters." : undefined}
+        value={next}
+        onValueChange={setNext}
+      />
 
       <PasswordField
         label="Confirm new password"
         autoComplete="new-password"
+        required
         value={confirm}
-        onChange={setConfirm}
-        show={showConfirm}
-        onToggleShow={() => setShowConfirm((v) => !v)}
-        invalid={mismatch}
-        hint={mismatch ? "Passwords don't match." : undefined}
+        onValueChange={setConfirm}
+        error={mismatch ? "Passwords don't match." : undefined}
       />
 
       <div>
@@ -237,60 +181,5 @@ export function ChangePasswordForm() {
         </Button>
       </div>
     </form>
-  );
-}
-
-function PasswordField({
-  label,
-  autoComplete,
-  value,
-  onChange,
-  show,
-  onToggleShow,
-  invalid,
-  hint,
-  minLength,
-}: {
-  label: string;
-  autoComplete: string;
-  value: string;
-  onChange: (v: string) => void;
-  show: boolean;
-  onToggleShow: () => void;
-  invalid?: boolean;
-  hint?: string;
-  minLength?: number;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5 text-sm">
-      <span className="font-medium text-foreground">{label}</span>
-      <div className="relative">
-        <Input
-          type={show ? "text" : "password"}
-          autoComplete={autoComplete}
-          required
-          minLength={minLength}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={cn(
-            "pr-10",
-            invalid && "border-destructive focus-visible:ring-destructive",
-          )}
-        />
-        <button
-          type="button"
-          onClick={onToggleShow}
-          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-          aria-label={show ? "Hide password" : "Show password"}
-        >
-          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-      {hint && (
-        <span className={cn("text-xs", invalid ? "text-destructive" : "text-muted-foreground")}>
-          {hint}
-        </span>
-      )}
-    </label>
   );
 }

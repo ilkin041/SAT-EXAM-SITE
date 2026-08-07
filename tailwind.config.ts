@@ -238,6 +238,17 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
         },
+        // Radix Accordion measures the panel and publishes its height as a
+        // custom property; these are the only two keyframes that can read it,
+        // which is why they live here rather than in globals.css.
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
       },
       animation: {
         "fade-in": "fade-in 200ms ease-out",
@@ -248,6 +259,8 @@ const config: Config = {
         "pulse-glow": "pulse-glow 2.5s ease-in-out infinite",
         "gradient-shift": "gradient-shift 15s ease infinite",
         shimmer: "shimmer 2s ease-in-out infinite",
+        "accordion-down": "accordion-down 200ms ease-out",
+        "accordion-up": "accordion-up 200ms ease-out",
       },
     },
   },

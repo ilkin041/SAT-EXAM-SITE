@@ -5,6 +5,12 @@ import { cn } from "@/lib/utils";
  * Standard text input — 40px tall to match Button's default size.
  * Features an inner shadow for depth, smooth focus ring animation,
  * and refined placeholder styling.
+ *
+ * There is still no error *variant*: the invalid treatment hangs off
+ * `aria-invalid` instead, so the attribute a screen reader needs is the same
+ * one that turns the border red and nothing can set one without the other.
+ * `Field` (T1.6) sets it from its `error` prop; a bare `<Input aria-invalid>`
+ * gets the same look.
  */
 export const Input = React.forwardRef<
   HTMLInputElement,
@@ -23,6 +29,8 @@ export const Input = React.forwardRef<
       // a 3:1 indicator on its own, so the input keeps the global
       // `:focus-visible` outline from globals.css and layers this underneath.
       "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-0",
+      "aria-[invalid=true]:border-destructive aria-[invalid=true]:hover:border-destructive",
+      "aria-[invalid=true]:focus-visible:border-destructive aria-[invalid=true]:focus-visible:ring-destructive/25",
       "disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}

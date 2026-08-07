@@ -28,7 +28,11 @@ export async function StudentNav() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           {user ? (
-            <UserMenu name={user.name ?? null} email={user.email ?? null} />
+            <UserMenu
+              id={user.id ?? null}
+              name={user.name ?? null}
+              email={user.email ?? null}
+            />
           ) : (
             <Link
               href="/login"

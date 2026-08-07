@@ -35,7 +35,7 @@ npm run dev
 npm run build
 npx tsc --noEmit              # there is no `typecheck` script
 npx tsc --noUnusedLocals      # catches dead imports
-npm test                      # vitest, 70 tests
+npm test                      # vitest, 115 tests
 npm run lint                  # next lint --no-cache --max-warnings=0; must be clean
 npm run analyze               # ANALYZE=true next build -> .next/analyze/*.html
 npx prisma migrate dev --name <name>
@@ -251,9 +251,9 @@ colour alone, keyboard-traversable modals, no horizontal scroll at 360px on full
 
 ### Radix packages
 
-Installed: `react-dialog`, `react-dropdown-menu`, `react-label`, `react-select`, `react-slot`,
-`react-tabs`, `react-tooltip`. **Not installed:** `react-accordion`, `react-progress`. Phase 1 adds
-those — budget for it.
+Installed: `react-accordion`, `react-dialog`, `react-dropdown-menu`, `react-label`, `react-select`,
+`react-slot`, `react-tabs`, `react-tooltip`. **Not installed:** `react-progress`. `react-label` was
+installed and unused until T1.6 gave it a call site in `Field`.
 
 **`package.json` pins `@radix-ui/react-dismissable-layer` through `overrides`. Do not remove it**
 without checking the symptom it fixes. Radix keeps its layer stack in a module-level React context,
@@ -264,14 +264,20 @@ will not merge them, because each parent pins its own. Outside-click layering ke
 throughout, which is what makes the split easy to miss — only the Escape path reads the shared
 stack. Any new Radix package needs this checked: `npm ls @radix-ui/react-dismissable-layer --all`.
 T1.5 checked it after adding `react-tabs` and `react-tooltip`: tooltip pulls the layer and dedupes
-onto the override, tabs does not use it at all. One stack.
+onto the override, tabs does not use it at all. One stack. T1.6 checked it again after adding
+`react-accordion`, which does not pull the layer either.
 
-### Existing primitives (15, in `src/components/ui/`)
+### Existing primitives (20, in `src/components/ui/`)
 
 `Button` (107 LOC, 6 variants, 4 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
 · `Select` (sizes sm/default, error state, leading icon, clearable) · `Table` · `DataTable` ·
-`Modal` · `Sheet` · `Tabs` · `Tooltip` · `Alert` · `SegmentedControl` · `EmptyState` ·
-`PageHeader` (admin only) · `StatCard`. Everything else in the plan is greenfield.
+`Pagination` · `Modal` · `Sheet` · `Tabs` · `Accordion` · `Tooltip` · `Alert` ·
+`SegmentedControl` · `Field` · `Avatar` · `Separator` · `EmptyState` · `PageHeader` (admin only) ·
+`StatCard`. Everything else in the plan is greenfield.
+
+Two app-level compositions sit outside `ui/` because they are *uses* of the primitives, not
+primitives: `src/components/password-field.tsx` (a `Field` + `Input` + show/hide toggle, used by all
+four auth forms and `/account`) and `src/components/password-strength.tsx`.
 
 `Select` carries one rule worth knowing before using it: Radix rejects an item value of `""`, so the
 wrapper translates it to a private sentinel and back. A call site writes `value=""` for the "All …"
@@ -318,6 +324,33 @@ The T1.5 six carry their own rules:
   tabs.
 - **`Alert` is not a live region by default.** Pass `live` only when it appears in response to
   something the reader just did; the role then follows the variant.
+
+The T1.6 five:
+
+- **`Field` owns the wiring, not the styling.** It sets `id`/`htmlFor`, an `aria-describedby`
+  covering the hint *and* the error, and `aria-invalid`. The red border is no longer a class a call
+  site remembers: `Input` styles `aria-[invalid=true]` itself, so the attribute a screen reader
+  needs is the same one that turns the border red. A single child is cloned with those props and a
+  child's own `id`/`aria-describedby` always wins; a control inside a wrapper takes the render-prop
+  form. **`required` renders no asterisk** — the copy rules mark the exceptions, so pass `optional`.
+  The error is not a live region, same rule as `Alert`.
+- **`Avatar` derives its hue from `seed`, and `seed` is the user id.** Not the name — an avatar that
+  changes colour when someone renames themselves stops being recognisable. Six hues, none of them
+  emerald, amber or red: those mean correct, time and incorrect, and a person is not a status.
+  `hueIndex()` is pinned by `tests/ui-primitives.test.ts`, so changing the hash is a deliberate act.
+  No image branch, because `User` has no `image` column.
+- **`Pagination` shares `?page=` with `DataTable` on purpose**, plus `?perPage=`, named by
+  `paginationParams(prefix)`. A `?perPage=` that is not one of the offered `pageSizeOptions` is
+  ignored. Passing `onPageChange` (or `onPageSizeChange`) makes that half controlled and it writes
+  no URL. It renders nothing at `total: 0` — that surface wants an `EmptyState`. **It has not been
+  wired into `DataTable`,** which still has its own inline prev/next; T1.9 owns that swap.
+- **`Separator` is for the two cases a `border-t` cannot do**: vertical, and labelled. Everything
+  else should stay a border. Decorative by default; the labelled form carries no role at all,
+  because a separator's children are presentational and the label would be hidden.
+- **`Accordion` needs `headingLevel` set to whatever the page's outline says.** Radix wraps every
+  trigger in an `<h3>`, which is right under an `<h2>` and wrong under an `<h1>`, and only the page
+  knows. The panel animation reads `--radix-accordion-content-height`, so its two keyframes live in
+  `tailwind.config.ts` rather than `globals.css`.
 
 ---
 
