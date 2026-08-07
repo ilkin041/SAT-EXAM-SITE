@@ -36,7 +36,19 @@
  * HSL channels (Tailwind / shadcn convention) so opacity utilities work.
  * ========================================================================= */
 @layer base {
-  :root {
+  /*
+   * `.light` is the mirror of `.dark`: it re-establishes the light token set on
+   * any subtree, so a light surface can be nested inside a dark document. The
+   * app itself never needs it — `<html>` carries exactly one theme — but the
+   * `/ui` gallery (T1.2) shows both themes side by side on one page, and that
+   * is impossible while light lives only on `:root`.
+   *
+   * Both selectors have the same specificity, and `.dark` is declared after, so
+   * an element carrying both would resolve dark. Nothing does; the panes carry
+   * one or the other.
+   */
+  :root,
+  .light {
     /* Tells the UA which palette to use for scrollbars and native controls,
        so they match the theme the blocking <ThemeScript /> picked. */
     color-scheme: light;

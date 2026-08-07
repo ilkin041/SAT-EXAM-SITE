@@ -25,6 +25,10 @@ const PUBLIC_PATHS = [
   "/privacy",
   "/terms",
   "/contact",
+  // Dev-only component gallery. `notFound()`s in a production build, so
+  // whitelisting it here cannot expose anything — but without the entry it
+  // redirects to /login in dev, which is the one place it needs to work.
+  "/ui",
 ];
 
 const PUBLIC_PREFIXES = [
@@ -40,6 +44,8 @@ const PUBLIC_PREFIXES = [
   "/api/attempts/",
   // Cron handlers authenticate their own Vercel bearer token.
   "/api/cron/",
+  // The gallery's viewport-simulator iframes live under /ui/frame.
+  "/ui/",
 ];
 
 function isPublic(pathname: string): boolean {
