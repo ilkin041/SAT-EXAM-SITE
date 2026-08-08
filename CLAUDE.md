@@ -42,6 +42,7 @@ npm run db:backfill-question-html   # populate Question.renderedHtml (see T2.1 b
 npm run db:verify-question-html     # stored render == fresh render, field by field
 npm run db:seed-taxonomy            # upsert Domain/Skill from question-taxonomy.ts
 npm run db:seed-demo-questions      # the three originally-authored landing-demo questions
+npm run db:seed-adaptive-test       # the one public ADAPTIVE test (see T3.6 below)
 npm run db:verify-taxonomy          # taxonomy invariants: no fold collisions, no cross-domain tags
 npm run gen:reference-sheet         # re-typeset the geometry reference sheet
 npm run gen:katex-subset            # re-derive the KaTeX CSS + font subset from the bank
@@ -502,10 +503,12 @@ body weight what the stats strip says one section down with numbers.
 - **Hero height is content-driven** — `py-16 md:py-24`, no `min-h-screen`. Padding to fill a
   viewport is what pushes the demo below the fold on the laptops it exists to catch.
 - **No "adaptive" in the hero copy.** Routing is implemented and tested, but
-  `SELECT mode, count(*) FROM "Test" WHERE "isPublic"` returns **5 LINEAR, 0 ADAPTIVE**, so the word
-  would describe the code rather than what a visitor gets. Same reason the demo's summary lost
-  "timed and adaptive". `Features`' `Adaptive Testing` tile still claims it — that is T3.6's, which
-  has the instruction in its prompt. Route cost unchanged: `/` is 9.42 kB / 123 kB First Load.
+  `SELECT mode, count(*) FROM "Test" WHERE "isPublic"` returned **5 LINEAR, 0 ADAPTIVE** at the
+  time, so the word would describe the code rather than what a visitor gets. Same reason the demo's
+  summary lost "timed and adaptive". Route cost unchanged: `/` is 9.42 kB / 123 kB First Load.
+  **T3.6 seeded the missing data** (that query is now 5 LINEAR, 1 ADAPTIVE) and the bento says it —
+  but the hero paragraph here still does not, deliberately: it is T3.4's copy and nobody has decided
+  that "adaptive" earns a line in a paragraph that is already four clauses long.
 
 ## The screenshots are photographs, and they are regenerated (T3.5)
 
@@ -560,6 +563,63 @@ npm run gen:screenshots              # Chrome, 1440x900 at DSF 2, WebP straight 
 - **The root layout now declares `viewport`** with `maximumScale: 5`. Next's default already allows
   pinch zoom; stating it stops anyone quietly removing it, which matters most on this section — a
   1440px screen shrunk into a 360px phone is legible only if you can zoom.
+
+## The adaptive claim is seeded, not written (T3.6)
+
+`Features` — three equal cards saying three unequal things — is deleted. `Capabilities` is five
+tiles where **area encodes importance**: adaptive routing with a diagram, the interface and the
+score report, then iPad support and no-account-needed across the bottom.
+
+- **The query came back 5 LINEAR, 0 ADAPTIVE, and structurally linear too** — one `MIXED` Module 2
+  per section, no `EASY`/`HARD` pair to route between. `npm run db:seed-adaptive-test` assembles
+  "Adaptive Practice — Math" out of the existing bank: Module 1 mixed (22), Module 2 HARD (22),
+  Module 2 EASY (22), all disjoint, drawn by difficulty from id-sorted lists so a re-run picks the
+  same 66 questions. Math-only because the bank holds 2 EASY and 8 HARD R&W questions — an adaptive
+  R&W section would be a decision between two modules that barely differ. Open decision 4 is
+  untouched: these questions already serve on `/practice`, and no stem from this test reaches the
+  landing page.
+- **`mode: ADAPTIVE` is not the predicate; `isRoutableAdaptiveTest` is.** `pickNextModule` falls
+  back to "any Module 2 in this section" when the difficulty it wants is missing, so an ADAPTIVE
+  test with one `MIXED` Module 2 runs perfectly and routes nobody. A claim resting on the column
+  would be true of the schema and false of the experience. The predicate is pure and lives in
+  `src/lib/adaptive-routing.ts`; `adaptive-capability.ts` owns the query. Same split as
+  `site-stats.ts` against `stats-banner.tsx`.
+- **The tile reads its own numbers off that row.** `thresholdPercent` is the seeded test's
+  `adaptiveThreshold`, `easyRouteCap` is `EASY_ROUTE_CAP` from `scoring.ts`, and the question count
+  is Module 1's. Nothing is hardcoded, so **deleting the test hides the tile** rather than leaving a
+  claim behind — the acceptance criterion is enforced by the page, not by a promise. `null` promotes
+  the interface tile into the large slot; both layouts tile a 12-column grid exactly.
+- **Spans only — no `col-start` or `row-start` anywhere in the bento.** Auto-placement then fills
+  every track in source order, which is what makes "no orphan tiles" a property of the grid instead
+  of something checked once in a screenshot. Verified at 1280 and at 360 (one column, no horizontal
+  scroll), in both the adaptive and the demoted layout.
+- **The diagram ships twice, and that is a legibility fix.** An SVG scales its text with its
+  viewBox, so the 600-unit landscape version dropped into a 360px column renders 245px wide — an
+  11px label at under 5px. No single font size survives both scales. The narrow variant is a
+  260-unit portrait box with the branches side by side, rendering near 1:1 on a phone (measured:
+  12.2px / 10.4px). Only one is ever in the accessibility tree; Tailwind's `hidden` is
+  `display: none`, which removes the other outright, so the shared `aria-label` is never read twice.
+- **Everything meaningful is drawn at rest; only a pulse and a highlight move.** That is the
+  opposite of "the line draws itself", and it is what makes the reduced-motion case a one-liner:
+  `animation: none` leaves the finished diagram. The override is explicit rather than left to the
+  global block — that block sets `duration: 0.01ms` and `iteration-count: 1`, which lands on the
+  *last* keyframe, a lit branch and a comet frozen mid-flight. Third instance of the same lesson,
+  after `.hero-rise` and `score-dial`.
+- **`pathLength="100"` on the comets** is what lets one set of keyframes drive a straight trunk and
+  two curves of different lengths. The connector `d` strings are declared once and shared by the
+  resting stroke and the pulse — copied geometry is a comet that drifts off its own line the first
+  time somebody nudges one of them.
+- **No gradient in the section, and the tile costs zero client JavaScript.** `--gradient-primary` is
+  already the hero's demo rail and policy allows it once; `--gradient-accent` stays unassigned.
+  `/` is unchanged at 16.3 kB / 139 kB First Load — the bento and the diagram are server components.
+- **The interface tile is a list of six named things** (eliminator with the ABC toggle, highlighting
+  with notes, Desmos, reference sheet, keyboard shortcuts, server-owned timer). Each was checked
+  against `src/app/test/attempt/**` before it was written. Specificity is the proof; "a familiar
+  testing experience" proves nothing.
+- **The fifth tile is "start without an account", not "free, no card".** Open decision 3 is
+  unresolved and `json-ld.ts` deliberately omits `offers` so as not to answer it in Google's index —
+  a pricing tile would answer it on the page instead. The prompt allowed a fourth capability and
+  this one is backed by `/practice`'s anonymous attempts.
 
 ## Copy rules
 
@@ -832,8 +892,10 @@ Do not guess. Ask if a task depends on an unresolved one.
 1. ~~Primary audience — student or tutor?~~ **Answered in T3.4: student-first.** The landing page
    speaks to the person taking the test; Appendix B's default copy deck applies. Tutors convert on
    a dedicated band plus `/for-tutors` (T3.8), not in the hero.
-2. ~~Does adaptive mode ship?~~ **Answered: yes, in code.** Query `Test.mode` where `isPublic` to
-   see whether *published data* is adaptive before writing landing copy about it.
+2. ~~Does adaptive mode ship?~~ **Answered: yes, in code, and since T3.6 in data too** — one public
+   ADAPTIVE test with both Module 2 branches. Do not go back to trusting `Test.mode` alone when
+   writing copy: use `isRoutableAdaptiveTest`, which is the difference between the column and the
+   experience.
 3. **Paid tiers?** "Free to use" appears repeatedly on the landing page.
 4. **Content licensing.** The bank references "Official SAT Practice Test 4". Blocks the public demo
    and the stats strip.

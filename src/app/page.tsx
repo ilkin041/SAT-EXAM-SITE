@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/json-ld";
+import { loadAdaptiveCapability } from "@/components/marketing/adaptive-capability";
+import { Capabilities } from "@/components/marketing/capabilities";
 import { CtaBanner } from "@/components/marketing/cta-banner";
-import { Features } from "@/components/marketing/features";
 import { Hero } from "@/components/marketing/hero";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { loadDemoQuestions } from "@/components/marketing/demo-questions";
@@ -29,7 +30,12 @@ export default async function Home() {
   // T3.4 folded the demo into the hero, so the page loads the questions and
   // hands them down: the hero's primary CTA depends on whether there are any,
   // and a component cannot branch on a sibling's render returning null.
-  const demoQuestions = await loadDemoQuestions();
+  // Both loaders are cached for an hour and neither throws, so they cost the
+  // route one cache read each and `/` still renders when the database is down.
+  const [demoQuestions, adaptive] = await Promise.all([
+    loadDemoQuestions(),
+    loadAdaptiveCapability(),
+  ]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -44,7 +50,7 @@ export default async function Home() {
         {/* Proof before the pitch: the demo shows one question, the strip
             counts the bank, and this shows the rest of the product. */}
         <ScreenshotTabs />
-        <Features />
+        <Capabilities adaptive={adaptive} />
         <HowItWorks />
         <CtaBanner />
       </main>

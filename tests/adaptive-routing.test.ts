@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { chooseModule2Difficulty } from "@/lib/adaptive-routing";
+import {
+  chooseModule2Difficulty,
+  isRoutableAdaptiveTest,
+  type RoutableModule,
+} from "@/lib/adaptive-routing";
 
 describe("chooseModule2Difficulty", () => {
   describe("linear mode", () => {
@@ -97,5 +101,99 @@ describe("chooseModule2Difficulty", () => {
         }),
       ).toBe("EASY");
     });
+  });
+});
+
+/**
+ * The predicate the landing page's adaptive tile turns on (T3.6). The claim it
+ * guards is about the *experience*, not the column: `pickNextModule` falls back
+ * to any Module 2 when the difficulty it wants is missing, so an ADAPTIVE test
+ * with one MIXED Module 2 routes nobody while running perfectly well.
+ */
+describe("isRoutableAdaptiveTest", () => {
+  const m = (
+    moduleNumber: number,
+    difficulty: RoutableModule["difficulty"],
+    questionCount = 22,
+  ): RoutableModule => ({ moduleNumber, difficulty, questionCount });
+
+  const routableSection = () => ({
+    modules: [m(1, "MIXED"), m(2, "HARD"), m(2, "EASY")],
+  });
+
+  it("accepts an adaptive test whose every section has a filled M1, M2-hard and M2-easy", () => {
+    expect(
+      isRoutableAdaptiveTest({
+        mode: "ADAPTIVE",
+        sections: [routableSection(), routableSection()],
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects a linear test even when it has both Module 2 branches", () => {
+    expect(
+      isRoutableAdaptiveTest({ mode: "LINEAR", sections: [routableSection()] }),
+    ).toBe(false);
+  });
+
+  it("rejects an adaptive test with a single MIXED Module 2 — the shape that routes nobody", () => {
+    expect(
+      isRoutableAdaptiveTest({
+        mode: "ADAPTIVE",
+        sections: [{ modules: [m(1, "MIXED"), m(2, "MIXED")] }],
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects a test missing one of the two branches", () => {
+    expect(
+      isRoutableAdaptiveTest({
+        mode: "ADAPTIVE",
+        sections: [{ modules: [m(1, "MIXED"), m(2, "HARD")] }],
+      }),
+    ).toBe(false);
+    expect(
+      isRoutableAdaptiveTest({
+        mode: "ADAPTIVE",
+        sections: [{ modules: [m(1, "MIXED"), m(2, "EASY")] }],
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects an empty module — the engine can serve it and the student cannot answer it", () => {
+    expect(
+      isRoutableAdaptiveTest({
+        mode: "ADAPTIVE",
+        sections: [{ modules: [m(1, "MIXED"), m(2, "HARD"), m(2, "EASY", 0)] }],
+      }),
+    ).toBe(false);
+    expect(
+      isRoutableAdaptiveTest({
+        mode: "ADAPTIVE",
+        sections: [{ modules: [m(1, "MIXED", 0), m(2, "HARD"), m(2, "EASY")] }],
+      }),
+    ).toBe(false);
+  });
+
+  it("requires every section to route, not just one", () => {
+    expect(
+      isRoutableAdaptiveTest({
+        mode: "ADAPTIVE",
+        sections: [routableSection(), { modules: [m(1, "MIXED"), m(2, "MIXED")] }],
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects a test with no sections", () => {
+    expect(isRoutableAdaptiveTest({ mode: "ADAPTIVE", sections: [] })).toBe(false);
+  });
+
+  it("rejects a Module 1 that is not MIXED", () => {
+    expect(
+      isRoutableAdaptiveTest({
+        mode: "ADAPTIVE",
+        sections: [{ modules: [m(1, "HARD"), m(2, "HARD"), m(2, "EASY")] }],
+      }),
+    ).toBe(false);
   });
 });

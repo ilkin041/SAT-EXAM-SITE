@@ -596,6 +596,91 @@
   }
 }
 
+/* =========================================================================
+ * Adaptive routing diagram (T3.6)
+ *
+ * One 6s loop, run twice through the same trunk: Module 1 → the split → the
+ * harder Module 2, then Module 1 → the split → the easier Module 2. Nothing
+ * that carries meaning moves. Every box, every connector and every label is
+ * drawn at rest, so the diagram is complete and readable at any frame — the
+ * animation only adds a travelling pulse and a highlight saying "this time,
+ * this branch". That is what makes the reduced-motion case a one-liner:
+ * switching the animations off leaves the finished diagram, not a half-drawn
+ * one, which is the opposite of the "line draws itself" pattern.
+ *
+ * The override below is explicit rather than left to the global
+ * `prefers-reduced-motion` block. That block sets `animation-duration: 0.01ms`
+ * and `iteration-count: 1`, which lands on the *last* keyframe — a lit branch
+ * and a comet frozen mid-flight. Same lesson as `.hero-rise` and `score-dial`:
+ * the global switch collapses time, and only the author knows which frame is
+ * the right one to stop on. Here it is the resting state, at 0.
+ *
+ * The comets are ordinary paths with `pathLength="100"`, so the dash geometry
+ * below is in percent of the path rather than in user units and the same rule
+ * works on the straight trunk and on both curves.
+ * ========================================================================= */
+
+.route-comet {
+  stroke-dasharray: 12 100;
+  stroke-dashoffset: 112;
+  opacity: 0;
+}
+
+.route-highlight {
+  opacity: 0;
+}
+
+/* Trunk — run twice per cycle, once for each branch that follows it. */
+@keyframes route-trunk {
+  0% { stroke-dashoffset: 112; opacity: 0; }
+  2% { stroke-dashoffset: 108; opacity: 1; }
+  14% { stroke-dashoffset: -8; opacity: 1; }
+  16% { stroke-dashoffset: -12; opacity: 0; }
+  50% { stroke-dashoffset: 112; opacity: 0; }
+  52% { stroke-dashoffset: 108; opacity: 1; }
+  64% { stroke-dashoffset: -8; opacity: 1; }
+  66%, 100% { stroke-dashoffset: -12; opacity: 0; }
+}
+
+@keyframes route-branch-hard {
+  0%, 17% { stroke-dashoffset: 112; opacity: 0; }
+  19% { stroke-dashoffset: 108; opacity: 1; }
+  31% { stroke-dashoffset: -8; opacity: 1; }
+  33%, 100% { stroke-dashoffset: -12; opacity: 0; }
+}
+
+@keyframes route-branch-easy {
+  0%, 67% { stroke-dashoffset: 112; opacity: 0; }
+  69% { stroke-dashoffset: 108; opacity: 1; }
+  81% { stroke-dashoffset: -8; opacity: 1; }
+  83%, 100% { stroke-dashoffset: -12; opacity: 0; }
+}
+
+@keyframes route-highlight-hard {
+  0%, 30% { opacity: 0; }
+  34%, 46% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes route-highlight-easy {
+  0%, 80% { opacity: 0; }
+  84%, 96% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.route-comet-trunk { animation: route-trunk 6s linear infinite; }
+.route-comet-hard { animation: route-branch-hard 6s linear infinite; }
+.route-comet-easy { animation: route-branch-easy 6s linear infinite; }
+.route-highlight-hard { animation: route-highlight-hard 6s ease-in-out infinite; }
+.route-highlight-easy { animation: route-highlight-easy 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .route-comet,
+  .route-highlight {
+    animation: none;
+  }
+}
+
 /* Subtle spin for loading indicators */
 @keyframes gentle-spin {
   from { transform: rotate(0deg); }
