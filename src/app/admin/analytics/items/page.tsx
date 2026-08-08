@@ -66,8 +66,8 @@ export default async function ItemAnalysisPage({
           id: true,
           sectionType: true,
           type: true,
-          domain: true,
-          skill: true,
+          domain: { select: { name: true } },
+          skill: { select: { name: true } },
           difficulty: true,
           stem: true,
           correctAnswer: true,
@@ -118,7 +118,7 @@ export default async function ItemAnalysisPage({
     .filter(({ question, analysis }) => {
       if (flag && !analysis.flags.includes(flag)) return false;
       if (!q) return true;
-      const haystack = [plainText(question.stem), question.domain, question.skill ?? ""]
+      const haystack = [plainText(question.stem), question.domain.name, question.skill?.name ?? ""]
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
@@ -144,8 +144,8 @@ export default async function ItemAnalysisPage({
     id: question.id,
     stem: plainText(question.stem).slice(0, 150),
     testTitles: [...(testTitlesByQuestion.get(question.id) ?? [])].join(", "),
-    domain: question.domain,
-    skill: question.skill ?? "",
+    domain: question.domain.name,
+    skill: question.skill?.name ?? "",
     difficulty: question.difficulty,
     exposures: analysis.exposures,
     correct: analysis.correct,
@@ -207,7 +207,7 @@ function plainText(html: string) {
 }
 
 type AnalyzedRow = {
-  question: { domain: string; skill: string | null; stem: string };
+  question: { domain: { name: string }; skill: { name: string } | null; stem: string };
   analysis: {
     pValue: number;
     exposures: number;
@@ -231,7 +231,8 @@ function comparator(
   const factor = dir === "desc" ? -1 : 1;
   const by: Record<string, (row: AnalyzedRow) => string | number> = {
     question: (row) => plainText(row.question.stem).toLowerCase(),
-    taxonomy: (row) => `${row.question.domain} ${row.question.skill ?? ""}`.toLowerCase(),
+    taxonomy: (row) =>
+      `${row.question.domain.name} ${row.question.skill?.name ?? ""}`.toLowerCase(),
     exposure: (row) => row.analysis.exposures,
     pValue: (row) => row.analysis.pValue,
     // An untimed item has no mean, and -1 keeps every one of them together at

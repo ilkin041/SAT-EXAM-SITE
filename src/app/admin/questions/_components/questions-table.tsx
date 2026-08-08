@@ -38,7 +38,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { RowDeleteButton } from "./row-delete-button";
-import { ALL_QUESTION_DOMAINS } from "@/lib/question-taxonomy";
+import type { DomainRow, SkillRow } from "@/lib/taxonomy-db";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "MIXED";
 
@@ -47,7 +47,10 @@ export interface QuestionRow {
   stemPreview: string;
   sectionType: "READING_WRITING" | "MATH";
   type: "MULTIPLE_CHOICE" | "STUDENT_PRODUCED_RESPONSE";
-  domain: string;
+  domainName: string;
+  skillName: string | null;
+  /** The pre-T2.2 free-text value, when this question is in the review queue. */
+  reviewLegacySkill?: string | null;
   difficulty: Difficulty;
   assignmentCount: number;
   /** Already formatted — `formatDate` pins the locale, so the server owns it. */
@@ -60,11 +63,14 @@ interface Props {
   /** Rows across every page — the bank is paged 100 at a time on the server. */
   total: number;
   pageSize: number;
-  domains: readonly string[];
+  /** The controlled vocabulary, read from the tables by the page. */
+  domains: DomainRow[];
+  skills: SkillRow[];
   section?: string;
   type?: string;
   difficulty?: string;
   domain?: string;
+  review?: string;
 }
 
 const SECTION_OPTIONS = [
@@ -105,10 +111,12 @@ export function QuestionsTable({
   total,
   pageSize,
   domains,
+  skills,
   section,
   type,
   difficulty,
   domain,
+  review,
 }: Props) {
   const router = useRouter();
   const toast = useToast();
@@ -189,7 +197,7 @@ export function QuestionsTable({
   }
 
   function openMetadata(mode: "domain" | "skill") {
-    setMetadataValue(mode === "domain" ? ALL_QUESTION_DOMAINS[0] : "");
+    setMetadataValue(mode === "domain" ? (domains[0]?.id ?? "") : "");
     setMetadataMode(mode);
   }
 
@@ -198,20 +206,45 @@ export function QuestionsTable({
     const mode = metadataMode;
     if (!mode) return;
     startTransition(async () => {
+      // Both take an id from the vocabulary now; "" on the skill dialog is the
+      // "No skill" row, which clears the tag rather than naming one.
       const res =
         mode === "domain"
           ? await bulkSetDomain(ids, metadataValue)
-          : await bulkSetSkill(ids, metadataValue);
+          : await bulkSetSkill(ids, metadataValue || null);
       if (!res.ok) {
         toast(res.error || "Update failed", "error");
         return;
       }
-      toast(`Updated ${res.updated} question${res.updated === 1 ? "" : "s"}.`);
+      // The counts differ from the selection when a question's domain does not
+      // own the skill, or when a domain change orphans one. Saying so beats a
+      // number the reader cannot reconcile with what they selected.
+      const notes: string[] = [];
+      if ("skipped" in res && res.skipped > 0) {
+        notes.push(`skipped ${res.skipped} in another domain`);
+      }
+      if ("skillsCleared" in res && res.skillsCleared > 0) {
+        notes.push(`cleared ${res.skillsCleared} skill${res.skillsCleared === 1 ? "" : "s"}`);
+      }
+      toast(
+        `Updated ${res.updated} question${res.updated === 1 ? "" : "s"}${notes.length ? ` · ${notes.join(" · ")}` : ""}.`,
+      );
       clearSelection();
       setMetadataMode(null);
       router.refresh();
     });
   }
+
+  /** Skills offered by the bulk dialog — every domain represented in the selection. */
+  const bulkSkillOptions = useMemo(() => {
+    const selectedDomains = new Set(
+      rows.filter((row) => selected.has(row.id)).map((row) => row.domainName),
+    );
+    const domainIds = new Set(
+      domains.filter((d) => selectedDomains.has(d.name)).map((d) => d.id),
+    );
+    return skills.filter((skill) => domainIds.has(skill.domainId));
+  }, [domains, rows, selected, skills]);
 
   function runBulkAssign(moduleId: string) {
     const ids = selectedIdsInView();
@@ -308,7 +341,20 @@ export function QuestionsTable({
         sortable: true,
         hideBelow: "md",
         cell: (row) => (
-          <span className="font-medium text-muted-foreground">{row.domain}</span>
+          <div className="max-w-[16rem]">
+            <div className="font-medium text-muted-foreground">{row.domainName}</div>
+            {row.skillName ? (
+              <div className="text-caption text-muted-foreground">{row.skillName}</div>
+            ) : row.reviewLegacySkill !== undefined ? (
+              // Amber, per the palette: this is unfinished authoring work, the
+              // "in-progress" reading — not an error and not a destructive state.
+              <Badge variant="warning">
+                {row.reviewLegacySkill
+                  ? `Review: “${row.reviewLegacySkill}”`
+                  : "Needs a skill"}
+              </Badge>
+            ) : null}
+          </div>
         ),
       },
       {
@@ -376,7 +422,7 @@ export function QuestionsTable({
     [allSelected, anySelected, selectAll, selected, toggleOne],
   );
 
-  const filtersActive = Boolean(section || type || difficulty || domain);
+  const filtersActive = Boolean(section || type || difficulty || domain || review);
 
   return (
     <>
@@ -443,7 +489,7 @@ export function QuestionsTable({
         defaultSort={{ key: "updated", dir: "desc" }}
         search={{ placeholder: "Search stem, passage, domain…" }}
         filtersActive={filtersActive}
-        filterParams={["section", "type", "difficulty", "domain"]}
+        filterParams={["section", "type", "difficulty", "domain", "review"]}
         empty={{
           icon: BookOpen,
           title: "No questions yet",
@@ -486,9 +532,19 @@ export function QuestionsTable({
               label="Domain"
               options={[
                 { value: "", label: "All domains" },
-                ...domains.map((option) => ({ value: option, label: option })),
+                ...domains.map((option) => ({ value: option.id, label: option.name })),
               ]}
               className="w-full sm:w-56"
+            />
+            <DataTableFilter
+              param="review"
+              value={review}
+              label="Taxonomy"
+              options={[
+                { value: "", label: "All questions" },
+                { value: "1", label: "Needs taxonomy review" },
+              ]}
+              className="w-full sm:w-52"
             />
           </>
         }
@@ -604,7 +660,9 @@ export function QuestionsTable({
               Change {metadataMode} for {selectedCount} question{selectedCount === 1 ? "" : "s"}
             </Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-muted-foreground">
-              This replaces the current {metadataMode} on every selected question.
+              {metadataMode === "domain"
+                ? "Moves every selected question to this domain. A question whose skill belongs to the old domain loses that skill — a skill belongs to exactly one domain."
+                : "Tags every selected question that is already in this skill's domain. The rest are skipped and reported."}
             </Dialog.Description>
             <div className="mt-4">
               {metadataMode === "domain" ? (
@@ -614,19 +672,23 @@ export function QuestionsTable({
                 >
                   <SelectTrigger aria-label="Domain" placeholder="Select a domain" />
                   <SelectContent>
-                    {ALL_QUESTION_DOMAINS.map((domain) => (
-                      <SelectItem key={domain} value={domain}>{domain}</SelectItem>
+                    {domains.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>{option.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
-                <input
-                  value={metadataValue}
-                  onChange={(event) => setMetadataValue(event.target.value)}
-                  placeholder="Leave blank to clear skill"
-                  maxLength={200}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
+                <Select value={metadataValue} onValueChange={setMetadataValue}>
+                  <SelectTrigger aria-label="Skill" placeholder="No skill" />
+                  <SelectContent>
+                    <SelectItem value="">No skill (clear it)</SelectItem>
+                    {bulkSkillOptions.map((skill) => (
+                      <SelectItem key={skill.id} value={skill.id}>
+                        {domains.find((d) => d.id === skill.domainId)?.name} · {skill.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
             <div className="mt-6 flex justify-end gap-2">

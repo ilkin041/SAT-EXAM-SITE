@@ -36,6 +36,12 @@ interface Props {
   moduleSectionType: "READING_WRITING" | "MATH";
   /** Question IDs already assigned to this module (so the panel can show "Already added"). */
   initiallyAssignedIds: string[];
+  /**
+   * The domain vocabulary, read from the tables by the page. T2.2 turned this
+   * filter from a free-text box — which only ever matched an exactly-typed
+   * name — into a picker over the eight real domains.
+   */
+  domains: { id: string; name: string; sectionType: "READING_WRITING" | "MATH" }[];
   onClose: () => void;
 }
 
@@ -47,6 +53,7 @@ export function AssignFromBankPanel({
   moduleLabel,
   moduleSectionType,
   initiallyAssignedIds,
+  domains,
   onClose,
 }: Props) {
   const router = useRouter();
@@ -206,7 +213,20 @@ export function AssignFromBankPanel({
             autoFocus
           />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Select value={sectionType} onValueChange={setSectionType}>
+            {/* Narrowing the section can strand a domain that belongs to the
+                other one, which would filter to nothing with no visible cause. */}
+            <Select
+              value={sectionType}
+              onValueChange={(value) => {
+                setSectionType(value);
+                if (
+                  value &&
+                  domains.some((d) => d.id === domain && d.sectionType !== value)
+                ) {
+                  setDomain("");
+                }
+              }}
+            >
               <SelectTrigger size="sm" aria-label="Section" />
               <SelectContent>
                 <SelectItem value="">All sections</SelectItem>
@@ -232,12 +252,22 @@ export function AssignFromBankPanel({
                 <SelectItem value="MIXED">Mixed</SelectItem>
               </SelectContent>
             </Select>
-            <input
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="Domain"
-              className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
-            />
+            <Select value={domain} onValueChange={setDomain}>
+              <SelectTrigger size="sm" aria-label="Domain" />
+              <SelectContent>
+                <SelectItem value="">All domains</SelectItem>
+                {domains
+                  .filter(
+                    (option) =>
+                      !sectionType || option.sectionType === sectionType,
+                  )
+                  .map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

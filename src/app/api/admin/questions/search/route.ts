@@ -10,8 +10,8 @@ import type { Difficulty, QuestionType, SectionType } from "@prisma/client";
  *   q            — text search across stem/passage/domain/skill
  *   type         — MULTIPLE_CHOICE | STUDENT_PRODUCED_RESPONSE
  *   difficulty   — EASY | MEDIUM | HARD | MIXED
- *   domain       — exact match
- *   skill        — exact match
+ *   domain       — a `Domain.id` (T2.2: was an exact name match)
+ *   skill        — a `Skill.id` (T2.2: was an exact name match)
  *   moduleId     — if set, results include `inModule: boolean` for each row
  *   limit        — 1..200, default 50
  */
@@ -37,14 +37,14 @@ export async function GET(req: Request) {
     where.OR = [
       { stem: { contains: q, mode: "insensitive" } },
       { passage: { contains: q, mode: "insensitive" } },
-      { domain: { contains: q, mode: "insensitive" } },
-      { skill: { contains: q, mode: "insensitive" } },
+      { domain: { name: { contains: q, mode: "insensitive" } } },
+      { skill: { name: { contains: q, mode: "insensitive" } } },
     ];
   }
   if (type) where.type = type as QuestionType;
   if (difficulty) where.difficulty = difficulty as Difficulty;
-  if (domain) where.domain = domain;
-  if (skill) where.skill = skill;
+  if (domain) where.domainId = domain;
+  if (skill) where.skillId = skill;
   if (sectionType) where.sectionType = sectionType as SectionType;
 
   const questions = await prisma.question.findMany({
@@ -55,8 +55,10 @@ export async function GET(req: Request) {
       id: true,
       sectionType: true,
       type: true,
-      domain: true,
-      skill: true,
+      domainId: true,
+      skillId: true,
+      domain: { select: { name: true } },
+      skill: { select: { name: true } },
       difficulty: true,
       stem: true,
       _count: { select: { moduleAssignments: true } },
@@ -78,8 +80,10 @@ export async function GET(req: Request) {
       id: q.id,
       sectionType: q.sectionType,
       type: q.type,
-      domain: q.domain,
-      skill: q.skill,
+      domainId: q.domainId,
+      domain: q.domain.name,
+      skillId: q.skillId,
+      skill: q.skill?.name ?? null,
       difficulty: q.difficulty,
       stemPreview: stripHtml(q.stem),
       assignmentCount: q._count.moduleAssignments,

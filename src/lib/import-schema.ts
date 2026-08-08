@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { isDomainForSection, normalizeQuestionDomain } from "@/lib/question-taxonomy";
+import {
+  ALL_QUESTION_DOMAINS,
+  isDomainForSection,
+  normalizeQuestionDomain,
+} from "@/lib/question-taxonomy";
 
 // ---------- Shared import schema ----------
 
@@ -13,10 +17,17 @@ export const questionSchema = z
     /** Required for bank-only imports; derived from the section for full-test imports. */
     sectionType: z.enum(["READING_WRITING", "MATH"]).optional(),
     type: z.enum(["MULTIPLE_CHOICE", "STUDENT_PRODUCED_RESPONSE"]),
+    // Names, not ids: an import file is written by a human. The route resolves
+    // them against the `Domain`/`Skill` tables and rejects anything unknown —
+    // this only normalises the spelling of the eight closed domain values so a
+    // case variant is not reported as an unknown domain.
     domain: z.string().min(1).transform((value, ctx) => {
       const domain = normalizeQuestionDomain(value);
       if (!domain) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Unknown SAT domain" });
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Unknown SAT domain "${value}". Use one of: ${ALL_QUESTION_DOMAINS.join(", ")}.`,
+        });
         return z.NEVER;
       }
       return domain;

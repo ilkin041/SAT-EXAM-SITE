@@ -32,8 +32,10 @@ async function addQuestion(moduleId: string, sectionType: SectionType, index: nu
       contentHash: randomUUID(),
       sectionType,
       type: "MULTIPLE_CHOICE",
-      domain: sectionType === "MATH" ? "Algebra" : "Information and Ideas",
-      skill: "Lifecycle fixture",
+      // Ids from the controlled vocabulary (T2.2) — `domainId` is a required
+      // FK, so the taxonomy must be seeded before this suite runs.
+      domainId: sectionType === "MATH" ? "algebra" : "info-ideas",
+      skillId: null,
       difficulty: "MEDIUM",
       passage: null,
       stem: `Integration question ${randomUUID()}`,

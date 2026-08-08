@@ -61,7 +61,16 @@ export default async function ResultsPage({
       },
       answers: {
         include: {
-          question: { select: { domain: true, type: true, difficulty: true } },
+          question: {
+            select: {
+              // T2.2: `domain` is a relation now. The breakdown still groups by
+              // the domain *name*, so `computeDomainBreakdown` is untouched and
+              // every historical attempt renders exactly the same rows.
+              domain: { select: { name: true } },
+              type: true,
+              difficulty: true,
+            },
+          },
         },
       },
     },
@@ -106,7 +115,7 @@ export default async function ResultsPage({
     attempt.answers.flatMap((a) => {
       const sectionType = questionSectionType.get(a.questionId);
       if (!sectionType) return [];
-      return [{ sectionType, domain: a.question.domain, isCorrect: a.isCorrect }];
+      return [{ sectionType, domain: a.question.domain.name, isCorrect: a.isCorrect }];
     }),
   );
 

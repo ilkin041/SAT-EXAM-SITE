@@ -27,7 +27,9 @@ export default async function ReviewAnswersPage({
               section: { select: { type: true, order: true } },
               moduleQuestions: {
                 orderBy: { order: "asc" },
-                include: { question: true },
+                // `include: { question: true }` gives the scalars only, and
+                // T2.2 made `domain` a relation — the badge needs its name.
+                include: { question: { include: { domain: { select: { name: true } } } } },
               },
             },
           },
@@ -78,7 +80,7 @@ export default async function ReviewAnswersPage({
         sectionType: mr.module.section.type,
         moduleNumber: mr.module.moduleNumber,
         type: q.type,
-        domain: q.domain,
+        domain: q.domain.name,
         difficulty: q.difficulty,
         passageHtml: rendered.passage,
         stemHtml: rendered.stem,

@@ -7,10 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { questionContentHash } from "@/lib/question-content-hash";
 import { renderQuestionHtml } from "@/lib/rendered-question";
-import {
-  isDomainForSection,
-  normalizeQuestionDomain,
-} from "@/lib/question-taxonomy";
+import { createSkillRow, loadTaxonomy, type TaxonomyTables } from "@/lib/taxonomy-db";
 
 const choiceSchema = z.object({
   label: z.enum(["A", "B", "C", "D"]),
@@ -22,15 +19,10 @@ const choiceSchema = z.object({
 const baseSchema = z.object({
   sectionType: z.enum(["READING_WRITING", "MATH"]),
   type: z.enum(["MULTIPLE_CHOICE", "STUDENT_PRODUCED_RESPONSE"]),
-  domain: z.string().min(1, "Domain is required").transform((value, ctx) => {
-    const domain = normalizeQuestionDomain(value);
-    if (!domain) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose a valid SAT domain" });
-      return z.NEVER;
-    }
-    return domain;
-  }),
-  skill: z.string().optional().nullable(),
+  /** An id from the `Domain` table. The form only ever offers real ones. */
+  domainId: z.string().min(1, "Domain is required"),
+  /** An id from the `Skill` table, or null for untagged. */
+  skillId: z.string().nullable().optional(),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD", "MIXED"]),
   passage: z.string().optional().nullable(),
   stem: z.string().min(1, "Stem is required"),
@@ -57,15 +49,36 @@ const baseSchema = z.object({
 
 export type QuestionInput = z.infer<typeof baseSchema>;
 
-function validate(input: QuestionInput) {
+/**
+ * Validate the payload *and* the taxonomy ids against the tables. The ids come
+ * from a `Select` the server rendered, so a mismatch is a stale tab or a hand
+ * -crafted request rather than a typo — but this is the last gate before a
+ * write, and the FK would otherwise surface as a Prisma error nobody can read.
+ */
+async function validate(input: QuestionInput) {
   const parsed = baseSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues.map((i) => i.message).join("; ") };
   }
   const data = parsed.data;
 
-  if (!isDomainForSection(data.domain, data.sectionType)) {
+  const tables = await loadTaxonomy();
+  const domain = tables.domains.find((d) => d.id === data.domainId);
+  if (!domain) {
+    return { ok: false as const, error: "Choose a domain from the list." };
+  }
+  if (domain.sectionType !== data.sectionType) {
     return { ok: false as const, error: "The selected domain does not belong to this section." };
+  }
+  if (data.skillId) {
+    const skill = tables.skills.find((s) => s.id === data.skillId);
+    if (!skill) return { ok: false as const, error: "Choose a skill from the list." };
+    if (skill.domainId !== domain.id) {
+      return {
+        ok: false as const,
+        error: `"${skill.name}" is not a ${domain.name} skill. Pick a skill from this domain, or change the domain.`,
+      };
+    }
   }
 
   if (data.type === "MULTIPLE_CHOICE") {
@@ -92,7 +105,7 @@ function validate(input: QuestionInput) {
 
 export async function createQuestion(input: QuestionInput) {
   await requireAdmin();
-  const v = validate(input);
+  const v = await validate(input);
   if (!v.ok) return { ok: false as const, error: v.error };
 
   const data = v.data;
@@ -100,8 +113,8 @@ export async function createQuestion(input: QuestionInput) {
     data: {
       sectionType: data.sectionType,
       type: data.type,
-      domain: data.domain,
-      skill: data.skill ?? null,
+      domainId: data.domainId,
+      skillId: data.skillId ?? null,
       difficulty: data.difficulty,
       passage: data.passage ?? null,
       stem: data.stem,
@@ -131,7 +144,7 @@ export async function createQuestion(input: QuestionInput) {
 
 export async function updateQuestion(id: string, input: QuestionInput) {
   await requireAdmin();
-  const v = validate(input);
+  const v = await validate(input);
   if (!v.ok) return { ok: false as const, error: v.error };
 
   const data = v.data;
@@ -167,8 +180,8 @@ export async function updateQuestion(id: string, input: QuestionInput) {
     data: {
       sectionType: data.sectionType,
       type: data.type,
-      domain: data.domain,
-      skill: data.skill ?? null,
+      domainId: data.domainId,
+      skillId: data.skillId ?? null,
       difficulty: data.difficulty,
       passage: data.passage ?? null,
       stem: data.stem,
@@ -194,6 +207,13 @@ export async function updateQuestion(id: string, input: QuestionInput) {
       }) as unknown as Prisma.InputJsonValue,
     },
   });
+
+  // Retagging is what the review queue is for, so naming a skill resolves the
+  // row. `deleteMany` rather than the one-to-one `delete` — most questions have
+  // no review row, and a missing one is not an error.
+  if (data.skillId) {
+    await prisma.taxonomyReview.deleteMany({ where: { questionId: id } });
+  }
 
   revalidatePath("/admin/questions");
   revalidatePath(`/admin/questions/${id}`);
@@ -322,50 +342,121 @@ export async function bulkSetDifficulty(
   }
 }
 
-export async function bulkSetDomain(ids: string[], requestedDomain: string) {
+/**
+ * Move a selection onto a different domain. Takes a `Domain.id`, and clears
+ * `skillId` for any question whose current skill does not live under the new
+ * domain — a skill belongs to exactly one domain, so leaving it would create
+ * precisely the disagreement the T2.2 migration spent 17 questions untangling.
+ */
+export async function bulkSetDomain(ids: string[], domainId: string) {
   await requireAdmin();
   const parsed = bulkIdsSchema.safeParse(ids);
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid selection" };
   }
-  const domain = normalizeQuestionDomain(requestedDomain);
-  if (!domain) return { ok: false as const, error: "Choose a valid SAT domain" };
+  const tables = await loadTaxonomy();
+  const domain = tables.domains.find((d) => d.id === domainId);
+  if (!domain) return { ok: false as const, error: "Choose a domain from the list." };
 
   const questions = await prisma.question.findMany({
     where: { id: { in: parsed.data } },
-    select: { sectionType: true },
+    select: { id: true, sectionType: true, skillId: true },
   });
-  if (questions.some((question) => !isDomainForSection(domain, question.sectionType))) {
+  if (questions.some((question) => question.sectionType !== domain.sectionType)) {
     return {
       ok: false as const,
-      error: "The selected questions include a section that does not use this domain.",
+      error: `The selection includes questions from the other section. "${domain.name}" is ${domain.sectionType === "MATH" ? "Math" : "Reading and Writing"} only.`,
     };
   }
 
-  const result = await prisma.question.updateMany({
-    where: { id: { in: parsed.data } },
-    data: { domain },
-  });
+  const keptSkills = new Set(
+    tables.skills.filter((s) => s.domainId === domainId).map((s) => s.id),
+  );
+  const losesSkill = questions
+    .filter((question) => question.skillId && !keptSkills.has(question.skillId))
+    .map((question) => question.id);
+
+  const [result] = await prisma.$transaction([
+    prisma.question.updateMany({
+      where: { id: { in: parsed.data } },
+      data: { domainId },
+    }),
+    prisma.question.updateMany({
+      where: { id: { in: losesSkill } },
+      data: { skillId: null },
+    }),
+  ]);
   revalidatePath("/admin/questions");
-  return { ok: true as const, updated: result.count };
+  return { ok: true as const, updated: result.count, skillsCleared: losesSkill.length };
 }
 
-export async function bulkSetSkill(ids: string[], skill: string) {
+/**
+ * Tag a selection with a skill, or clear it. `skillId` is an id from the
+ * `Skill` table or `null`; there is no free-text path, which is the point of
+ * T2.2. Questions whose domain does not own the skill are skipped rather than
+ * silently re-domained, and reported back so the count is honest.
+ */
+export async function bulkSetSkill(ids: string[], skillId: string | null) {
   await requireAdmin();
   const parsed = bulkIdsSchema.safeParse(ids);
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid selection" };
   }
-  const normalizedSkill = skill.trim();
-  if (normalizedSkill.length > 200) {
-    return { ok: false as const, error: "Skill must be 200 characters or fewer" };
+
+  if (skillId === null) {
+    const cleared = await prisma.question.updateMany({
+      where: { id: { in: parsed.data } },
+      data: { skillId: null },
+    });
+    revalidatePath("/admin/questions");
+    return { ok: true as const, updated: cleared.count, skipped: 0 };
   }
-  const result = await prisma.question.updateMany({
-    where: { id: { in: parsed.data } },
-    data: { skill: normalizedSkill || null },
+
+  const tables = await loadTaxonomy();
+  const skill = tables.skills.find((s) => s.id === skillId);
+  if (!skill) return { ok: false as const, error: "Choose a skill from the list." };
+  const domain = tables.domains.find((d) => d.id === skill.domainId);
+
+  const eligible = await prisma.question.findMany({
+    where: { id: { in: parsed.data }, domainId: skill.domainId },
+    select: { id: true },
   });
+  const eligibleIds = eligible.map((question) => question.id);
+  const skipped = parsed.data.length - eligibleIds.length;
+
+  if (eligibleIds.length === 0) {
+    return {
+      ok: false as const,
+      error: `None of the selected questions are in ${domain?.name ?? "that domain"}, so "${skill.name}" does not apply to them.`,
+    };
+  }
+
+  const [result] = await prisma.$transaction([
+    prisma.question.updateMany({ where: { id: { in: eligibleIds } }, data: { skillId } }),
+    // Tagging resolves the review queue for those questions.
+    prisma.taxonomyReview.deleteMany({ where: { questionId: { in: eligibleIds } } }),
+  ]);
   revalidatePath("/admin/questions");
-  return { ok: true as const, updated: result.count };
+  return { ok: true as const, updated: result.count, skipped };
+}
+
+/**
+ * Add a skill to a domain's vocabulary from the question editor. This is the
+ * only way the vocabulary grows — see `createSkillRow`, which fold-matches so a
+ * second spelling of an existing skill can never be created.
+ */
+export async function createSkill(domainId: string, name: string) {
+  await requireAdmin();
+  const result = await createSkillRow(domainId, name);
+  if (!result.ok) return { ok: false as const, error: result.error };
+  revalidatePath("/admin/questions");
+  return { ok: true as const, skill: result.value };
+}
+
+/** The full vocabulary, for the question form's two `Select`s. */
+export async function listTaxonomy(): Promise<TaxonomyTables> {
+  await requireAdmin();
+  return loadTaxonomy();
 }
 
 /**

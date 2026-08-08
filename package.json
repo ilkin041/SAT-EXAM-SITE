@@ -13,6 +13,8 @@
     "db:backfill-question-hashes": "tsx scripts/backfill-question-hashes.ts",
     "db:backfill-question-html": "tsx scripts/backfill-question-html.ts",
     "db:finalize-stale-attempts": "tsx scripts/finalize-stale-attempts.ts",
+    "db:seed-taxonomy": "tsx scripts/seed-taxonomy.ts",
+    "db:verify-taxonomy": "tsx scripts/verify-taxonomy.ts",
     "db:studio": "prisma studio",
     "gen:reference-sheet": "tsx scripts/generate-reference-sheet.ts",
     "gen:katex-subset": "tsx scripts/subset-katex.ts",

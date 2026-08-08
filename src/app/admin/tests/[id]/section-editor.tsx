@@ -35,9 +35,11 @@ interface Props {
     module2TimeLimit: number;
   };
   modules: ModuleRow[];
+  /** The domain vocabulary, for the "Add from bank" panel's filter. */
+  domains: { id: string; name: string; sectionType: "READING_WRITING" | "MATH" }[];
 }
 
-export function SectionEditor({ section, modules }: Props) {
+export function SectionEditor({ section, modules, domains }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [m1, setM1] = useState(Math.round(section.module1TimeLimit / 60));
@@ -129,6 +131,7 @@ export function SectionEditor({ section, modules }: Props) {
             moduleLabel={`${sectionLabel} · Module ${m.moduleNumber} (${m.difficulty})`}
             moduleSectionType={section.type}
             initiallyAssignedIds={m.questions.map((q) => q.id)}
+            domains={domains}
             onClose={() => setPanelModuleId("")}
           />
         ))}

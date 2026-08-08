@@ -35,11 +35,13 @@ npm run dev
 npm run build
 npx tsc --noEmit              # there is no `typecheck` script
 npx tsc --noUnusedLocals      # catches dead imports
-npm test                      # vitest, 156 tests
+npm test                      # vitest, 185 tests
 npm run lint                  # next lint --no-cache --max-warnings=0; must be clean
 npm run analyze               # ANALYZE=true next build -> .next/analyze/*.html
 npm run db:backfill-question-html   # populate Question.renderedHtml (see T2.1 below)
 npm run db:verify-question-html     # stored render == fresh render, field by field
+npm run db:seed-taxonomy            # upsert Domain/Skill from question-taxonomy.ts
+npm run db:verify-taxonomy          # taxonomy invariants: no fold collisions, no cross-domain tags
 npm run gen:reference-sheet         # re-typeset the geometry reference sheet
 npm run gen:katex-subset            # re-derive the KaTeX CSS + font subset from the bank
 npx prisma migrate dev --name <name>
@@ -242,6 +244,44 @@ and `Question.renderedHtml` stores the sanitized output. `/results/[attemptId]/r
   extensions from its matcher — without that, `/katex/fonts/*.woff2` 307s to `/login` and math
   renders in a fallback serif for exactly the logged-out visitors who cannot tell.
 
+## The taxonomy is a controlled vocabulary (T2.2)
+
+`Question.domain` and `Question.skill` were free text. They are now `domainId` / `skillId` FKs into
+`Domain` (8 rows) and `Skill` (29 rows), seeded from `src/lib/question-taxonomy.ts`, which holds
+College Board's own list. There is **no code path that writes a taxonomy string** any more.
+
+- **A skill belongs to exactly one domain.** That is what lets `SkillMastery` (T8.1) roll a skill up
+  to a domain without a second join, and it is the invariant every write path enforces: the question
+  form clears `skillId` when the domain changes, `bulkSetDomain` clears an orphaned skill,
+  `bulkSetSkill` skips questions in another domain, and the import rejects the pair outright.
+- **The tables are the source of truth; the file is the seed.** A tutor can add a skill from the
+  question editor (`createSkill` → `createSkillRow`), and that row exists only in `Skill`. So
+  `src/lib/taxonomy-db.ts` resolves against the tables and uses the static aliases only to
+  *interpret* a name, never to decide one exists. `npm run db:seed-taxonomy` upserts the file into
+  the tables and deletes nothing.
+- **`createSkillRow` fold-matches, which is the whole point.** `foldTaxonomyName` collapses case,
+  punctuation, hyphens and plurality, so "Linear Models" resolves to the existing "Linear models"
+  rather than becoming its second spelling. `tests/question-taxonomy.test.ts` asserts no two seeded
+  skills fold together; `npm run db:verify-taxonomy` asserts the same about the live table, plus
+  every question's skill belonging to its own domain.
+- **The migration treated `domain` as authoritative, not `skill`.** `computeDomainBreakdown` reads
+  `Question.domain` live — no score is persisted — so re-domaining one question would silently
+  rewrite the score report of every historical attempt containing it. 17 questions whose skill named
+  a different domain kept their domain and lost their skill to the review queue. Per-domain counts
+  are byte-identical to the pre-migration bank.
+- **40 of 280 questions are in `TaxonomyReview`**, holding their original strings verbatim: 21 whose
+  skill was too vague to map (`"Data Analysis"` spans four PSDA skills), 17 cross-domain, 2 never
+  tagged. They are at `/admin/questions?review=1`, listed in `docs/taxonomy-review.md`, and saving a
+  skill on one deletes its row. **Nothing was guessed** — a fabricated tag is what T8.1's mastery
+  model would then be built on.
+- **`scripts/generate-taxonomy-migration.ts` wrote the migration** by reading the distinct legacy
+  values out of the bank and resolving each in TypeScript, so the fold lives in one language and the
+  SQL is one self-contained file rather than two migrations with a manual step between them. It
+  cannot run again — the columns it reads are dropped — and is kept because its output is
+  unreadable without it.
+- **`?domain=` and `?skill=` carry ids now**, not names. The ids are stable slugs (`algebra`,
+  `algebra-linear-functions`), so an old bookmark matches nothing rather than erroring.
+
 ## Copy rules
 
 - Active voice, plain verbs. "Save changes", not "Submit".
@@ -296,9 +336,9 @@ colour alone, keyboard-traversable modals, no horizontal scroll at 360px on full
   (`correctCount`/`totalCount` per module) on each render. A conversion-table change retroactively
   rewrites history. `/progress` charts and Δ columns are N+1 by construction — measure before
   shipping.
-- **`Question.domain` is free-text String (indexed). `Question.skill` is nullable free-text, not
-  indexed.** `"Linear equations"`, `"Linear Equations"` and `"linear equations "` are three different
-  skills today. Per-skill drilling and `SkillMastery` require normalising this first (T2.2).
+- **`Question.domainId` and `Question.skillId` are FKs into `Domain` and `Skill` (T2.2).** The
+  free-text `domain`/`skill` columns are gone. `skillId` is nullable; `domainId` is not. See
+  "The taxonomy is a controlled vocabulary" below.
 - **`Test.isPublic: Boolean`.** There is no `Test.visibility` and no `Question.published`.
 - **`Test.mode` defaults to `ADAPTIVE`.** Adaptive routing is fully implemented and tested
   (`src/lib/adaptive-routing.ts`, `ModuleResult.routedTo`, 600-point EASY-route cap). "Every test is

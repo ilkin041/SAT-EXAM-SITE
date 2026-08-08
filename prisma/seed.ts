@@ -3,8 +3,9 @@ import bcrypt from "bcryptjs";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { questionContentHash } from "../src/lib/question-content-hash";
-import { normalizeQuestionDomain } from "../src/lib/question-taxonomy";
+import { resolveDomain, resolveSkill } from "../src/lib/question-taxonomy";
 import { renderQuestionHtml } from "../src/lib/rendered-question";
+import { seedTaxonomy } from "../scripts/seed-taxonomy";
 
 const prisma = new PrismaClient();
 
@@ -88,16 +89,43 @@ async function createTestFromPayload(payload: ImportPayload, createdById: string
 
       for (let i = 0; i < mod.questions.length; i++) {
         const q = mod.questions[i];
-        const domain = normalizeQuestionDomain(q.domain);
+        const domain = resolveDomain(q.domain);
         if (!domain) throw new Error(`Unknown SAT domain in seed: ${q.domain}`);
+
+        // Same rule the T2.2 migration applied, so a freshly seeded database
+        // matches a migrated one: a skill is kept only when it resolves *and*
+        // belongs to this question's domain. Anything else goes to the review
+        // queue with its original string, rather than being guessed at.
+        const skill = q.skill ? resolveSkill(q.skill) : null;
+        const skillId = skill && skill.domainId === domain.id ? skill.id : null;
+        const reviewReason =
+          skillId !== null
+            ? null
+            : !q.skill
+              ? "No skill was ever assigned."
+              : skill
+                ? `"${q.skill}" is not a ${domain.name} skill.`
+                : `"${q.skill}" has no canonical equivalent — it spans more than one skill.`;
+
         // 1) Create the bank question (no module link yet).
         const createdQuestion = await prisma.question.create({
           data: {
             // Inherit section type from the section the seed is placing it in.
             sectionType: SectionType[section.type],
             type: QuestionType[q.type],
-            domain,
-            skill: q.skill,
+            domainId: domain.id,
+            skillId,
+            ...(reviewReason
+              ? {
+                  taxonomyReview: {
+                    create: {
+                      legacyDomain: q.domain,
+                      legacySkill: q.skill ?? null,
+                      reason: reviewReason,
+                    },
+                  },
+                }
+              : {}),
             difficulty: Difficulty[q.difficulty],
             passage: q.passage ?? null,
             stem: q.stem,
@@ -126,6 +154,12 @@ async function createTestFromPayload(payload: ImportPayload, createdById: string
 }
 
 async function main() {
+  // The vocabulary first: `Question.domainId` is a required FK, so nothing
+  // below can be written until these rows exist.
+  console.log("Seeding taxonomy...");
+  const taxonomy = await seedTaxonomy(prisma);
+  console.log(`  ${taxonomy.domains} domains, ${taxonomy.skills} skills`);
+
   console.log("Seeding users...");
   const admin = await upsertUser("admin@example.com", "admin123", "Admin User", Role.ADMIN);
   const student = await upsertUser("student@example.com", "student123", "Sample Student", Role.STUDENT);

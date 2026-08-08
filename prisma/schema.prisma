@@ -138,6 +138,57 @@ model Module {
   @@index([sectionId])
 }
 
+/// A College Board content domain. Eight rows, seeded from
+/// `src/lib/question-taxonomy.ts` by `npm run db:seed-taxonomy`. Ids are
+/// hand-written slugs so a fresh database gets the same ones as this one.
+model Domain {
+  id          String      @id
+  name        String      @unique
+  sectionType SectionType
+  /// Authoring order within the section — the order a `Select` lists them in.
+  sortOrder   Int
+
+  skills    Skill[]
+  questions Question[]
+
+  @@index([sectionType])
+}
+
+/// A skill within exactly one domain. Single-domain ownership is College
+/// Board's model and is what lets `SkillMastery` (T8.1) roll a skill up to a
+/// domain without a second join.
+model Skill {
+  id        String @id
+  domainId  String
+  name      String
+  sortOrder Int
+
+  domain    Domain     @relation(fields: [domainId], references: [id], onDelete: Restrict)
+  questions Question[]
+
+  @@unique([domainId, name])
+  @@index([domainId])
+}
+
+/// A question whose pre-T2.2 free-text taxonomy could not be mapped onto the
+/// controlled vocabulary. The original strings are kept verbatim so a tutor
+/// retagging the question can see what the author meant — the alternative was
+/// dropping them, and a guess here would feed T8.1's mastery model a tag nobody
+/// wrote. Resolved by setting `Question.skillId`, which clears the row.
+model TaxonomyReview {
+  id            String   @id @default(cuid())
+  questionId    String   @unique
+  /// Verbatim `Question.domain` at migration time.
+  legacyDomain  String
+  /// Verbatim `Question.skill` at migration time. NULL means it was never tagged.
+  legacySkill   String?
+  /// Why it could not be mapped — shown to whoever works the queue.
+  reason        String
+  createdAt     DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
 model Question {
   id              String        @id @default(cuid())
   contentHash     String?
@@ -146,8 +197,12 @@ model Question {
   /// MATH question can't be dropped into an R&W module by mistake.
   sectionType     SectionType
   type            QuestionType
-  domain          String
-  skill           String?
+  /// Controlled vocabulary since T2.2 — there is no free-text domain column.
+  domainId        String
+  /// NULL is legal: an untagged question, or one whose legacy value went to
+  /// `TaxonomyReview`. Every student-facing surface groups by domain, so a
+  /// missing skill degrades nothing before T8.1.
+  skillId         String?
   difficulty      Difficulty    @default(MEDIUM)
   passage         String? // sanitized HTML, optional (R&W)
   stem            String // sanitized HTML
@@ -177,12 +232,16 @@ model Question {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  domain            Domain           @relation(fields: [domainId], references: [id], onDelete: Restrict)
+  skill             Skill?           @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  taxonomyReview    TaxonomyReview?
   moduleAssignments ModuleQuestion[]
   answers           Answer[]
   annotations       Annotation[]
 
   @@index([sectionType])
-  @@index([domain])
+  @@index([domainId])
+  @@index([skillId])
   @@index([difficulty])
   @@index([contentHash])
 }

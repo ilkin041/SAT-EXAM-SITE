@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { loadTaxonomy } from "@/lib/taxonomy-db";
 import { QuestionForm } from "../_components/question-form";
 import type { PreviewChoice } from "@/components/question-preview";
 
@@ -55,12 +56,13 @@ export default async function EditQuestionPage({
     take: 50,
   });
   const liveAttemptCount = liveAttempts.length;
+  const taxonomy = await loadTaxonomy();
 
   const initialValues = {
     sectionType: question.sectionType,
     type: question.type,
-    domain: question.domain,
-    skill: question.skill ?? "",
+    domainId: question.domainId,
+    skillId: question.skillId,
     difficulty: question.difficulty,
     passage: question.passage ?? "",
     stem: question.stem,
@@ -103,6 +105,8 @@ export default async function EditQuestionPage({
         mode="edit"
         questionId={question.id}
         initial={initialValues}
+        domains={taxonomy.domains}
+        skills={taxonomy.skills}
         assignments={question.moduleAssignments.map((mq) => ({
           id: mq.id,
           testId: mq.module.section.test.id,

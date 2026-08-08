@@ -1,6 +1,7 @@
 import { QuestionForm } from "../_components/question-form";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { loadTaxonomy } from "@/lib/taxonomy-db";
 import type { PreviewChoice } from "@/components/question-preview";
 
 export const metadata = { title: "New question — Admin" };
@@ -11,17 +12,18 @@ export default async function NewQuestionPage({
   searchParams: Promise<{ clone?: string }>;
 }) {
   const { clone } = await searchParams;
-  const source = clone
-    ? await prisma.question.findUnique({ where: { id: clone } })
-    : null;
+  const [source, taxonomy] = await Promise.all([
+    clone ? prisma.question.findUnique({ where: { id: clone } }) : null,
+    loadTaxonomy(),
+  ]);
   if (clone && !source) notFound();
 
   const initial = source
     ? {
         sectionType: source.sectionType,
         type: source.type,
-        domain: source.domain,
-        skill: source.skill ?? "",
+        domainId: source.domainId,
+        skillId: source.skillId,
         difficulty: source.difficulty,
         passage: source.passage ?? "",
         stem: source.stem,
@@ -48,6 +50,8 @@ export default async function NewQuestionPage({
       <QuestionForm
         mode="create"
         initial={initial}
+        domains={taxonomy.domains}
+        skills={taxonomy.skills}
         draftKey={source ? `clone-${source.id}` : "new"}
       />
     </>

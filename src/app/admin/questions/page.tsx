@@ -7,8 +7,8 @@ import type { Difficulty, Prisma, QuestionType, SectionType } from "@prisma/clie
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { listAssignableModules } from "./actions";
+import { loadTaxonomy } from "@/lib/taxonomy-db";
 import { QuestionsTable, type QuestionRow } from "./_components/questions-table";
-import { ALL_QUESTION_DOMAINS } from "@/lib/question-taxonomy";
 
 export const metadata = { title: "Questions — Admin" };
 
@@ -22,7 +22,9 @@ const ORDERINGS: Record<
   stem: (dir) => ({ stem: dir }),
   section: (dir) => ({ sectionType: dir }),
   type: (dir) => ({ type: dir }),
-  domain: (dir) => ({ domain: dir }),
+  // Order by the domain's *name*, not its id — the ids are slugs and sort
+  // nothing like the labels the reader is looking at.
+  domain: (dir) => ({ domain: { name: dir } }),
   difficulty: (dir) => ({ difficulty: dir }),
   usedIn: (dir) => ({ moduleAssignments: { _count: dir } }),
   updated: (dir) => ({ updatedAt: dir }),
@@ -39,25 +41,31 @@ export default async function QuestionsPage({
   const section = typeof sp.section === "string" ? sp.section : undefined;
   const type = typeof sp.type === "string" ? sp.type : undefined;
   const difficulty = typeof sp.difficulty === "string" ? sp.difficulty : undefined;
+  // `?domain=` carries a `Domain.id` since T2.2 — the ids are stable slugs, so
+  // an existing bookmark holding a domain *name* simply matches nothing rather
+  // than 500ing.
   const domain = typeof sp.domain === "string" ? sp.domain : undefined;
+  const review = sp.review === "1" ? "1" : undefined;
 
   const where: Prisma.QuestionWhereInput = {};
   if (q) {
     where.OR = [
       { stem: { contains: q, mode: "insensitive" } },
       { passage: { contains: q, mode: "insensitive" } },
-      { domain: { contains: q, mode: "insensitive" } },
-      { skill: { contains: q, mode: "insensitive" } },
+      { domain: { name: { contains: q, mode: "insensitive" } } },
+      { skill: { name: { contains: q, mode: "insensitive" } } },
     ];
   }
-  if (domain) where.domain = domain;
+  if (domain) where.domainId = domain;
+  if (review) where.taxonomyReview = { isNot: null };
   if (difficulty) where.difficulty = difficulty as Difficulty;
   if (type) where.type = type as QuestionType;
   if (section) where.sectionType = section as SectionType;
 
-  const [questionCount, assignableTests] = await Promise.all([
+  const [questionCount, assignableTests, taxonomy] = await Promise.all([
     prisma.question.count({ where }),
     listAssignableModules(),
+    loadTaxonomy(),
   ]);
   const totalPages = Math.max(1, Math.ceil(questionCount / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
@@ -66,7 +74,12 @@ export default async function QuestionsPage({
     orderBy: orderByFrom(sort, dir, ORDERINGS, "updated"),
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
-    include: { _count: { select: { moduleAssignments: true } } },
+    include: {
+      _count: { select: { moduleAssignments: true } },
+      domain: { select: { name: true } },
+      skill: { select: { name: true } },
+      taxonomyReview: { select: { legacySkill: true } },
+    },
   });
 
   const rows: QuestionRow[] = questions.map((q) => ({
@@ -74,7 +87,10 @@ export default async function QuestionsPage({
     stemPreview: stripHtml(q.stem),
     sectionType: q.sectionType,
     type: q.type,
-    domain: q.domain,
+    domainName: q.domain.name,
+    skillName: q.skill?.name ?? null,
+    // `undefined` means "not in the queue"; `null` means "queued, never tagged".
+    reviewLegacySkill: q.taxonomyReview ? q.taxonomyReview.legacySkill : undefined,
     difficulty: q.difficulty,
     assignmentCount: q._count.moduleAssignments,
     updatedAt: formatDate(q.updatedAt),
@@ -102,11 +118,13 @@ export default async function QuestionsPage({
           assignableTests={assignableTests}
           total={questionCount}
           pageSize={PAGE_SIZE}
-          domains={ALL_QUESTION_DOMAINS}
+          domains={taxonomy.domains}
+          skills={taxonomy.skills}
           section={section}
           type={type}
           difficulty={difficulty}
           domain={domain}
+          review={review}
         />
       </div>
     </>

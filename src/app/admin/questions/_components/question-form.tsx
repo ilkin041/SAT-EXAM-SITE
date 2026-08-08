@@ -15,14 +15,11 @@ import {
 import type { QuestionAssignment } from "../actions";
 import {
   createQuestion,
+  createSkill,
   findLikelyDuplicateQuestion,
   updateQuestion,
 } from "../actions";
-import {
-  isDomainForSection,
-  normalizeQuestionDomain,
-  QUESTION_DOMAINS,
-} from "@/lib/question-taxonomy";
+import type { DomainRow, SkillRow } from "@/lib/taxonomy-db";
 
 type Type = "MULTIPLE_CHOICE" | "STUDENT_PRODUCED_RESPONSE";
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "MIXED";
@@ -32,8 +29,8 @@ type ImagePosition = "TOP" | "INLINE";
 interface FormValues {
   sectionType: SectionType;
   type: Type;
-  domain: string;
-  skill: string;
+  domainId: string;
+  skillId: string | null;
   difficulty: Difficulty;
   passage: string;
   stem: string;
@@ -53,6 +50,13 @@ interface Props {
   /** Module assignments — passed straight into the delete modal so it skips its own fetch. */
   assignments?: QuestionAssignment[];
   draftKey?: string;
+  /**
+   * The controlled vocabulary, read from the tables by the page. Passed as a
+   * prop rather than imported: `taxonomy-db` imports `prisma`, and this is a
+   * client component.
+   */
+  domains: DomainRow[];
+  skills: SkillRow[];
 }
 
 const EMPTY_CHOICES: PreviewChoice[] = [
@@ -68,17 +72,22 @@ export function QuestionForm({
   initial,
   assignments = [],
   draftKey,
+  domains,
+  skills: initialSkills,
 }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Local copy so a skill added through `createSkill` appears in the Select
+  // without a round trip through the page.
+  const [skills, setSkills] = useState(initialSkills);
 
   const initialValues: FormValues = {
     sectionType: initial?.sectionType ?? "READING_WRITING",
     type: initial?.type ?? "MULTIPLE_CHOICE",
-    domain: initial?.domain ?? "",
-    skill: initial?.skill ?? "",
+    domainId: initial?.domainId ?? "",
+    skillId: initial?.skillId ?? null,
     difficulty: initial?.difficulty ?? "MEDIUM",
     passage: initial?.passage ?? "",
     stem: initial?.stem ?? "",
@@ -151,14 +160,50 @@ export function QuestionForm({
     setValues((v) => ({ ...v, [key]: value }));
   }
 
+  const sectionDomains = useMemo(
+    () => domains.filter((domain) => domain.sectionType === values.sectionType),
+    [domains, values.sectionType],
+  );
+  // A skill belongs to exactly one domain, so the second Select is always a
+  // filter of the first — there is no "all skills" state to fall back to.
+  const domainSkills = useMemo(
+    () => skills.filter((skill) => skill.domainId === values.domainId),
+    [skills, values.domainId],
+  );
+
   function setSectionType(sectionType: SectionType) {
+    setValues((current) => {
+      const stillValid = domains.some(
+        (domain) => domain.id === current.domainId && domain.sectionType === sectionType,
+      );
+      if (stillValid) return { ...current, sectionType };
+      const fallback = domains.find((domain) => domain.sectionType === sectionType);
+      return {
+        ...current,
+        sectionType,
+        domainId: fallback?.id ?? "",
+        // The old skill belonged to the old domain. Keeping it would be the
+        // exact domain/skill disagreement T2.2 exists to prevent.
+        skillId: null,
+      };
+    });
+  }
+
+  function setDomain(domainId: string) {
     setValues((current) => ({
       ...current,
-      sectionType,
-      domain: isDomainForSection(current.domain, sectionType)
-        ? current.domain
-        : QUESTION_DOMAINS[sectionType][0],
+      domainId,
+      skillId: skills.some((skill) => skill.id === current.skillId && skill.domainId === domainId)
+        ? current.skillId
+        : null,
     }));
+  }
+
+  function onSkillCreated(skill: SkillRow) {
+    setSkills((current) =>
+      current.some((existing) => existing.id === skill.id) ? current : [...current, skill],
+    );
+    update("skillId", skill.id);
   }
 
   function setChoice(idx: number, text: string) {
@@ -208,8 +253,8 @@ export function QuestionForm({
     const payload = {
       sectionType: values.sectionType,
       type: values.type,
-      domain: normalizeQuestionDomain(values.domain) ?? QUESTION_DOMAINS[values.sectionType][0],
-      skill: values.skill.trim() || null,
+      domainId: values.domainId,
+      skillId: values.skillId,
       difficulty: values.difficulty,
       passage: values.passage.trim() || null,
       stem: values.stem,
@@ -311,29 +356,28 @@ export function QuestionForm({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Domain">
             <Select
-              name="domain"
+              name="domainId"
               required
               // `undefined`, not `""`: an unset domain is the placeholder
               // state, not a selected empty row. See select.tsx.
-              value={values.domain || undefined}
-              onValueChange={(v) => update("domain", v)}
+              value={values.domainId || undefined}
+              onValueChange={setDomain}
             >
               <SelectTrigger aria-label="Domain" placeholder="Select a domain" />
               <SelectContent>
-                {QUESTION_DOMAINS[values.sectionType].map((domain) => (
-                  <SelectItem key={domain} value={domain}>{domain}</SelectItem>
+                {sectionDomains.map((domain) => (
+                  <SelectItem key={domain.id} value={domain.id}>{domain.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Skill (optional)">
-            <input
-              value={values.skill}
-              onChange={(e) => update("skill", e.target.value)}
-              className={inputClass}
-              placeholder="e.g. Linear equations"
-            />
-          </Field>
+          <SkillField
+            domainId={values.domainId}
+            skills={domainSkills}
+            value={values.skillId}
+            onChange={(skillId) => update("skillId", skillId)}
+            onCreated={onSkillCreated}
+          />
         </div>
 
         <Field
@@ -556,6 +600,133 @@ export function QuestionForm({
 
 const inputClass =
   "w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+
+/**
+ * Skill picker over the domain's controlled vocabulary, plus the one path that
+ * grows that vocabulary. The new name goes through `createSkill`, which writes
+ * a `Skill` row and fold-matches against every existing name — so "Linear
+ * Models" resolves to the existing "Linear models" instead of becoming the
+ * second spelling this task exists to eliminate.
+ */
+function SkillField({
+  domainId,
+  skills,
+  value,
+  onChange,
+  onCreated,
+}: {
+  domainId: string;
+  skills: SkillRow[];
+  value: string | null;
+  onChange: (skillId: string | null) => void;
+  onCreated: (skill: SkillRow) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function submit() {
+    const name = draft.trim();
+    if (!name) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await createSkill(domainId, name);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onCreated(res.skill);
+      setDraft("");
+      setAdding(false);
+    });
+  }
+
+  if (!domainId) {
+    return (
+      <Field label="Skill (optional)" hint="Pick a domain first — a skill belongs to one domain.">
+        <Select disabled value={undefined}>
+          <SelectTrigger aria-label="Skill" placeholder="Select a domain first" />
+          <SelectContent />
+        </Select>
+      </Field>
+    );
+  }
+
+  if (adding) {
+    return (
+      <Field label="New skill" hint="Added to this domain's vocabulary for every question.">
+        <div className="flex gap-2">
+          <input
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submit();
+              }
+              if (e.key === "Escape") setAdding(false);
+            }}
+            className={inputClass}
+            placeholder="e.g. Rational exponents"
+            aria-label="New skill name"
+          />
+          <button
+            type="button"
+            onClick={submit}
+            disabled={pending || !draft.trim()}
+            className="rounded-md border border-input px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
+          >
+            {pending ? "Adding…" : "Add"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAdding(false);
+              setError(null);
+            }}
+            className="rounded-md border border-input px-3 text-xs hover:bg-accent"
+          >
+            Cancel
+          </button>
+        </div>
+        {error && <span className="text-xs text-destructive">{error}</span>}
+      </Field>
+    );
+  }
+
+  return (
+    <Field label="Skill (optional)">
+      <div className="flex gap-2">
+        {/* `""` is the "No skill" row; the Select wrapper maps it onto its own
+            private sentinel and back, so this stays a plain empty string. */}
+        <Select
+          name="skillId"
+          value={value ?? ""}
+          onValueChange={(v) => onChange(v === "" ? null : v)}
+        >
+          <SelectTrigger aria-label="Skill" placeholder="No skill" />
+          <SelectContent>
+            <SelectItem value="">No skill</SelectItem>
+            {skills.map((skill) => (
+              <SelectItem key={skill.id} value={skill.id}>
+                {skill.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="whitespace-nowrap rounded-md border border-input px-3 text-xs font-medium hover:bg-accent"
+        >
+          Add skill
+        </button>
+      </div>
+    </Field>
+  );
+}
 
 function SectionPill({
   active,

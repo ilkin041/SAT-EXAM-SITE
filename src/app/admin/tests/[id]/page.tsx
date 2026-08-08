@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { loadTaxonomy } from "@/lib/taxonomy-db";
 import { TestMetaForm } from "./test-meta-form";
 import { SectionEditor } from "./section-editor";
 import { DeleteTestButton } from "./delete-test-button";
@@ -25,7 +26,8 @@ export default async function TestDetailPage({
             include: {
               moduleQuestions: {
                 orderBy: { order: "asc" },
-                include: { question: true },
+                // T2.2: `domain` is a relation, and the row label needs its name.
+                include: { question: { include: { domain: { select: { name: true } } } } },
               },
             },
           },
@@ -35,6 +37,8 @@ export default async function TestDetailPage({
   });
 
   if (!test) notFound();
+
+  const { domains } = await loadTaxonomy();
 
   return (
     <>
@@ -77,6 +81,7 @@ export default async function TestDetailPage({
                 module1TimeLimit: section.module1TimeLimit,
                 module2TimeLimit: section.module2TimeLimit,
               }}
+              domains={domains}
               modules={section.modules.map((m) => ({
                 id: m.id,
                 moduleNumber: m.moduleNumber,
@@ -86,7 +91,7 @@ export default async function TestDetailPage({
                   order: mq.order,
                   type: mq.question.type,
                   difficulty: mq.question.difficulty,
-                  domain: mq.question.domain,
+                  domain: mq.question.domain.name,
                   stem: mq.question.stem,
                 })),
               }))}

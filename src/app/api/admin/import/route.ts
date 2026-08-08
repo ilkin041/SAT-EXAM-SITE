@@ -14,6 +14,54 @@ import {
   selectQuestionImportIndices,
 } from "@/lib/question-content-hash";
 import { renderQuestionHtml } from "@/lib/rendered-question";
+import {
+  loadTaxonomy,
+  resolveDomainRow,
+  resolveSkillRow,
+  type TaxonomyTables,
+} from "@/lib/taxonomy-db";
+
+/**
+ * Resolve every question's `domain`/`skill` *names* onto ids from the
+ * controlled vocabulary, collecting every failure rather than throwing on the
+ * first — an import of 100 questions with a consistently misspelled skill
+ * should report that once per row, not make the author fix and re-upload 100
+ * times.
+ *
+ * Unknown names are rejected, never created. A genuinely new skill is added in
+ * the question editor, which is the one write path into `Skill`.
+ */
+function resolveTaxonomy(
+  tables: TaxonomyTables,
+  questions: { domain: string; skill?: string | null; sectionType?: string }[],
+  pathFor: (index: number) => string,
+): { ok: true; ids: { domainId: string; skillId: string | null }[] } | { ok: false; errors: string[] } {
+  const errors: string[] = [];
+  const ids: { domainId: string; skillId: string | null }[] = [];
+
+  questions.forEach((question, index) => {
+    const domain = resolveDomainRow(tables, question.domain);
+    if (!domain.ok) {
+      errors.push(`${pathFor(index)}.domain: ${domain.error}`);
+      ids.push({ domainId: "", skillId: null });
+      return;
+    }
+    const skillName = question.skill?.trim();
+    if (!skillName) {
+      ids.push({ domainId: domain.value.id, skillId: null });
+      return;
+    }
+    const skill = resolveSkillRow(tables, domain.value, skillName);
+    if (!skill.ok) {
+      errors.push(`${pathFor(index)}.skill: ${skill.error}`);
+      ids.push({ domainId: domain.value.id, skillId: null });
+      return;
+    }
+    ids.push({ domainId: domain.value.id, skillId: skill.value.id });
+  });
+
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, ids };
+}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -61,11 +109,38 @@ async function handleFullImport(body: unknown, dryRun: boolean, adminId: string)
       { status: 400 },
     );
   }
+
+  // Flat view of every question in the payload, so the taxonomy is resolved
+  // once and every unknown name is reported in the same response.
+  const flat = parsed.data.sections.flatMap((section, si) =>
+    section.modules.flatMap((mod, mi) =>
+      mod.questions.map((question, qi) => ({
+        question,
+        path: `sections.${si}.modules.${mi}.questions.${qi}`,
+      })),
+    ),
+  );
+  const tables = await loadTaxonomy();
+  const resolved = resolveTaxonomy(
+    tables,
+    flat.map((entry) => entry.question),
+    (index) => flat[index].path,
+  );
+  if (!resolved.ok) {
+    return NextResponse.json(
+      { ok: false, mode: "test", errors: resolved.errors },
+      { status: 400 },
+    );
+  }
+  const taxonomyByQuestion = new Map(
+    flat.map((entry, index) => [entry.question, resolved.ids[index]]),
+  );
+
   const summary = buildSummary(parsed.data);
   if (dryRun) {
     return NextResponse.json({ ok: true, mode: "test", dryRun: true, summary });
   }
-  const created = await commit(parsed.data, adminId);
+  const created = await commit(parsed.data, adminId, taxonomyByQuestion);
   return NextResponse.json({
     ok: true,
     mode: "test",
@@ -86,6 +161,19 @@ async function handleBankImport(body: unknown, dryRun: boolean) {
     );
   }
   const data = parsed.data;
+
+  const tables = await loadTaxonomy();
+  const resolved = resolveTaxonomy(tables, data.questions, (index) => `questions.${index}`);
+  if (!resolved.ok) {
+    return NextResponse.json(
+      { ok: false, mode: "bank", errors: resolved.errors },
+      { status: 400 },
+    );
+  }
+  const taxonomyByQuestion = new Map(
+    data.questions.map((question, index) => [question, resolved.ids[index]]),
+  );
+
   const hashes = data.questions.map((q) => questionContentHash(q));
   const existing = await prisma.question.findMany({
     where: { contentHash: { in: hashes } },
@@ -123,7 +211,7 @@ async function handleBankImport(body: unknown, dryRun: boolean) {
     });
   }
 
-  const result = await commitBank(data);
+  const result = await commitBank(data, taxonomyByQuestion);
   return NextResponse.json({
     ok: true,
     mode: "bank",
@@ -133,7 +221,10 @@ async function handleBankImport(body: unknown, dryRun: boolean) {
   });
 }
 
-async function commitBank(payload: BankImportPayload) {
+/** Resolved `Domain.id` / `Skill.id` per question, keyed by the parsed object. */
+type TaxonomyByQuestion = Map<object, { domainId: string; skillId: string | null }>;
+
+async function commitBank(payload: BankImportPayload, taxonomy: TaxonomyByQuestion) {
   return prisma.$transaction(async (tx) => {
     const hashes = payload.questions.map((question) => questionContentHash(question));
     const existing = await tx.question.findMany({
@@ -146,7 +237,12 @@ async function commitBank(payload: BankImportPayload) {
       keepDuplicateIndices: payload.keepDuplicateIndices,
     });
     const rows = selectedIndices.map((index) =>
-      questionCreateData(payload.questions[index], payload.questions[index].sectionType!, hashes[index]),
+      questionCreateData(
+        payload.questions[index],
+        payload.questions[index].sectionType!,
+        taxonomy.get(payload.questions[index])!,
+        hashes[index],
+      ),
     );
     if (rows.length > 0) await tx.question.createMany({ data: rows });
     return { added: rows.length, skipped: payload.questions.length - rows.length };
@@ -160,13 +256,14 @@ type ImportedQuestion =
 function questionCreateData(
   q: ImportedQuestion,
   sectionType: "READING_WRITING" | "MATH",
+  taxonomy: { domainId: string; skillId: string | null },
   contentHash = questionContentHash(q),
 ): Prisma.QuestionCreateManyInput {
   return {
     sectionType: SectionType[sectionType],
     type: QuestionType[q.type],
-    domain: q.domain,
-    skill: q.skill ?? null,
+    domainId: taxonomy.domainId,
+    skillId: taxonomy.skillId,
     difficulty: Difficulty[q.difficulty],
     passage: q.passage ?? null,
     stem: q.stem,
@@ -226,7 +323,11 @@ function buildSummary(payload: ImportPayload) {
   };
 }
 
-async function commit(payload: ImportPayload, adminId: string) {
+async function commit(
+  payload: ImportPayload,
+  adminId: string,
+  taxonomy: TaxonomyByQuestion,
+) {
   // Wrap the whole import in a transaction so a partial failure leaves no
   // half-built test behind.
   return prisma.$transaction(async (tx) => {
@@ -280,7 +381,12 @@ async function commit(payload: ImportPayload, adminId: string) {
           if (!questionIdByHash.has(hash) && !missingByHash.has(hash)) {
             missingByHash.set(
               hash,
-              questionCreateData(question, question.sectionType ?? section.type, hash),
+              questionCreateData(
+                question,
+                question.sectionType ?? section.type,
+                taxonomy.get(question)!,
+                hash,
+              ),
             );
           }
         });
