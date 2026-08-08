@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--", "--port", "3100"],
+      "port": 3100
+    },
+    {
+      "//": "Second production port, for checking public marketing pages while another session holds 3100. No sign-in on this one — NEXTAUTH_URL names 3000.",
+      "name": "prod-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--", "--port", "3200"],
+      "port": 3200
+    },
+    {
+      "//": "Production build on 3000, which is what NEXTAUTH_URL points at — sign-in fails on any other port. Used by `npm run gen:screenshots`.",
+      "name": "prod-auth",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--", "--port", "3000"],
+      "port": 3000
+    }
+  ]
+}
