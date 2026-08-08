@@ -3,9 +3,17 @@ import { BookOpen, FileText, Users, Activity } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import {
+  Table,
+  TableEmpty,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui/table";
 
 export const metadata = { title: "Admin — SAT Practice" };
 
@@ -51,68 +59,75 @@ export default async function AdminDashboard() {
           </Link>
         </div>
 
-        {recentAttempts.length === 0 ? (
-          <EmptyState
-            icon={Activity}
-            title="No attempts yet"
-            description="When students start taking tests, recent activity will show up here."
-          />
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-body">
-                <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">Student</th>
-                    <th className="px-6 py-4 font-semibold">Test Name</th>
-                    <th className="px-6 py-4 font-semibold">Status</th>
-                    <th className="px-6 py-4 font-semibold">Started At</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {recentAttempts.map((a) => (
-                    <tr key={a.id} className="transition-colors hover:bg-muted/30">
-                      <td className="px-6 py-4">
-                        <Link
-                          href={`/admin/attempts/${a.id}`}
-                          className="font-semibold text-foreground hover:text-primary transition-colors"
-                        >
-                          {a.user?.name ?? a.user?.email ?? (
-                            <span className="italic text-muted-foreground font-normal">anonymous</span>
-                          )}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 font-medium text-foreground">{a.test.title}</td>
-                      <td className="px-6 py-4">
-                        <Badge
-                          variant={
-                            a.status === "COMPLETED"
-                              ? "success"
-                              : a.status === "IN_PROGRESS"
-                                ? "warning"
-                                : "muted"
-                          }
-                          className={a.status === "IN_PROGRESS" ? "animate-pulse" : undefined}
-                        >
-                          {a.status === "IN_PROGRESS"
-                            ? "In progress"
-                            : a.status === "COMPLETED"
-                              ? "Completed"
-                              : a.status === "EXPIRED"
-                                ? "Expired"
-                                : "Abandoned"}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-caption text-muted-foreground">
-                        {formatDateTime(a.startedAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {/*
+          `Table` rather than `DataTable` (T1.9): this is the eight most recent
+          attempts, not the list of them. Searching or paging a deliberately
+          truncated window would be lying about what it holds — "View all
+          attempts" above is the surface that does that, and it is a `DataTable`.
+          Staying on the primitives also keeps the admin landing page free of
+          client JavaScript.
+        */}
+        <Table>
+          <THead>
+            <TR>
+              <TH>Student</TH>
+              <TH>Test name</TH>
+              <TH>Status</TH>
+              <TH hideBelow="sm">Started at</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {recentAttempts.length === 0 ? (
+              <TableEmpty
+                colSpan={4}
+                icon={Activity}
+                title="No attempts yet"
+                description="When students start taking tests, recent activity will show up here."
+              />
+            ) : (
+              recentAttempts.map((a) => (
+                <TR key={a.id}>
+                  <TD>
+                    <Link
+                      href={`/admin/attempts/${a.id}`}
+                      className="font-semibold text-foreground transition-colors hover:text-primary"
+                    >
+                      {a.user?.name ?? a.user?.email ?? (
+                        <span className="font-normal italic text-muted-foreground">
+                          anonymous
+                        </span>
+                      )}
+                    </Link>
+                  </TD>
+                  <TD className="font-medium text-foreground">{a.test.title}</TD>
+                  <TD>
+                    <Badge
+                      variant={
+                        a.status === "COMPLETED"
+                          ? "success"
+                          : a.status === "IN_PROGRESS"
+                            ? "warning"
+                            : "muted"
+                      }
+                      className={a.status === "IN_PROGRESS" ? "animate-pulse" : undefined}
+                    >
+                      {a.status === "IN_PROGRESS"
+                        ? "In progress"
+                        : a.status === "COMPLETED"
+                          ? "Completed"
+                          : a.status === "EXPIRED"
+                            ? "Expired"
+                            : "Abandoned"}
+                    </Badge>
+                  </TD>
+                  <TD hideBelow="sm" className="text-caption text-muted-foreground">
+                    {formatDateTime(a.startedAt)}
+                  </TD>
+                </TR>
+              ))
+            )}
+          </TBody>
+        </Table>
       </section>
     </>
   );

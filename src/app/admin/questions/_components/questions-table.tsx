@@ -1,21 +1,27 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatDate } from "@/lib/format-date";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   AlertTriangle,
+  BookOpen,
   CheckCircle2,
   ChevronDown,
   Copy,
   Pencil,
+  Plus,
   Trash2,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DataTable,
+  DataTableFilter,
+  type Column,
+} from "@/components/ui/data-table";
 import { useToast } from "@/components/toast";
 import {
   bulkAssignToModule,
@@ -32,7 +38,6 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { RowDeleteButton } from "./row-delete-button";
-import { cn } from "@/lib/utils";
 import { ALL_QUESTION_DOMAINS } from "@/lib/question-taxonomy";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "MIXED";
@@ -45,20 +50,66 @@ export interface QuestionRow {
   domain: string;
   difficulty: Difficulty;
   assignmentCount: number;
+  /** Already formatted — `formatDate` pins the locale, so the server owns it. */
   updatedAt: string;
 }
 
 interface Props {
   rows: QuestionRow[];
   assignableTests: AssignableTest[];
+  /** Rows across every page — the bank is paged 100 at a time on the server. */
+  total: number;
+  pageSize: number;
+  domains: readonly string[];
+  section?: string;
+  type?: string;
+  difficulty?: string;
+  domain?: string;
 }
 
+const SECTION_OPTIONS = [
+  { value: "", label: "All sections" },
+  { value: "READING_WRITING", label: "English (R&W)" },
+  { value: "MATH", label: "Math" },
+];
+
+const TYPE_OPTIONS = [
+  { value: "", label: "All types" },
+  { value: "MULTIPLE_CHOICE", label: "Multiple choice" },
+  { value: "STUDENT_PRODUCED_RESPONSE", label: "Student-produced" },
+];
+
+const DIFFICULTY_OPTIONS = [
+  { value: "", label: "All difficulties" },
+  { value: "EASY", label: "Easy" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "HARD", label: "Hard" },
+  { value: "MIXED", label: "Mixed" },
+];
+
 /**
- * Sortable, selectable questions table. Built around shadcn-style primitives
- * to match the rest of the admin UI. Selection is local component state; bulk
- * actions hit dedicated server actions and re-fetch the route on success.
+ * Sortable, selectable questions table (T1.9: now over `DataTable`).
+ *
+ * **Server mode.** The bank is paged 100 at a time by the route, and search,
+ * sort, filters and page all live in `?q= ?sort= ?dir= ?page=` plus the four
+ * filter params — so a filtered view of the bank is a link.
+ *
+ * Selection stays local component state, and it is deliberately scoped to the
+ * page in view: `selectedIdsInView()` intersects with the visible rows before
+ * every bulk action, so a selection made on page 1 cannot silently delete rows
+ * the reader has since navigated away from.
  */
-export function QuestionsTable({ rows, assignableTests }: Props) {
+export function QuestionsTable({
+  rows,
+  assignableTests,
+  total,
+  pageSize,
+  domains,
+  section,
+  type,
+  difficulty,
+  domain,
+}: Props) {
   const router = useRouter();
   const toast = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -75,18 +126,19 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
   // are no longer in view.
   const visibleIds = useMemo(() => new Set(rows.map((r) => r.id)), [rows]);
 
-  function toggleOne(id: string) {
+  const toggleOne = useCallback((id: string) => {
     setSelected((cur) => {
       const next = new Set(cur);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
-  function selectAll() {
-    if (selected.size === rows.length) setSelected(new Set());
-    else setSelected(new Set(rows.map((r) => r.id)));
-  }
+  }, []);
+  const selectAll = useCallback(() => {
+    setSelected((cur) =>
+      cur.size === rows.length ? new Set() : new Set(rows.map((r) => r.id)),
+    );
+  }, [rows]);
   function clearSelection() {
     setSelected(new Set());
   }
@@ -181,6 +233,150 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
 
   const hasSelection = selected.size > 0;
   const selectedCount = selected.size;
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const anySelected = rows.some((r) => selected.has(r.id));
+
+  const columns = useMemo<ReadonlyArray<Column<QuestionRow>>>(
+    () => [
+      {
+        key: "select",
+        header: "",
+        srHeader: "Select",
+        width: "3rem",
+        headerCell: (
+          <input
+            type="checkbox"
+            aria-label="Select all"
+            checked={allSelected}
+            ref={(el) => {
+              if (!el) return;
+              el.indeterminate = anySelected && !allSelected;
+            }}
+            onChange={selectAll}
+            className="h-4 w-4 cursor-pointer rounded border-input text-primary"
+          />
+        ),
+        cell: (row) => (
+          <input
+            type="checkbox"
+            aria-label={`Select question: ${row.stemPreview.slice(0, 60)}`}
+            checked={selected.has(row.id)}
+            onChange={() => toggleOne(row.id)}
+            className="h-4 w-4 cursor-pointer rounded border-input text-primary"
+          />
+        ),
+        searchValue: () => "",
+      },
+      {
+        key: "stem",
+        header: "Stem",
+        sortable: true,
+        cell: (row) => (
+          <Link
+            href={`/admin/questions/${row.id}`}
+            className="line-clamp-2 max-w-md font-semibold text-foreground transition-colors hover:text-primary"
+          >
+            {row.stemPreview}
+          </Link>
+        ),
+      },
+      {
+        key: "section",
+        header: "Section",
+        sortable: true,
+        hideBelow: "sm",
+        cell: (row) => (
+          <Badge variant={row.sectionType === "MATH" ? "purple" : "success"}>
+            {row.sectionType === "MATH" ? "Math" : "R&W"}
+          </Badge>
+        ),
+      },
+      {
+        key: "type",
+        header: "Type",
+        sortable: true,
+        hideBelow: "lg",
+        cell: (row) => (
+          <Badge variant={row.type === "MULTIPLE_CHOICE" ? "outline" : "info"}>
+            {row.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
+          </Badge>
+        ),
+      },
+      {
+        key: "domain",
+        header: "Domain",
+        sortable: true,
+        hideBelow: "md",
+        cell: (row) => (
+          <span className="font-medium text-muted-foreground">{row.domain}</span>
+        ),
+      },
+      {
+        key: "difficulty",
+        header: "Difficulty",
+        sortable: true,
+        hideBelow: "sm",
+        cell: (row) => (
+          <Badge variant={difficultyVariant(row.difficulty)}>{row.difficulty}</Badge>
+        ),
+      },
+      {
+        key: "usedIn",
+        header: "Used in",
+        sortable: true,
+        hideBelow: "lg",
+        cell: (row) =>
+          row.assignmentCount === 0 ? (
+            <span className="text-caption font-medium text-muted-foreground">
+              Unassigned
+            </span>
+          ) : (
+            <Badge variant="secondary">
+              {row.assignmentCount} module{row.assignmentCount === 1 ? "" : "s"}
+            </Badge>
+          ),
+      },
+      {
+        key: "updated",
+        header: "Updated",
+        sortable: true,
+        hideBelow: "md",
+        cell: (row) => (
+          <span className="text-caption text-muted-foreground">{row.updatedAt}</span>
+        ),
+      },
+      {
+        key: "actions",
+        header: "",
+        srHeader: "Actions",
+        width: "1%",
+        cell: (row) => (
+          <div className="flex items-center justify-end gap-2">
+            <Link
+              href={`/admin/questions/new?clone=${row.id}`}
+              className="rounded-lg p-1.5 text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground"
+              aria-label="Clone"
+              title="Clone question"
+            >
+              <Copy className="h-4 w-4" />
+            </Link>
+            <Link
+              href={`/admin/questions/${row.id}`}
+              className="rounded-lg p-1.5 text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground"
+              aria-label="Edit"
+            >
+              <Pencil className="h-4 w-4" />
+            </Link>
+            <RowDeleteButton questionId={row.id} />
+          </div>
+        ),
+        searchValue: () => "",
+      },
+    ],
+    [allSelected, anySelected, selectAll, selected, toggleOne],
+  );
+
+  const filtersActive = Boolean(section || type || difficulty || domain);
 
   return (
     <>
@@ -236,122 +432,67 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="w-12 px-6 py-4">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all"
-                    checked={
-                      rows.length > 0 &&
-                      rows.every((r) => selected.has(r.id))
-                    }
-                    ref={(el) => {
-                      if (!el) return;
-                      const anySelected = rows.some((r) => selected.has(r.id));
-                      const allSelected = rows.every((r) => selected.has(r.id));
-                      el.indeterminate = anySelected && !allSelected;
-                    }}
-                    onChange={selectAll}
-                    className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
-                  />
-                </th>
-                <th className="px-6 py-4 font-semibold">Stem</th>
-                <th className="px-6 py-4 font-semibold">Section</th>
-                <th className="px-6 py-4 font-semibold">Type</th>
-                <th className="px-6 py-4 font-semibold">Domain</th>
-                <th className="px-6 py-4 font-semibold">Difficulty</th>
-                <th className="px-6 py-4 font-semibold">Used in</th>
-                <th className="px-6 py-4 font-semibold">Updated</th>
-                <th className="px-6 py-4 w-12" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {rows.map((r) => {
-                const isSelected = selected.has(r.id);
-                return (
-                  <tr
-                    key={r.id}
-                    className={cn(
-                      "transition-colors hover:bg-muted/30",
-                      isSelected && "bg-primary/5",
-                    )}
-                  >
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        aria-label="Select question"
-                        checked={isSelected}
-                        onChange={() => toggleOne(r.id)}
-                        className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/admin/questions/${r.id}`}
-                        className="line-clamp-2 max-w-md font-semibold text-foreground hover:text-primary transition-colors"
-                      >
-                        {r.stemPreview}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge variant={r.sectionType === "MATH" ? "purple" : "success"}>
-                        {r.sectionType === "MATH" ? "Math" : "R&W"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge variant={r.type === "MULTIPLE_CHOICE" ? "outline" : "info"}>
-                        {r.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground font-medium">{r.domain}</td>
-                    <td className="px-6 py-4">
-                      <Badge variant={difficultyVariant(r.difficulty)}>
-                        {r.difficulty}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      {r.assignmentCount === 0 ? (
-                        <span className="text-xs text-muted-foreground font-medium">Unassigned</span>
-                      ) : (
-                        <Badge variant="secondary">
-                          {r.assignmentCount} module{r.assignmentCount === 1 ? "" : "s"}
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-muted-foreground">
-                      {formatDate(r.updatedAt)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/admin/questions/new?clone=${r.id}`}
-                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
-                          aria-label="Clone"
-                          title="Clone question"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Link>
-                        <Link
-                          href={`/admin/questions/${r.id}`}
-                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
-                          aria-label="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                        <RowDeleteButton questionId={r.id} />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        mode="server"
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.id}
+        total={total}
+        pageSize={pageSize}
+        itemNoun="questions"
+        defaultSort={{ key: "updated", dir: "desc" }}
+        search={{ placeholder: "Search stem, passage, domain…" }}
+        filtersActive={filtersActive}
+        filterParams={["section", "type", "difficulty", "domain"]}
+        empty={{
+          icon: BookOpen,
+          title: "No questions yet",
+          description: "Add your first question to start building the bank.",
+          action: (
+            <Button asChild>
+              <Link href="/admin/questions/new">
+                <Plus className="h-4 w-4" />
+                New question
+              </Link>
+            </Button>
+          ),
+        }}
+        filters={
+          <>
+            <DataTableFilter
+              param="section"
+              value={section}
+              label="Section"
+              options={SECTION_OPTIONS}
+              className="w-full sm:w-40"
+            />
+            <DataTableFilter
+              param="type"
+              value={type}
+              label="Question type"
+              options={TYPE_OPTIONS}
+              className="w-full sm:w-44"
+            />
+            <DataTableFilter
+              param="difficulty"
+              value={difficulty}
+              label="Difficulty"
+              options={DIFFICULTY_OPTIONS}
+              className="w-full sm:w-40"
+            />
+            <DataTableFilter
+              param="domain"
+              value={domain}
+              label="Domain"
+              options={[
+                { value: "", label: "All domains" },
+                ...domains.map((option) => ({ value: option, label: option })),
+              ]}
+              className="w-full sm:w-56"
+            />
+          </>
+        }
+      />
 
       {/* ----- Delete confirm modal ----- */}
       <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>

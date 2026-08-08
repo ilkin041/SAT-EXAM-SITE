@@ -1,20 +1,11 @@
-import Link from "next/link";
-import sanitizeHtml from "sanitize-html";
-import { BarChart3, Clock, Flag, Gauge } from "lucide-react";
+﻿import sanitizeHtml from "sanitize-html";
+import { BarChart3, Flag, Gauge } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { computeItemAnalysis, type ItemFlag } from "@/lib/analytics";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { readTableParams, type SortDir } from "@/lib/table-params";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
 import { StatCard } from "@/components/ui/stat-card";
+import { ItemsTable, type ItemRow } from "./_components/items-table";
 
 export const metadata = { title: "Item analysis — Admin" };
 
@@ -23,21 +14,17 @@ const PAGE_SIZE = 50;
 export default async function ItemAnalysisPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    q?: string;
-    testId?: string;
-    section?: string;
-    flag?: string;
-    page?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const q = (sp.q ?? "").trim().toLowerCase();
-  const testId = sp.testId || undefined;
+  const params = readTableParams(sp);
+  const q = params.q.toLowerCase();
+  const testId = typeof sp.testId === "string" && sp.testId ? sp.testId : undefined;
   const section =
     sp.section === "READING_WRITING" || sp.section === "MATH" ? sp.section : undefined;
-  const flag = isItemFlag(sp.flag) ? sp.flag : undefined;
-  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const flag = isItemFlag(typeof sp.flag === "string" ? sp.flag : undefined)
+    ? (sp.flag as ItemFlag)
+    : undefined;
 
   const [attempts, tests] = await Promise.all([
     prisma.testAttempt.findMany({
@@ -136,11 +123,11 @@ export default async function ItemAnalysisPage({
         .toLowerCase();
       return haystack.includes(q);
     })
-    .sort((a, b) => a.analysis.pValue - b.analysis.pValue);
+    .sort(comparator(params.sort, params.dir));
 
   const totalPages = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const rows = allRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const currentPage = Math.min(params.page, totalPages);
+  const pageRows = allRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const flaggedCount = allRows.filter((row) => row.analysis.flags.length > 0).length;
   const legacyAttemptCount = attempts.filter(
     (attempt) => attempt.questionSnapshots.length === 0,
@@ -153,16 +140,30 @@ export default async function ItemAnalysisPage({
     ? Math.round(timed.reduce((sum, row) => sum + (row.analysis.averageTimeSeconds ?? 0), 0) / timed.length)
     : 0;
 
-  const pageHref = (nextPage: number) => {
-    const params = new URLSearchParams();
-    if (sp.q) params.set("q", sp.q);
-    if (testId) params.set("testId", testId);
-    if (section) params.set("section", section);
-    if (flag) params.set("flag", flag);
-    if (nextPage > 1) params.set("page", String(nextPage));
-    const query = params.toString();
-    return `/admin/analytics/items${query ? `?${query}` : ""}`;
-  };
+  const rows: ItemRow[] = pageRows.map(({ question, analysis }) => ({
+    id: question.id,
+    stem: plainText(question.stem).slice(0, 150),
+    testTitles: [...(testTitlesByQuestion.get(question.id) ?? [])].join(", "),
+    domain: question.domain,
+    skill: question.skill ?? "",
+    difficulty: question.difficulty,
+    exposures: analysis.exposures,
+    correct: analysis.correct,
+    pValuePercent: Math.round(analysis.pValue * 100),
+    averageTimeSeconds: analysis.averageTimeSeconds,
+    timedResponses: analysis.timedResponses,
+    flags: analysis.flags.map((itemFlag) => ({
+      key: itemFlag,
+      label: flagLabel(itemFlag),
+      severe: itemFlag === "DISTRACTOR_OUTDRAWS_KEY",
+    })),
+    responses: analysis.responses.map((response) => ({
+      response: response.response,
+      isKey: response.isKey,
+      count: response.count,
+      percentage: response.percentage,
+    })),
+  }));
 
   return (
     <>
@@ -183,128 +184,17 @@ export default async function ItemAnalysisPage({
         </p>
       )}
 
-      <form method="get" className="my-6 grid gap-3 rounded-2xl border border-border/80 bg-card p-4 shadow-sm md:grid-cols-[1fr_auto_auto_auto_auto]">
-        <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search stem, domain, or skill" />
-        <Select name="testId" defaultValue={testId ?? ""} className="md:w-56">
-          <SelectTrigger aria-label="Test" />
-          <SelectContent>
-            <SelectItem value="">All tests</SelectItem>
-            {tests.map((test) => (
-              <SelectItem key={test.id} value={test.id}>{test.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select name="section" defaultValue={section ?? ""} className="md:w-44">
-          <SelectTrigger aria-label="Section" />
-          <SelectContent>
-            <SelectItem value="">All sections</SelectItem>
-            <SelectItem value="READING_WRITING">R&amp;W</SelectItem>
-            <SelectItem value="MATH">Math</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select name="flag" defaultValue={flag ?? ""} className="md:w-56">
-          <SelectTrigger aria-label="Flag" />
-          <SelectContent>
-            <SelectItem value="">All flags</SelectItem>
-            <SelectItem value="TOO_EASY">Too easy</SelectItem>
-            <SelectItem value="TOO_HARD">Too hard</SelectItem>
-            <SelectItem value="DISTRACTOR_OUTDRAWS_KEY">Distractor outdraws key</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button type="submit">Filter</Button>
-      </form>
-
-      {rows.length === 0 ? (
-        <EmptyState icon={BarChart3} title="No analyzable items" description="Complete attempts or broaden the current filters." />
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border/80 bg-card shadow-sm">
-          <table className="w-full min-w-[980px] text-body">
-            <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Question</th>
-                <th className="px-4 py-3">Taxonomy</th>
-                <th className="px-4 py-3 text-center">Exposure</th>
-                <th className="px-4 py-3 text-center">p-value</th>
-                <th className="px-4 py-3 text-center">Avg. time</th>
-                <th className="px-4 py-3">Flags / responses</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {rows.map(({ question, analysis }) => (
-                <tr key={question.id} className="align-top hover:bg-muted/20">
-                  <td className="max-w-md px-4 py-4">
-                    <Link href={`/admin/questions/${question.id}`} className="font-semibold text-primary hover:underline">
-                      {plainText(question.stem).slice(0, 150) || "Untitled question"}
-                    </Link>
-                    <div className="mt-1 text-caption text-muted-foreground">
-                      {[...(testTitlesByQuestion.get(question.id) ?? [])].join(", ")}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-caption">
-                    <div className="font-medium">{question.domain}</div>
-                    <div className="text-muted-foreground">{question.skill || "No skill"} · {question.difficulty}</div>
-                  </td>
-                  <td className="px-4 py-4 text-center tabular">{analysis.exposures}</td>
-                  <td className="px-4 py-4 text-center">
-                    <div className="font-bold tabular">{Math.round(analysis.pValue * 100)}%</div>
-                    <div className="text-caption text-muted-foreground">{analysis.correct}/{analysis.exposures}</div>
-                  </td>
-                  <td className="px-4 py-4 text-center tabular">
-                    {analysis.averageTimeSeconds === null ? "—" : `${analysis.averageTimeSeconds}s`}
-                    <div className="text-caption text-muted-foreground">{analysis.timedResponses} timed</div>
-                  </td>
-                  <td className="max-w-sm px-4 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {analysis.flags.length === 0 ? <Badge variant="muted">No flag</Badge> : analysis.flags.map((itemFlag) => (
-                        <Badge key={itemFlag} variant={itemFlag === "DISTRACTOR_OUTDRAWS_KEY" ? "destructive" : "warning"}>
-                          {flagLabel(itemFlag)}
-                        </Badge>
-                      ))}
-                    </div>
-                    <details className="mt-2 text-caption">
-                      <summary className="cursor-pointer font-semibold text-primary">Response frequencies</summary>
-                      <div className="mt-2 space-y-1">
-                        {analysis.responses.map((response) => (
-                          <div key={response.response} className="flex justify-between gap-4">
-                            <span className={response.isKey ? "font-bold text-emerald-700" : "text-muted-foreground"}>
-                              {response.response}{response.isKey ? " (key)" : ""}
-                            </span>
-                            <span className="tabular">{response.count} · {response.percentage}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div className="mt-5 flex items-center justify-between">
-          {currentPage <= 1 ? (
-            <Button variant="secondary" size="sm" disabled>Previous</Button>
-          ) : (
-            <Button asChild variant="secondary" size="sm">
-              <Link href={pageHref(currentPage - 1)}>Previous</Link>
-            </Button>
-          )}
-          <span className="text-caption text-muted-foreground">Page {currentPage} of {totalPages}</span>
-          {currentPage >= totalPages ? (
-            <Button variant="secondary" size="sm" disabled>Next</Button>
-          ) : (
-            <Button asChild variant="secondary" size="sm">
-              <Link href={pageHref(currentPage + 1)}>Next</Link>
-            </Button>
-          )}
-        </div>
-      )}
-
-      <p className="mt-6 flex items-center gap-2 text-caption text-muted-foreground">
-        <Clock className="h-3.5 w-3.5" /> Flags require at least five completed-attempt exposures: p ≥ 0.90 is too easy; p ≤ 0.30 is too hard.
-      </p>
+      <div className="my-6">
+        <ItemsTable
+          rows={rows}
+          total={allRows.length}
+          pageSize={PAGE_SIZE}
+          tests={tests}
+          testId={testId}
+          section={section}
+          flag={flag}
+        />
+      </div>
     </>
   );
 }
@@ -314,6 +204,53 @@ function plainText(html: string) {
     .replace(/&nbsp;/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+type AnalyzedRow = {
+  question: { domain: string; skill: string | null; stem: string };
+  analysis: {
+    pValue: number;
+    exposures: number;
+    averageTimeSeconds: number | null;
+  };
+};
+
+/**
+ * `?sort=` over the computed analysis. Sorting happens here rather than in
+ * `DataTable` because p-value and mean time are derived from every completed
+ * attempt — the table only ever holds one page of them, so it cannot order the
+ * set it is not given.
+ *
+ * The default stays p-value ascending: the hardest items first is what this
+ * page is for.
+ */
+function comparator(
+  sort: string | undefined,
+  dir: SortDir,
+): (a: AnalyzedRow, b: AnalyzedRow) => number {
+  const factor = dir === "desc" ? -1 : 1;
+  const by: Record<string, (row: AnalyzedRow) => string | number> = {
+    question: (row) => plainText(row.question.stem).toLowerCase(),
+    taxonomy: (row) => `${row.question.domain} ${row.question.skill ?? ""}`.toLowerCase(),
+    exposure: (row) => row.analysis.exposures,
+    pValue: (row) => row.analysis.pValue,
+    // An untimed item has no mean, and -1 keeps every one of them together at
+    // one end rather than scattered through the middle as zeroes.
+    time: (row) => row.analysis.averageTimeSeconds ?? -1,
+  };
+  // `hasOwnProperty`, not `by[sort]` — see `orderByFrom`. `?sort=constructor`
+  // finds a truthy non-ordering on `Object.prototype` and `?sort=__proto__`
+  // finds something that is not callable at all.
+  const pick =
+    sort && Object.prototype.hasOwnProperty.call(by, sort) ? by[sort] : by.pValue;
+  return (a, b) => {
+    const left = pick(a);
+    const right = pick(b);
+    if (typeof left === "number" && typeof right === "number") {
+      return factor * (left - right);
+    }
+    return factor * String(left).localeCompare(String(right));
+  };
 }
 
 function isItemFlag(value: string | undefined): value is ItemFlag {

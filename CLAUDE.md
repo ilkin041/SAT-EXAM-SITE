@@ -301,7 +301,7 @@ row exactly as it did with `<option>`, and **"nothing selected" is `undefined`, 
 what shows the placeholder. Passing `name` renders a mirror input so GET filter forms and server
 actions still receive the value; there is no native `<select>` left in the app.
 
-`Table` and `DataTable` (T1.4) carry three rules worth knowing before T1.9 migrates the 13
+`Table` and `DataTable` (T1.4) carry three rules, all of which survived T1.9 migrating the 13
 hand-rolled tables onto them:
 
 - **`stickyHeader` caps the scroll container at `max-h-[70vh]`.** The wrapper that keeps a wide
@@ -358,8 +358,11 @@ The T1.6 five:
 - **`Pagination` shares `?page=` with `DataTable` on purpose**, plus `?perPage=`, named by
   `paginationParams(prefix)`. A `?perPage=` that is not one of the offered `pageSizeOptions` is
   ignored. Passing `onPageChange` (or `onPageSizeChange`) makes that half controlled and it writes
-  no URL. It renders nothing at `total: 0` — that surface wants an `EmptyState`. **It has not been
-  wired into `DataTable`,** which still has its own inline prev/next; T1.9 owns that swap.
+  no URL. It renders nothing at `total: 0` — that surface wants an `EmptyState`. **T1.9 wired it
+  into `DataTable`,** replacing that component's inline prev/next; the swap was a deletion rather
+  than an integration, because the two already shared `?page=` on purpose. `DataTable` passes
+  `page` and `onPageChange` — it has already clamped the page against `total`, and letting
+  `Pagination` re-read a hand-edited `?page=` would put the overshoot back on screen.
 - **`Separator` is for the two cases a `border-t` cannot do**: vertical, and labelled. Everything
   else should stay a border. Decorative by default; the labelled form carries no role at all,
   because a separator's children are presentational and the label would be hidden.
@@ -400,6 +403,34 @@ The T1.7 three — the score-report language, now shared by results, progress an
   primitive tempted to reach for `Tooltip`, `Modal` or `Sheet` behind an optional prop has the same
   problem. Compose the trigger at the call site around `DomainBarLabel`.
 
+T1.9 migrated all 13 hand-rolled tables and left four rules behind:
+
+- **`dataTableParams` lives in `src/lib/table-params.ts`, not in `data-table.tsx`.** Every export of
+  a `"use client"` module — plain functions included — becomes a client *reference* when a Server
+  Component imports it, so calling the client copy on the server throws at request time rather than
+  at build time. `data-table.tsx` re-exports it for client call sites; **a server page must import
+  it from `@/lib/table-params`.** That module also has `readTableParams` (searchParams → `{q, sort,
+  dir, page, skip}`) and `orderByFrom`, which maps `?sort=` onto a **whitelist** of orderings.
+  The whitelist lookup is `hasOwnProperty`, not `orderings[sort]`: a plain object literal still
+  inherits from `Object.prototype`, so `?sort=constructor` found a truthy non-ordering and
+  `?sort=__proto__` found something that was not callable. Both crashed the page until
+  `tests/table-params.test.ts` went looking. The same fix is inlined in the analytics comparator.
+- **`DataTableFilter` is what the `filters` slot is for.** A `Select` that writes its param to the
+  URL on change and resets the table's page. There is no Filter button anywhere any more — the
+  search box already navigates on its own debounce, and a bar where one control applies itself and
+  the other waits for a button is unpredictable. The param is **not** run through `paramPrefix`: a
+  filter belongs to the page's query, not to the table's view state.
+- **A server page whose filters live in its `where` must pass `filtersActive`.** The component can
+  only see its own search box, so without that flag an over-filtered list renders as "no rows yet"
+  — an empty database rather than a narrow filter. `filterParams` names what "Clear filters" wipes.
+- **Not every table wants a `DataTable`.** Four deliberately stayed on the bare `Table` primitives:
+  `/admin` (the eight most recent attempts — searching a deliberately truncated window lies about
+  what it holds), `/dashboard` history (the abandoned-attempt disclosure is a grouped `<tr>` a flat
+  row list cannot express, and it is a student route), the import preview (rows that have no ids
+  and vanish on reload — a shareable URL would restore a filter over nothing), and the results
+  difficulty breakdown (three fixed rows; `DataTable` is a client component and this page is the
+  one whose bundle T1.7 already fought over). All four stayed at zero client JavaScript.
+
 T1.8 added two `Button` options:
 
 - **`variant="soft"` is the repeated-list action.** A rail of five `primary` cards fights itself
@@ -439,6 +470,9 @@ Do not guess. Ask if a task depends on an unresolved one.
    and the stats strip.
 5. ~~Chart library or hand-rolled?~~ **Answered: hand-rolled.** `score-trend.tsx` already is, and no
    charting dep is installed. Ratified.
-6. **zustand** — installed at `^5.0.2` with zero imports. Use in T7.2 or remove.
+6. ~~zustand — installed with zero imports.~~ **Answered in T1.9: removed.** Nothing in the app
+   had state that outgrew React context — the toast provider is one and works — so the dependency
+   was uninstalled rather than given a make-work call site. **`docs/prompts/C-student.md:318` and
+   T7.2 still plan a `use-test-store.ts`; that task must `npm i zustand` first.**
 7. **Mobile test-taking: support or warn?** Blocks T7.4.
 8. **Localisation** (Azerbaijani/Russian). Cheap now, expensive after Phase 8.

@@ -12,6 +12,7 @@ import {
   Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useToast } from "@/components/toast";
 import { cn } from "@/lib/utils";
 
@@ -442,65 +443,68 @@ function BankPreview({
         {count - duplicateCount + keepDuplicateIndices.size === 1 ? "" : "s"} will be added.
         {duplicateCount > 0 && ` ${duplicateCount} likely duplicate${duplicateCount === 1 ? "" : "s"} will be skipped by default.`}
       </div>
-      <div className="overflow-hidden rounded-md border border-border bg-card">
-        <table className="w-full text-xs">
-          <thead className="bg-muted/50 text-left uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="p-2">Type</th>
-              <th className="p-2">Domain</th>
-              <th className="p-2">Diff.</th>
-              <th className="p-2">Stem preview</th>
-              <th className="p-2">Duplicate handling</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {questions.map((q, i) => (
-              <tr key={i}>
-                <td className="p-2 text-muted-foreground">
-                  {q.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
-                </td>
-                <td className="p-2">
-                  {q.domain}
-                  {q.skill && (
-                    <span className="text-muted-foreground"> · {q.skill}</span>
-                  )}
-                </td>
-                <td className="p-2 text-muted-foreground">{q.difficulty}</td>
-                <td className="p-2">{q.stemPreview}</td>
-                <td className="p-2">
-                  {q.duplicate || q.duplicateImportIndex !== null ? (
-                    <div className="space-y-1">
-                      {q.duplicate ? (
-                        <Link
-                          href={`/admin/questions/${q.duplicate.id}`}
-                          target="_blank"
-                          className="block text-amber-700 underline dark:text-amber-300"
-                        >
-                          Existing question
-                        </Link>
-                      ) : (
-                        <span className="block text-amber-700 dark:text-amber-300">
-                          Same as import row {(q.duplicateImportIndex ?? 0) + 1}
-                        </span>
-                      )}
-                      <label className="flex items-center gap-1.5">
-                        <input
-                          type="checkbox"
-                          checked={keepDuplicateIndices.has(q.index)}
-                          onChange={() => onToggleDuplicate(q.index)}
-                        />
-                        Keep anyway
-                      </label>
-                    </div>
-                  ) : (
-                    <span className="text-green-700 dark:text-green-300">New</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/*
+        `Table` rather than `DataTable` (T1.9). This is a preview of a file that
+        has not been imported yet: its rows have no ids, they carry per-row
+        checkbox state, and they vanish on reload. `DataTable` puts its search,
+        sort and page into the URL — a shareable link to rows that only exist in
+        this tab's memory would restore a filter over nothing.
+      */}
+      <Table stickyHeader containerClassName="max-h-96 rounded-md">
+        <THead>
+          <TR>
+            <TH>Type</TH>
+            <TH>Domain</TH>
+            <TH>Diff.</TH>
+            <TH>Stem preview</TH>
+            <TH>Duplicate handling</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {questions.map((q, i) => (
+            <TR key={i}>
+              <TD className="text-muted-foreground">
+                {q.type === "MULTIPLE_CHOICE" ? "MC" : "SPR"}
+              </TD>
+              <TD>
+                {q.domain}
+                {q.skill && <span className="text-muted-foreground"> · {q.skill}</span>}
+              </TD>
+              <TD className="text-muted-foreground">{q.difficulty}</TD>
+              <TD>{q.stemPreview}</TD>
+              <TD>
+                {q.duplicate || q.duplicateImportIndex !== null ? (
+                  <div className="space-y-1">
+                    {q.duplicate ? (
+                      <Link
+                        href={`/admin/questions/${q.duplicate.id}`}
+                        target="_blank"
+                        className="block text-amber-700 underline dark:text-amber-300"
+                      >
+                        Existing question
+                      </Link>
+                    ) : (
+                      <span className="block text-amber-700 dark:text-amber-300">
+                        Same as import row {(q.duplicateImportIndex ?? 0) + 1}
+                      </span>
+                    )}
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={keepDuplicateIndices.has(q.index)}
+                        onChange={() => onToggleDuplicate(q.index)}
+                      />
+                      Keep anyway
+                    </label>
+                  </div>
+                ) : (
+                  <span className="text-green-700 dark:text-green-300">New</span>
+                )}
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
     </div>
   );
 }

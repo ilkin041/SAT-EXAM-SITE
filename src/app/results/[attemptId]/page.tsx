@@ -20,6 +20,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { DomainBarList } from "@/components/ui/domain-bar";
 import { Progress } from "@/components/ui/progress";
 import { ScoreDial } from "@/components/ui/score-dial";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import {
   computeDifficultyBreakdown,
   computeDomainBreakdown,
@@ -364,50 +365,53 @@ function DifficultyTable({
 
   return (
     <div className="rounded-2xl border border-border/80 bg-card p-5 md:p-6 shadow-xs hover:shadow-sm transition-all duration-200">
-      <div className="overflow-x-auto">
-        <table className="w-full text-body">
-          <thead>
-            <tr className="border-b border-border/60 text-left text-caption uppercase tracking-wide text-muted-foreground">
-              <th className="pb-3.5 font-semibold">Difficulty</th>
-              <th className="pb-3.5 text-center font-semibold">Correct</th>
-              <th className="pb-3.5 text-center font-semibold">Total</th>
-              <th className="pb-3.5 text-center font-semibold">Accuracy</th>
-              <th className="pb-3.5 pl-6 font-semibold">Visual Accuracy</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/60">
-            {rows.map((r) => {
-              const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0;
-              const cfg = difficultyDisplay(r.difficulty);
-              return (
-                <tr key={r.difficulty} className="transition-colors hover:bg-muted/10">
-                  <td className="py-4">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-caption font-semibold border",
-                        cfg.badge,
-                      )}
-                    >
-                      {cfg.label}
-                    </span>
-                  </td>
-                  <td className="py-4 text-center tabular font-medium text-foreground">{r.correct}</td>
-                  <td className="py-4 text-center tabular text-muted-foreground font-medium">
-                    {r.total}
-                  </td>
-                  <td className="py-4 text-center font-bold tabular text-foreground">{pct}%</td>
-                  <td className="py-4 pl-6 min-w-[120px]">
-                    {/* Difficulty colours, not grades: 40% on hard questions is
-                        not the same news as 40% on easy ones, so the bar keeps
-                        the row's own colour. */}
-                    <Progress value={pct} barClassName={cfg.bar} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/*
+        `Table` rather than `DataTable` (T1.9): three fixed rows — easy, medium,
+        hard. There is nothing to search, nothing to page, and the ordering is
+        the meaning. `DataTable` is a client component, and importing one here
+        would put its search box, sorter and pager into the results bundle to
+        render three rows that never change.
+      */}
+      <Table containerClassName="rounded-none border-0 bg-transparent">
+        <THead>
+          <TR>
+            <TH>Difficulty</TH>
+            <TH numeric>Correct</TH>
+            <TH numeric>Total</TH>
+            <TH numeric>Accuracy</TH>
+            <TH>Visual accuracy</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.map((r) => {
+            const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0;
+            const cfg = difficultyDisplay(r.difficulty);
+            return (
+              <TR key={r.difficulty}>
+                <TD>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2.5 py-0.5 text-caption font-semibold",
+                      cfg.badge,
+                    )}
+                  >
+                    {cfg.label}
+                  </span>
+                </TD>
+                <TD numeric className="font-medium text-foreground">{r.correct}</TD>
+                <TD numeric className="font-medium text-muted-foreground">{r.total}</TD>
+                <TD numeric className="font-bold text-foreground">{pct}%</TD>
+                <TD className="min-w-[120px]">
+                  {/* Difficulty colours, not grades: 40% on hard questions is
+                      not the same news as 40% on easy ones, so the bar keeps
+                      the row's own colour. */}
+                  <Progress value={pct} barClassName={cfg.bar} />
+                </TD>
+              </TR>
+            );
+          })}
+        </TBody>
+      </Table>
       {hint && (
         <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50/50 px-4 py-3 text-caption text-amber-800 dark:bg-amber-950/20 dark:text-amber-200 leading-relaxed">
           {hint}

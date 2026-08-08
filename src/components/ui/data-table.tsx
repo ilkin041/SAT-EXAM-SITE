@@ -5,14 +5,19 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
-  ChevronLeft,
-  ChevronRight,
   ChevronsUpDown,
   Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import {
   Table,
   TableCaption,
@@ -25,6 +30,7 @@ import {
   TR,
   type HideBelow,
 } from "@/components/ui/table";
+import { dataTableParams as tableParamNames, type SortDir } from "@/lib/table-params";
 import { cn } from "@/lib/utils";
 
 /**
@@ -77,9 +83,13 @@ export type Column<T> = {
   searchValue?: (row: T) => string;
   /** Accessible header when `header` is empty. */
   srHeader?: string;
+  /**
+   * Replaces the header's text with a control — a select-all checkbox, in
+   * practice. Not sortable: a header that is both a sort button and a
+   * checkbox has two meanings for one click. `srHeader` still names the column.
+   */
+  headerCell?: React.ReactNode;
 };
-
-type SortDir = "asc" | "desc";
 
 export interface DataTableProps<T> {
   columns: ReadonlyArray<Column<T>>;
@@ -109,6 +119,15 @@ export interface DataTableProps<T> {
   };
   /** Noun for the result count and the empty message: "questions", "attempts". */
   itemNoun?: string;
+  /**
+   * A page-level filter is narrowing the rows. The search box is the only
+   * narrowing this component can see for itself, so a server page whose
+   * `filters` are in its own `where` clause has to say so — otherwise an
+   * over-filtered list reads as an empty database.
+   */
+  filtersActive?: boolean;
+  /** The params "Clear filters" removes alongside the search and the page. */
+  filterParams?: ReadonlyArray<string>;
   /** Disambiguates the URL params when a page carries two tables. */
   paramPrefix?: string;
   className?: string;
@@ -118,13 +137,113 @@ export interface DataTableProps<T> {
  * The URL params a `DataTable` reads and writes. Server pages should read these
  * out of `searchParams` rather than spelling the keys out again.
  */
-export function dataTableParams(paramPrefix = "") {
-  return {
-    q: `${paramPrefix}q`,
-    sort: `${paramPrefix}sort`,
-    dir: `${paramPrefix}dir`,
-    page: `${paramPrefix}page`,
-  } as const;
+export { dataTableParams } from "@/lib/table-params";
+
+export interface DataTableFilterOption {
+  /** `""` is the "All …" row. It deletes the param rather than setting it. */
+  value: string;
+  label: string;
+}
+
+export interface DataTableFilterProps {
+  /**
+   * The URL param this filter owns. Not run through `paramPrefix` — a filter
+   * belongs to the page's query, not to the table's view state, and a server
+   * page reads it straight out of `searchParams`.
+   */
+  param: string;
+  /** Current value. Read on the server so the first paint already agrees. */
+  value?: string;
+  options: ReadonlyArray<DataTableFilterOption>;
+  /** Accessible name for the trigger. */
+  label: string;
+  /**
+   * The table's `paramPrefix`, so changing a filter resets that table's page.
+   * Landing on page 7 of a three-page result is the bug this prevents.
+   */
+  paramPrefix?: string;
+  className?: string;
+}
+
+/**
+ * A `Select` that writes its value straight to the URL — the control the
+ * `filters` slot is for.
+ *
+ * **It commits on change, and there is no Filter button.** The search box next
+ * to it already navigates on its own 300ms debounce, and a bar where one
+ * control applies itself and the other waits for a button is a bar nobody can
+ * predict. A filter that submits on selection is also one fewer keyboard stop
+ * between choosing and seeing.
+ */
+export function DataTableFilter(props: DataTableFilterProps) {
+  return (
+    <React.Suspense fallback={<DataTableFilterFallback {...props} />}>
+      <DataTableFilterInner {...props} />
+    </React.Suspense>
+  );
+}
+
+function DataTableFilterFallback({
+  value,
+  options,
+  label,
+  className,
+}: DataTableFilterProps) {
+  return (
+    <Select value={value ?? ""} disabled className={className}>
+      <SelectTrigger size="sm" aria-label={label} />
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function DataTableFilterInner({
+  param,
+  value,
+  options,
+  label,
+  paramPrefix = "",
+  className,
+}: DataTableFilterProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [, startTransition] = React.useTransition();
+
+  const onValueChange = React.useCallback(
+    (next: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next) params.set(param, next);
+      else params.delete(param);
+      params.delete(tableParamNames(paramPrefix).page);
+      const queryString = params.toString();
+      startTransition(() => {
+        router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [param, paramPrefix, pathname, router, searchParams],
+  );
+
+  return (
+    <Select value={value ?? ""} onValueChange={onValueChange} className={className}>
+      <SelectTrigger size="sm" aria-label={label} />
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 /**
@@ -171,6 +290,8 @@ function DataTableInner<T>({
   defaultSort,
   empty,
   itemNoun = "results",
+  filtersActive = false,
+  filterParams,
   paramPrefix = "",
   className,
 }: DataTableProps<T>) {
@@ -179,7 +300,7 @@ function DataTableInner<T>({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = React.useTransition();
 
-  const names = React.useMemo(() => dataTableParams(paramPrefix), [paramPrefix]);
+  const names = React.useMemo(() => tableParamNames(paramPrefix), [paramPrefix]);
 
   const query = searchParams.get(names.q) ?? "";
   const sortKey = searchParams.get(names.sort) ?? defaultSort?.key;
@@ -259,7 +380,23 @@ function DataTableInner<T>({
   // "Nothing here yet" and "nothing matched" are different messages. In server
   // mode the component only ever sees one page, so the query is the only signal
   // available — which is the right one.
-  const filteredToNothing = showsNothing && hasQuery;
+  const filteredToNothing = showsNothing && (hasQuery || filtersActive);
+
+  // Clears the search, the page and every page-level filter in one go. Written
+  // out rather than routed through `setParams` because the filter params are
+  // the page's, not this component's, so they are not in `names`.
+  const clearAll = React.useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(names.q);
+    params.delete(names.page);
+    for (const param of filterParams ?? []) params.delete(param);
+    const queryString = params.toString();
+    startTransition(() => {
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+        scroll: false,
+      });
+    });
+  }, [filterParams, names, pathname, router, searchParams]);
 
   const handleSort = React.useCallback(
     (column: Column<T>) => {
@@ -279,11 +416,8 @@ function DataTableInner<T>({
     (typeof search === "object" ? search.placeholder : undefined) ??
     `Search ${itemNoun}…`;
 
+  // The range line moved to `Pagination` along with the rest of the footer.
   const busy = loading || isPending;
-  const from = resultCount === 0 ? 0 : (page - 1) * pageSize + 1;
-  const to = isServer
-    ? Math.min(page * pageSize, resultCount)
-    : (page - 1) * pageSize + pageRows.length;
 
   return (
     <div className={cn("w-full min-w-0 space-y-4", className)}>
@@ -329,14 +463,19 @@ function DataTableInner<T>({
                 <TableEmpty
                   colSpan={columns.length}
                   icon={Search}
-                  title={`No ${itemNoun} match “${query}”`}
-                  description="Try a shorter search, or clear it to see everything."
+                  title={
+                    hasQuery
+                      ? `No ${itemNoun} match “${query}”`
+                      : `No ${itemNoun} match these filters`
+                  }
+                  description={
+                    hasQuery
+                      ? "Try a shorter search, or clear it to see everything."
+                      : "Widen a filter, or clear them to see everything."
+                  }
                   action={
-                    <Button
-                      variant="secondary"
-                      onClick={() => setParams({ q: undefined, page: undefined })}
-                    >
-                      Clear search
+                    <Button variant="secondary" onClick={clearAll}>
+                      {hasQuery && !filtersActive ? "Clear search" : "Clear filters"}
                     </Button>
                   }
                 />
@@ -368,45 +507,29 @@ function DataTableInner<T>({
         )}
       </Table>
 
-      {!showsNothing && (
-        <nav
-          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-          aria-label={`${itemNoun} pagination`}
-        >
-          <p className="text-caption text-muted-foreground" aria-live="polite">
-            <span className="tabular">
-              {from}–{to}
-            </span>{" "}
-            of <span className="tabular">{resultCount}</span> {itemNoun}
-          </p>
+      {/*
+        `Pagination` rather than an inline prev/next (T1.9). The two had been
+        duplicating the range line and the page maths since T1.6, and they
+        already shared `?page=` by design — `paginationParams` and
+        `dataTableParams` name the same key on purpose — so the swap is a
+        deletion, not an integration. It buys numbered pages and first/last
+        jumps, which two chevrons could not offer.
 
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => goToPage(page - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" aria-hidden />
-                Previous
-              </Button>
-              <span className="px-1 text-caption text-muted-foreground">
-                Page <span className="tabular">{page}</span> of{" "}
-                <span className="tabular">{totalPages}</span>
-              </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={page >= totalPages}
-                onClick={() => goToPage(page + 1)}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" aria-hidden />
-              </Button>
-            </div>
-          )}
-        </nav>
+        `page` is passed rather than left to the URL because this component has
+        already clamped it against `total`; letting `Pagination` re-read the raw
+        `?page=` would put a hand-edited overshoot back on screen. `goToPage`
+        keeps the writes going through `setParams`, so a page change still
+        clears nothing else and still lands in the same transition.
+      */}
+      {!showsNothing && (
+        <Pagination
+          total={resultCount}
+          pageSize={pageSize}
+          page={page}
+          onPageChange={goToPage}
+          itemNoun={itemNoun}
+          paramPrefix={paramPrefix}
+        />
       )}
     </div>
   );
@@ -448,7 +571,12 @@ function HeaderRow<T>({
                   : undefined
               }
             >
-              {column.sortable && onSort ? (
+              {column.headerCell ? (
+                <>
+                  {column.headerCell}
+                  {column.srHeader && <span className="sr-only">{column.srHeader}</span>}
+                </>
+              ) : column.sortable && onSort ? (
                 // A real button, so it is tabbable, Enter/Space-operable and
                 // wears the global :focus-visible ring. `-mx-1 px-1` keeps the
                 // ring off the text without shifting the column.

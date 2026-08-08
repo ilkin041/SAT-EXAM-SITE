@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, ArrowLeft, BookOpen, TrendingUp, User, Users } from "lucide-react";
+import { Activity, ArrowLeft, TrendingUp, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import { ScoreTrend } from "@/components/score-trend";
+import {
+  GroupMembersTable,
+  GroupTestsTable,
+  type GroupMemberRow,
+  type GroupTestRow,
+} from "./_components/group-tables";
 import {
   Select,
   SelectContent,
@@ -16,9 +22,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { computeAttemptScorePoint } from "@/lib/analytics";
 import {
   addStudentToGroup,
-  removeStudentFromGroup,
   assignTestToGroup,
-  removeTestFromGroup,
 } from "../actions";
 
 export async function generateMetadata({
@@ -89,7 +93,7 @@ export default async function GroupDetailsPage({
     ? Math.round(groupScorePoints.reduce((sum, point) => sum + point.total, 0) / groupScorePoints.length)
     : null;
   const activeStudents = group.users.filter((member) => member.attempts.length > 0).length;
-  const memberAverages = new Map(
+  const memberAverages = new Map<string, number | null>(
     [...memberScores].map(([memberId, scores]) => [
       memberId,
       scores.length
@@ -97,6 +101,18 @@ export default async function GroupDetailsPage({
         : null,
     ]),
   );
+
+  const memberRows: GroupMemberRow[] = group.users.map((member) => ({
+    id: member.id,
+    name: member.name,
+    email: member.email,
+    completedCount: member.attempts.length,
+    average: memberAverages.get(member.id) ?? null,
+  }));
+  const testRows: GroupTestRow[] = group.tests.map((test) => ({
+    id: test.id,
+    title: test.title,
+  }));
 
   return (
     <>
@@ -133,56 +149,19 @@ export default async function GroupDetailsPage({
           <div className="mb-4 rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
             <h3 className="mb-2 text-body font-semibold">Add Student</h3>
             <form action={addStudentToGroup.bind(null, group.id)} className="flex gap-2">
-              <input
+              <Input
                 type="email"
                 name="email"
                 required
+                aria-label="Student email address"
                 placeholder="Student email address"
-                className="flex-1 rounded-xl border border-input/80 bg-card px-3 py-1.5 text-body focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                className="flex-1"
               />
               <Button type="submit" size="sm">Add</Button>
             </form>
           </div>
 
-          {group.users.length === 0 ? (
-            <EmptyState
-              icon={User}
-              title="No students"
-              description="Add students by email to give them access to this group's tests."
-            />
-          ) : (
-            <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
-              <table className="w-full text-body">
-                <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Name / Email</th>
-                    <th className="px-4 py-3 text-center font-semibold">Completed</th>
-                    <th className="px-4 py-3 text-center font-semibold">Avg.</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {group.users.map((u) => (
-                    <tr key={u.id} className="transition-colors hover:bg-muted/30">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-foreground">{u.name || "—"}</div>
-                        <div className="text-caption text-muted-foreground">{u.email}</div>
-                      </td>
-                      <td className="px-4 py-3 text-center tabular">{u.attempts.length}</td>
-                      <td className="px-4 py-3 text-center font-semibold tabular">{memberAverages.get(u.id) ?? "—"}</td>
-                      <td className="px-4 py-3 text-right">
-                        <form action={removeStudentFromGroup.bind(null, group.id, u.id)}>
-                          <Button type="submit" variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive">
-                            Remove
-                          </Button>
-                        </form>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <GroupMembersTable groupId={group.id} rows={memberRows} />
         </section>
 
         {/* --- TESTS --- */}
@@ -210,38 +189,7 @@ export default async function GroupDetailsPage({
             </form>
           </div>
 
-          {group.tests.length === 0 ? (
-            <EmptyState
-              icon={BookOpen}
-              title="No tests assigned"
-              description="Assign tests to make them visible to students in this group."
-            />
-          ) : (
-            <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
-              <table className="w-full text-body">
-                <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Test Title</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {group.tests.map((t) => (
-                    <tr key={t.id} className="transition-colors hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium text-foreground">{t.title}</td>
-                      <td className="px-4 py-3 text-right">
-                        <form action={removeTestFromGroup.bind(null, group.id, t.id)}>
-                          <Button type="submit" variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive">
-                            Remove
-                          </Button>
-                        </form>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <GroupTestsTable groupId={group.id} rows={testRows} />
         </section>
       </div>
     </>

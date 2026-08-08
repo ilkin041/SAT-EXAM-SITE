@@ -1,11 +1,10 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format-date";
 import { AdminResetPasswordModal } from "@/components/admin-reset-password-modal";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { ScoreTrend } from "@/components/score-trend";
 import { computeAttemptScorePoint } from "@/lib/analytics";
@@ -15,8 +14,19 @@ import {
   computeScaledScores,
   getScoreFidelity,
 } from "@/lib/scoring";
+import {
+  UserAttemptsTable,
+  type UserAttemptRow,
+} from "./_components/user-attempts-table";
 
 export const metadata = { title: "User detail — Admin" };
+
+const STATUS_LABELS = {
+  IN_PROGRESS: "In progress",
+  COMPLETED: "Completed",
+  EXPIRED: "Expired",
+  ABANDONED: "Abandoned",
+} as const;
 
 export default async function UserDetailPage({
   params,
@@ -51,6 +61,34 @@ export default async function UserDetailPage({
     .map(computeAttemptScorePoint)
     .filter((point): point is NonNullable<typeof point> => point !== null)
     .filter((point) => point.fidelity === "FULL_LENGTH");
+
+  const attemptRows: UserAttemptRow[] = user.attempts.map((attempt) => {
+    const liveResults = attempt.moduleResults.filter((r) => r.module && r.module.section);
+    const moduleResults = liveResults.map((r) => ({
+      sectionType: r.module.section.type,
+      correctCount: r.correctCount,
+      totalCount: r.totalCount,
+      moduleId: r.moduleId,
+      routedTo: r.routedTo,
+      moduleNumber: r.module.moduleNumber,
+      difficulty: r.module.difficulty,
+    }));
+    const raw = computeRawScores(moduleResults);
+    const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
+    const scoreFidelity = getScoreFidelity(raw);
+    const scored = attempt.status === "COMPLETED" && scoreFidelity !== "INCOMPLETE";
+
+    return {
+      id: attempt.id,
+      testTitle: attempt.test.title,
+      status: attempt.status,
+      statusLabel: STATUS_LABELS[attempt.status],
+      total: scored ? scaled.total : null,
+      estimated: scoreFidelity === "ESTIMATE",
+      started: formatDate(attempt.startedAt),
+      startedAtMs: attempt.startedAt.getTime(),
+    };
+  });
 
   return (
     <>
@@ -106,93 +144,12 @@ export default async function UserDetailPage({
       {/* ----- Recent attempts ----- */}
       <section className="mt-10">
         <h2 className="mb-3 text-h3">Recent attempts</h2>
-        {user.attempts.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-body text-muted-foreground">
-            This user hasn&apos;t started any attempts yet.
-          </p>
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-            <table className="w-full text-body">
-              <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2.5 font-medium">Test</th>
-                  <th className="px-4 py-2.5 font-medium">Status</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Score</th>
-                  <th className="px-4 py-2.5 font-medium">Started</th>
-                  <th className="px-4 py-2.5" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {user.attempts.map((a) => {
-                  const liveResults = a.moduleResults.filter(
-                    (r) => r.module && r.module.section,
-                  );
-                  const moduleResults = liveResults.map((r) => ({
-                    sectionType: r.module.section.type,
-                    correctCount: r.correctCount,
-                    totalCount: r.totalCount,
-                    moduleId: r.moduleId,
-                    routedTo: r.routedTo,
-                    moduleNumber: r.module.moduleNumber,
-                    difficulty: r.module.difficulty,
-                  }));
-                  const raw = computeRawScores(moduleResults);
-                  const scaled = computeScaledScores(raw, computeAttemptRoutes(moduleResults));
-                  const scoreFidelity = getScoreFidelity(raw);
-                  const isDone = a.status === "COMPLETED";
-                  return (
-                    <tr key={a.id} className="transition-colors hover:bg-accent/40">
-                      <td className="px-4 py-3 font-medium">{a.test.title}</td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant={
-                            a.status === "COMPLETED"
-                              ? "success"
-                              : a.status === "IN_PROGRESS"
-                                ? "warning"
-                                : "muted"
-                          }
-                        >
-                          {a.status === "IN_PROGRESS"
-                            ? "In progress"
-                            : isDone
-                              ? "Completed"
-                              : a.status === "EXPIRED"
-                                ? "Expired"
-                                : "Abandoned"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right tabular">
-                        {isDone && scoreFidelity !== "INCOMPLETE" ? (
-                          <span className="font-semibold">
-                            {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-caption text-muted-foreground">
-                        {formatDate(a.startedAt)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button asChild variant="secondary" size="sm">
-                          <Link href={`/admin/attempts/${a.id}`}>Open</Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <UserAttemptsTable rows={attemptRows} />
       </section>
 
       {/* ----- Danger zone ----- */}
       <section className="mt-12">
-        <h2 className="mb-3 text-h3 text-destructive">
-          Danger zone
-        </h2>
+        <h2 className="mb-3 text-h3 text-destructive">Danger zone</h2>
         <div className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-body font-semibold">Reset password</div>
@@ -207,3 +164,4 @@ export default async function UserDetailPage({
     </>
   );
 }
+

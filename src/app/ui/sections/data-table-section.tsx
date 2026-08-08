@@ -5,13 +5,12 @@ import { formatDate } from "@/lib/format-date";
 import { BookOpen, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable, type Column } from "@/components/ui/data-table";
+import { useSearchParams } from "next/navigation";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+  DataTable,
+  DataTableFilter,
+  type Column,
+} from "@/components/ui/data-table";
 import { GallerySection, Row } from "../gallery-section";
 
 /**
@@ -189,8 +188,22 @@ const QUESTION_COLUMNS: Column<Question>[] = [
   },
 ];
 
+const SECTION_OPTIONS = [
+  { value: "", label: "All sections" },
+  { value: "English", label: "English" },
+  { value: "Math", label: "Math" },
+];
+
+/**
+ * The filter is a `DataTableFilter`, so the section lives in `?qbSection=`
+ * alongside the table's own params rather than in component state — reload the
+ * page and the filter is still applied. The rows are still narrowed here,
+ * because this example is in client mode; a server-mode page would put the same
+ * value into its `where` instead and nothing else would change.
+ */
 function QuestionBankExample() {
-  const [section, setSection] = React.useState("");
+  const searchParams = useSearchParams();
+  const section = searchParams.get("qbSection") ?? "";
   const rows = React.useMemo(
     () => (section ? QUESTIONS.filter((q) => q.section === section) : QUESTIONS),
     [section],
@@ -207,20 +220,22 @@ function QuestionBankExample() {
       stickyHeader
       search={{ placeholder: "Search stem, domain…" }}
       defaultSort={{ key: "updatedAt", dir: "desc" }}
+      filtersActive={Boolean(section)}
+      filterParams={["qbSection"]}
       empty={{
         icon: BookOpen,
         title: "No questions in this section",
         description: "Clear the section filter to see the whole bank.",
       }}
       filters={
-        <Select value={section} onValueChange={setSection} className="w-44">
-          <SelectTrigger size="sm" aria-label="Section" />
-          <SelectContent>
-            <SelectItem value="">All sections</SelectItem>
-            <SelectItem value="English">English</SelectItem>
-            <SelectItem value="Math">Math</SelectItem>
-          </SelectContent>
-        </Select>
+        <DataTableFilter
+          param="qbSection"
+          value={section}
+          label="Section"
+          options={SECTION_OPTIONS}
+          paramPrefix="qb"
+          className="w-44"
+        />
       }
     />
   );
@@ -249,7 +264,13 @@ export function DataTableSpecimens() {
         label="Nine columns"
         note="narrow the pane: Code and Type drop below lg, Domain and Updated below md, Section below sm"
       >
-        <QuestionBankExample />
+        {/* `useSearchParams` opts its subtree into client rendering, and Next
+            fails the build on a prerendered page holding one without a
+            boundary. `DataTable` and `DataTableFilter` own theirs; this example
+            reads the param itself, so it owns one too. */}
+        <React.Suspense fallback={null}>
+          <QuestionBankExample />
+        </React.Suspense>
       </Row>
 
       <Row label="Loading" note="skeleton rows keep the column shape">
@@ -294,7 +315,10 @@ export function DataTableSection() {
         "pasted to someone else; `paramPrefix` keeps two tables on one page apart. " +
         "`mode` chooses where the work happens: client mode takes every row and " +
         "does it here, server mode takes one page plus a `total` and lets the " +
-        "page's own query do it. The same four params drive both."
+        "page's own query do it. The same four params drive both. " +
+        "`DataTableFilter` is the control the filter slot is for: a `Select` " +
+        "that commits to the URL on change and resets the table's page, so a " +
+        "filter bar never needs a Filter button."
       }
       viewports
     >

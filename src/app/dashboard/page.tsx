@@ -8,6 +8,7 @@ import { TestCard } from "@/components/test-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { ScoreTrend } from "@/components/score-trend";
 import { AbandonedRows } from "./abandoned-rows";
 import { computeAttemptScorePoint } from "@/lib/analytics";
@@ -232,32 +233,38 @@ export default async function DashboardPage() {
               description="Start one of the practice tests above to see your results here."
             />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-body">
-                  <thead className="border-b border-border bg-muted/40 text-left text-caption uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                      <th className="px-6 py-4 font-semibold">Test Name</th>
-                      <th className="px-6 py-4 font-semibold">Status</th>
-                      <th className="px-6 py-4 font-semibold text-center">Score</th>
-                      <th className="px-6 py-4 font-semibold">Date Started</th>
-                      <th className="px-6 py-4" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {activeAttempts.map(renderAttemptRow)}
-                    {abandonedAttempts.length > 0 && (
-                      <AbandonedRows
-                        count={abandonedAttempts.length}
-                        columnCount={HISTORY_COLUMN_COUNT}
-                      >
-                        {abandonedAttempts.map(renderAttemptRow)}
-                      </AbandonedRows>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            /*
+              `Table` rather than `DataTable` (T1.9). Two reasons, either of
+              which is enough: abandoned attempts collapse behind a disclosure
+              row, which is a grouped `<tr>` a flat row list cannot express; and
+              this is a student route showing at most ten rows, so a search box,
+              a sorter and a pager would be client JavaScript bought for a list
+              nobody needs to search.
+            */
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Test name</TH>
+                  <TH>Status</TH>
+                  <TH numeric>Score</TH>
+                  <TH hideBelow="sm">Date started</TH>
+                  <TH>
+                    <span className="sr-only">Actions</span>
+                  </TH>
+                </TR>
+              </THead>
+              <TBody>
+                {activeAttempts.map(renderAttemptRow)}
+                {abandonedAttempts.length > 0 && (
+                  <AbandonedRows
+                    count={abandonedAttempts.length}
+                    columnCount={HISTORY_COLUMN_COUNT}
+                  >
+                    {abandonedAttempts.map(renderAttemptRow)}
+                  </AbandonedRows>
+                )}
+              </TBody>
+            </Table>
           )}
         </section>
       </main>
@@ -293,9 +300,9 @@ function renderAttemptRow(a: HistoryAttempt) {
   const isDone = a.status === "COMPLETED";
 
   return (
-    <tr key={a.id} className="transition-colors hover:bg-muted/30">
-      <td className="px-6 py-4 font-semibold text-foreground">{a.test.title}</td>
-      <td className="px-6 py-4">
+    <TR key={a.id}>
+      <TD className="font-semibold text-foreground">{a.test.title}</TD>
+      <TD>
         <Badge
           variant={
             a.status === "COMPLETED"
@@ -314,8 +321,8 @@ function renderAttemptRow(a: HistoryAttempt) {
                 ? "Expired"
                 : "Abandoned"}
         </Badge>
-      </td>
-      <td className="px-6 py-4 text-center tabular">
+      </TD>
+      <TD numeric>
         {isDone && scoreFidelity !== "INCOMPLETE" ? (
           <span className="inline-flex items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-caption font-extrabold text-primary shadow-xs">
             {scoreFidelity === "ESTIMATE" ? `Est. ${scaled.total}` : scaled.total}
@@ -323,11 +330,11 @@ function renderAttemptRow(a: HistoryAttempt) {
         ) : (
           <span className="font-medium text-muted-foreground">—</span>
         )}
-      </td>
-      <td className="px-6 py-4 text-caption text-muted-foreground">
+      </TD>
+      <TD hideBelow="sm" className="text-caption text-muted-foreground">
         {formatDate(a.startedAt)}
-      </td>
-      <td className="px-6 py-4 text-right">
+      </TD>
+      <TD className="text-right">
         {isDone ? (
           <Button asChild variant="soft" size="xs" className="active-press">
             <Link href={`/results/${a.id}`}>View results</Link>
@@ -349,7 +356,7 @@ function renderAttemptRow(a: HistoryAttempt) {
             </Link>
           </Button>
         )}
-      </td>
-    </tr>
+      </TD>
+    </TR>
   );
 }
