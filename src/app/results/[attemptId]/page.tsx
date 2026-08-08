@@ -160,7 +160,10 @@ export default async function ResultsPage({
           </p>
         </section>
       ) : (
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-hero border border-border/50 p-8 mb-10 shadow-sm flex flex-col items-center">
+      // T1.8: was `bg-gradient-hero`. The `ScoreDial` ring is this page's one
+      // gradient — the policy lets `--gradient-primary` be the score gauge or
+      // the hero signature, not both — so the panel behind it is a flat sheet.
+      <section className="relative overflow-hidden rounded-3xl bg-paper-sunk border border-border/50 p-8 mb-10 shadow-sm flex flex-col items-center">
         {/* Blurred ambient background spots */}
         <div className="absolute -left-16 -top-16 h-36 w-36 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
         <div className="absolute -right-16 -bottom-16 h-36 w-36 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
@@ -194,14 +197,12 @@ export default async function ResultsPage({
             icon={BookOpen}
             value={scaled.readingWriting}
             raw={`${raw.readingWriting.correct} / ${raw.readingWriting.total} Correct`}
-            progressColor="bg-gradient-primary"
           />
           <SectionScore
             label="Math"
             icon={Calculator}
             value={scaled.math}
             raw={`${raw.math.correct} / ${raw.math.total} Correct`}
-            progressColor="bg-gradient-accent"
           />
         </div>
       </section>
@@ -273,7 +274,7 @@ export default async function ResultsPage({
 
       {/* ---------- Action Buttons ---------- */}
       <div className="mt-8 flex flex-wrap gap-4 justify-center sm:justify-start">
-        <Button asChild size="lg" className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary hover-lift active-press transition-all duration-200">
+        <Button asChild size="lg" className="hover-lift active-press">
           <Link href={`/results/${attempt.id}/review`} className="flex items-center gap-1.5">
             Review all answers
             <ArrowRight className="h-5 w-5" />
@@ -306,13 +307,11 @@ function SectionScore({
   icon: Icon,
   value,
   raw,
-  progressColor = "bg-primary",
 }: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   value: number;
   raw: string;
-  progressColor?: string;
 }) {
   return (
     <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs hover:border-primary/20 hover:shadow-sm transition-all duration-200">
@@ -329,17 +328,11 @@ function SectionScore({
         <span className="text-h1 tabular text-foreground">{value}</span>
         <span className="text-body font-semibold text-muted-foreground">/ 800</span>
       </div>
-      {/* The gradient stays a call-site decision: `--gradient-accent` is
-          unassigned in CLAUDE.md and the page's gradient budget belongs to
-          T1.8, so this passes its own fill rather than teaching Progress a
-          tone it may not keep. */}
-      <Progress
-        value={value}
-        min={200}
-        max={800}
-        barClassName={progressColor}
-        className="mt-4"
-      />
+      {/* T1.8 dropped the two `barClassName` gradients — one of them was
+          `--gradient-accent`, which CLAUDE.md leaves unassigned. With no fill
+          passed, `Progress` grades the bar on the product's one scale, so the
+          two sections read against each other instead of by brand colour. */}
+      <Progress value={value} min={200} max={800} className="mt-4" />
     </div>
   );
 }

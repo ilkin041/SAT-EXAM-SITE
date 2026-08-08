@@ -7,13 +7,14 @@ import { GallerySection, Row, Swatch } from "../gallery-section";
 const VARIANTS = [
   "primary",
   "secondary",
+  "soft",
   "destructive",
   "ghost",
   "link",
   "accent",
 ] as const;
 
-const SIZES = ["sm", "default", "lg"] as const;
+const SIZES = ["xs", "sm", "default", "lg"] as const;
 
 export function ButtonSpecimens() {
   return (
@@ -26,7 +27,7 @@ export function ButtonSpecimens() {
         ))}
       </Row>
 
-      <Row label="Sizes" note="h-9 / h-10 / h-11, plus a square icon size">
+      <Row label="Sizes" note="h-8 / h-9 / h-10 / h-11, plus a square icon size">
         {SIZES.map((size) => (
           <Swatch key={size} caption={size}>
             <Button size={size}>Save changes</Button>
@@ -44,6 +45,20 @@ export function ButtonSpecimens() {
           <Swatch key={variant} caption={variant}>
             <Button variant={variant} disabled>
               Save changes
+            </Button>
+          </Swatch>
+        ))}
+      </Row>
+
+      <Row
+        label="Repeated list actions"
+        note="`soft` — the same action on every card in a rail, so no card wins"
+      >
+        {["Practice Test 1", "Practice Test 2", "Practice Test 3"].map((t) => (
+          <Swatch key={t} caption={t}>
+            <Button variant="soft">
+              Start test
+              <ArrowRight className="h-4 w-4" aria-hidden />
             </Button>
           </Swatch>
         ))}
@@ -117,7 +132,7 @@ export function ButtonSection() {
     <GallerySection
       id="button"
       title="Button"
-      description="Six variants, four sizes. `loading` swaps in a spinner and disables the button; it is ignored under `asChild`, where Slot requires exactly one child. Icon-only buttons need an aria-label."
+      description="Seven variants, five sizes. `soft` is the repeated-list action — a tinted surface that stays quiet across a rail of cards, so the page keeps one real primary. `loading` swaps in a spinner and disables the button; it is ignored under `asChild`, where Slot requires exactly one child. Icon-only buttons need an aria-label."
     >
       <ButtonSpecimens />
     </GallerySection>

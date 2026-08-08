@@ -100,7 +100,13 @@ export default async function DashboardPage() {
       <StudentNav />
       <main className="container mx-auto max-w-6xl px-4 py-10 animate-fade-in">
         {/* Welcome Hero Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-hero border border-border/50 p-6 md:p-8 mb-10 shadow-sm">
+        {/*
+          T1.8: the banner was `bg-gradient-hero`. The page's one gradient is
+          the warm "Continue test" in the history table below — resume is the
+          only thing here the policy lets a gradient mean — so the banner is a
+          recessed sheet instead.
+        */}
+        <div className="relative overflow-hidden rounded-3xl bg-paper-sunk border border-border/50 p-6 md:p-8 mb-10 shadow-sm">
           {/* Decorative blurred blobs */}
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
           <div className="absolute right-20 -bottom-10 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
@@ -118,7 +124,7 @@ export default async function DashboardPage() {
                 Student Dashboard
               </span>
               <h1 className="text-h1 text-foreground">
-                Welcome back, <span className="text-gradient-primary">{displayName}</span>
+                Welcome back, <span className="text-primary">{displayName}</span>
               </h1>
               <p className="mt-2.5 text-body-lg text-muted-foreground">
                 {completedCount === 0
@@ -136,14 +142,14 @@ export default async function DashboardPage() {
               </div>
               {/* Stat 2: Avg Score */}
               <div className="glass rounded-2xl p-4 border border-border/40 text-center shadow-xs">
-                <span className="block text-h2 tabular text-gradient-primary">
+                <span className="block text-h2 tabular text-foreground">
                   {avgScore !== null ? avgScore : "—"}
                 </span>
                 <span className="block eyebrow text-muted-foreground mt-1">Avg Score</span>
               </div>
               {/* Stat 3: Best Score */}
               <div className="glass rounded-2xl p-4 border border-border/40 text-center shadow-xs">
-                <span className="block text-h2 tabular text-gradient-accent">
+                <span className="block text-h2 tabular text-foreground">
                   {bestScore !== null ? bestScore : "—"}
                 </span>
                 <span className="block eyebrow text-muted-foreground mt-1">Best Score</span>
@@ -326,19 +332,21 @@ function renderAttemptRow(a: HistoryAttempt) {
       </td>
       <td className="px-6 py-4 text-right">
         {isDone ? (
-          <Button asChild variant="secondary" size="sm" className="hover-lift active-press shadow-xs">
+          <Button asChild variant="soft" size="xs" className="active-press">
             <Link href={`/results/${a.id}`}>View results</Link>
           </Button>
         ) : a.status === "IN_PROGRESS" ? (
+          // The page's one gradient. `--gradient-warm` is reserved for resume,
+          // and this is the only resume affordance on the dashboard.
           <Button
             asChild
-            size="sm"
+            size="xs"
             className="bg-gradient-warm text-white border-transparent hover:opacity-95 hover:glow-warm active-press transition-all duration-200"
           >
             <Link href={`/test/attempt/${a.id}`}>Continue test</Link>
           </Button>
         ) : (
-          <Button asChild variant="secondary" size="sm" disabled className="opacity-50">
+          <Button asChild variant="secondary" size="xs" disabled className="opacity-50">
             <Link href={`/results/${a.id}`}>
               {a.status === "EXPIRED" ? "Expired" : "Abandoned"}
             </Link>

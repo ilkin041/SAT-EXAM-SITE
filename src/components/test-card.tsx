@@ -35,7 +35,7 @@ interface Props {
  * Dashboard test card. Two render modes:
  *
  *  - **No in-progress attempt** → links straight to the pre-test page.
- *  - **In-progress attempt** → primary action is "Continue Test" (yellow),
+ *  - **In-progress attempt** → primary action is "Continue test",
  *    with a secondary "Start Fresh" that opens a confirmation modal. Starting
  *    fresh abandons the existing attempt server-side via the start endpoint's
  *    `fresh=1` flag.
@@ -133,11 +133,17 @@ export function TestCard({
 
       {inProgressAttemptId ? (
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <Button
-            asChild
-            className="flex-1 bg-gradient-warm text-white border-transparent hover:opacity-95 hover:glow-warm active-press transition-all duration-200"
-          >
-            <Link href={`/test/attempt/${inProgressAttemptId}`} className="flex items-center justify-center gap-1.5">
+          {/*
+            T1.8: was `bg-gradient-warm`. The dashboard's single warm gradient
+            now lives on the history table's "Continue test"; a rail of cards
+            each carrying one is exactly what the budget exists to stop. The
+            amber "In progress" badge above still carries the state.
+          */}
+          <Button asChild className="flex-1 active-press">
+            <Link
+              href={`/test/attempt/${inProgressAttemptId}`}
+              className="flex items-center justify-center gap-1.5"
+            >
               Continue test
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
@@ -184,11 +190,10 @@ export function TestCard({
           </Modal>
         </div>
       ) : (
-        // TODO(T1.8): move to the `soft` variant once it exists. Five
-        // full-width gradient bars dominated the dashboard, so this is
-        // `secondary` in the meantime — the card's left accent strip already
-        // carries the primary gradient.
-        <Button asChild variant="secondary" className="mt-4 w-full active-press">
+        // The same action on every card in the rail, so it takes `soft`: still
+        // the card's primary action, but five of them do not fight the page.
+        // The left accent strip carries the brand.
+        <Button asChild variant="soft" className="mt-4 w-full active-press">
           <Link href={`/test/${testId}/start`} className="flex items-center justify-center gap-1.5">
             Start test
             <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />

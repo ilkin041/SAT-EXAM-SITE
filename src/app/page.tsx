@@ -32,7 +32,8 @@ export default async function Home() {
       <ScrolledHeader>
         <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2.5 text-body font-bold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
+            {/* Solid, matching the StudentNav / UserMenu marks T0.6 flattened. */}
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <GraduationCap className="h-4 w-4" aria-hidden />
             </span>
             SAT Practice
@@ -79,11 +80,13 @@ export default async function Home() {
               Bluebook-style practice platform
             </span>
 
-            <h1 className="mt-6 text-display text-foreground">
-              Digital SAT Practice,{" "}
-              <span className="text-gradient-primary">
-                Built for Your Students
-              </span>
+            {/*
+              T1.8: the second half was `text-gradient-primary`. The page's one
+              gradient is the "Sign Up Free" CTA below — a headline and a CTA
+              cannot both be the signature, and only one of them is clickable.
+            */}
+            <h1 className="mt-6 text-display text-ink">
+              Digital SAT Practice, Built for Your Students
             </h1>
 
             <p className="mt-6 max-w-[52ch] text-body-lg text-muted-foreground">
@@ -180,21 +183,21 @@ export default async function Home() {
               icon={LayoutGrid}
               title="Adaptive Testing"
               description="Module 2 difficulty routes from Module 1 performance — exactly how the real Digital SAT works."
-              gradient="from-blue-500/10 to-indigo-500/10"
+              tint="bg-blue-500/10"
               iconColor="text-blue-600 dark:text-blue-400"
             />
             <Feature
               icon={BookOpenCheck}
               title="Full Question Bank"
               description="Build your own library of math and reading-and-writing questions, then assign them across tests."
-              gradient="from-violet-500/10 to-purple-500/10"
+              tint="bg-violet-500/10"
               iconColor="text-violet-600 dark:text-violet-400"
             />
             <Feature
               icon={BarChart3}
               title="Detailed Results"
               description="200–800 scaled scores per section, total out of 1600, and a per-domain breakdown of every attempt."
-              gradient="from-emerald-500/10 to-teal-500/10"
+              tint="bg-emerald-500/10"
               iconColor="text-emerald-600 dark:text-emerald-400"
             />
           </div>
@@ -253,7 +256,8 @@ export default async function Home() {
 
       {/* ----- CTA banner ----- */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-violet-500/5" aria-hidden />
+        {/* Flat tint — was a three-stop wash competing with the hero CTA. */}
+        <div className="absolute inset-0 bg-primary/5" aria-hidden />
         <div className="container relative mx-auto max-w-6xl px-4 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-h2">
@@ -263,7 +267,8 @@ export default async function Home() {
               Join students already practicing with full-length, timed practice tests.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Button asChild size="lg" variant="accent">
+              {/* Solid: the hero's "Sign Up Free" is the page's one accent. */}
+              <Button asChild size="lg">
                 <Link href="/signup">
                   Get Started Free
                   <ArrowRight className="h-4 w-4" />
@@ -329,25 +334,26 @@ function Feature({
   icon: Icon,
   title,
   description,
-  gradient,
+  tint,
   iconColor,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
-  gradient: string;
+  /** Flat surface tint, shared by the icon tile and the hover wash. */
+  tint: string;
   iconColor: string;
 }) {
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-7 shadow-card transition-all duration-200 hover:shadow-elevated hover:-translate-y-1">
-      {/* Gradient background wash */}
+      {/* Hover wash — flat since T1.8; three gradient tiles is three signatures. */}
       <div
-        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
+        className={`pointer-events-none absolute inset-0 ${tint} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
         aria-hidden
       />
 
       <div className="relative">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} ${iconColor} shadow-sm`}>
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${tint} ${iconColor} shadow-sm`}>
           <Icon className="h-5 w-5" aria-hidden />
         </div>
         <h3 className="mt-5 text-h3">{title}</h3>
@@ -374,7 +380,7 @@ function Step({
     <li className="group relative rounded-2xl border border-border/60 bg-card p-7 shadow-card transition-all duration-200 hover:shadow-elevated hover:-translate-y-1">
       {/* Step number badge with glow */}
       <div className="absolute -top-3.5 left-7">
-        <span className="relative inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 px-2.5 text-caption tabular font-bold text-primary-foreground shadow-md">
+        <span className="relative inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-primary px-2.5 text-caption tabular font-bold text-primary-foreground shadow-md">
           {n}
         </span>
       </div>

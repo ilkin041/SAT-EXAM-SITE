@@ -164,7 +164,7 @@ return (
             ))}
           </SelectContent>
         </Select>
-        <Button type="submit" className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary hover-lift active-press transition-all duration-200">Filter</Button>
+        <Button type="submit" variant="soft" className="active-press">Filter</Button>
       </div>
     </form>
 

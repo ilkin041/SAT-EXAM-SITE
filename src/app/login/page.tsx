@@ -11,11 +11,13 @@ export default function LoginPage() {
     <main className="flex min-h-screen">
       {/* Left decorative panel */}
       <div className="relative hidden w-1/2 overflow-hidden lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-violet-600" />
+        {/* T1.8: was a primary→violet wash. Flat `--primary`, so the panel and
+            the form's submit button are the same blue. */}
+        <div className="absolute inset-0 bg-primary" />
         <DotLattice />
         {/* Decorative orbs */}
         <div className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" aria-hidden />
-        <div className="absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-violet-400/20 blur-3xl" aria-hidden />
+        <div className="absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-white/10 blur-3xl" aria-hidden />
 
         <div className="relative flex h-full flex-col items-center justify-center px-12 text-center text-white">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 shadow-lg backdrop-blur-sm">
@@ -44,7 +46,7 @@ export default function LoginPage() {
             href="/"
             className="mb-8 inline-flex items-center gap-2.5 text-body font-bold text-foreground transition-colors hover:text-primary"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <GraduationCap className="h-4 w-4" aria-hidden />
             </span>
             SAT Practice

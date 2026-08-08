@@ -89,7 +89,8 @@ export default async function QuestionsPage({
         title="Question Bank"
         description="Questions live in the global bank and are assigned to test modules from each test's detail page."
         actions={
-          <Button asChild className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary active-press transition-all duration-200">
+          // Solid: the navy AdminNav bar is the admin section's one gradient.
+          <Button asChild className="active-press">
             <Link href="/admin/questions/new">
               <Plus className="h-4 w-4" />
               New question
@@ -147,7 +148,7 @@ export default async function QuestionsPage({
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2">
-            <Button type="submit" size="default" className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary hover-lift active-press transition-all duration-200">Filter</Button>
+            <Button type="submit" variant="soft" size="default" className="active-press">Filter</Button>
             {hasFilter && (
               <Button asChild variant="ghost" size="default" className="hover-lift active-press rounded-xl">
                 <Link href="/admin/questions">Clear</Link>

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * classes on <button>/<Link> tags.
  *
  *  - `variant`: visual treatment
- *  - `size`: vertical rhythm (h-9 / h-10 / h-11 / icon)
+ *  - `size`: vertical rhythm (h-8 / h-9 / h-10 / h-11 / icon)
  *  - `loading`: shows spinner and disables the button (button mode only —
  *    ignored with `asChild`, since wrapping a Link in a spinner doesn't make
  *    semantic sense and Slot requires exactly one child)
@@ -38,6 +38,17 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground shadow-md",
           "hover:bg-destructive/90 hover:shadow-lg hover:-translate-y-0.5",
         ].join(" "),
+        /*
+         * Tinted surface, no gradient, no shadow. This is the repeated-list
+         * action: a rail of five `primary` cards fights itself for attention
+         * and a rail of five `secondary` ones reads as disabled. `soft` sits
+         * between them — it still says "primary action of this card" while
+         * letting the page keep one real primary.
+         */
+        soft: [
+          "border border-primary/20 bg-primary/10 text-primary",
+          "hover:bg-primary/15 hover:border-primary/30 hover:-translate-y-0.5",
+        ].join(" "),
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         accent: [
@@ -46,6 +57,8 @@ const buttonVariants = cva(
         ].join(" "),
       },
       size: {
+        // Table rows and dense toolbars, where h-9 already crowds the row.
+        xs: "h-8 gap-1.5 px-3 text-xs",
         sm: "h-9 px-3.5 text-sm",
         default: "h-10 px-5",
         lg: "h-11 px-7 text-base",

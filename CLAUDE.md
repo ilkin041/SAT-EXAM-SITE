@@ -108,13 +108,17 @@ pair — along with a third class constant the rule never saw, a function-scoped
 
 ### Gradient budget — one gradient element per viewport
 
-8 of 30 routes still violate this (was 17 before T0.6 fixed shared chrome). Per-route before/after
-counts are in `docs/gradient-audit.md`. `/dashboard` has 6, `/` has 5 — both owned by T1.8.
+**No route exceeds one gradient element above the fold** (was 17 of 30 over budget before T0.6 did
+shared chrome, 8 before T1.8 did the pages). Per-route before/after counts are in
+`docs/gradient-audit.md`. The only residual is `/dashboard` at 2 total, both below the fold and
+both deliberate: the `TestCard` left accent strip and the warm `Continue test` in the history
+table. There are **no hand-rolled `bg-gradient-*` buttons left** — `Button variant="accent"` on the
+`/` hero is the app's one gradient button.
 
 | Token | Reserved for |
 |---|---|
 | `--gradient-primary` | The single primary CTA on a page, **or** the score gauge, **or** the hero signature — never two at once |
-| `--gradient-accent` | **UNASSIGNED.** Was reserved for AI features; the AI feature was removed 2026-08-06. Do not silently reuse it — ask before assigning |
+| `--gradient-accent` | **UNASSIGNED, and as of T1.8 unused in `.tsx`.** Was reserved for AI features; the AI feature was removed 2026-08-06. Do not silently reuse it — ask before assigning |
 | `--gradient-warm` | Resume / in-progress / time pressure only |
 | `--brand-navy` | Admin chrome only |
 | `--accent-warm` (amber) | Time, pacing, in-progress. Never decorative |
@@ -122,8 +126,10 @@ counts are in `docs/gradient-audit.md`. `/dashboard` has 6, `/` has 5 — both o
 | `destructive` | Incorrect, destructive actions, offline |
 | `--ink` / `--paper` / `--paper-sunk` | Editorial pair: highest-contrast text, its sheet, a recessed well within it. Inverted (not dimmed) in dark; `paper-sunk` recedes in both. Available as `text-ink`, `bg-paper`, `bg-paper-sunk` |
 
-Shared chrome is already clean (T0.6): `AdminNav` is down to its one navy bar, and `StudentNav`,
-`UserMenu` and `PageHeader` carry none. What is left is page-level and belongs to T1.8.
+Shared chrome is clean (T0.6): `AdminNav` is down to its one navy bar, and `StudentNav`,
+`UserMenu` and `PageHeader` carry none. Pages are clean (T1.8). The one remaining known gap is
+`EmptyState`'s `from-card/80 to-muted/30` surface tint — read strictly it should be a flat
+`bg-muted/20`, and it takes any route showing an empty state to 2.
 
 ### Numbers are mono
 
@@ -269,7 +275,7 @@ onto the override, tabs does not use it at all. One stack. T1.6 checked it again
 
 ### Existing primitives (23, in `src/components/ui/`)
 
-`Button` (107 LOC, 6 variants, 4 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
+`Button` (7 variants, 5 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
 · `Select` (sizes sm/default, error state, leading icon, clearable) · `Table` · `DataTable` ·
 `Pagination` · `Modal` · `Sheet` · `Tabs` · `Accordion` · `Tooltip` · `Alert` ·
 `SegmentedControl` · `Field` · `Avatar` · `Separator` · `Progress` · `ScoreDial` · `DomainBar` ·
@@ -359,8 +365,9 @@ The T1.7 three — the score-report language, now shared by results, progress an
   grading scale; `tests/ui-primitives.test.ts` pins them, because no score is stored and every bar
   in every historical attempt is recomputed on render. Difficulty colours are *not* this scale and
   must not be folded into it: 40% on hard is not the same news as 40% on easy, so a difficulty bar
-  passes `barClassName`. That escape hatch also carries the two section-score gradients, which stay
-  a call-site decision — `--gradient-accent` is unassigned and the page's gradient budget is T1.8's.
+  passes `barClassName`. T1.8 removed the only other escape-hatch use: the results page's two
+  section-score bars passed `bg-gradient-primary` / `bg-gradient-accent` and now pass nothing, so
+  they grade like everything else.
   **A bar with no `label` is `aria-hidden`**, because it nearly always sits under text that already
   reads "12 / 15 · 80%"; pass `label` only when the bar is the only place the number appears.
 - **`variant="scoreBand"` is the relative reading, `ScoreDial` is the absolute one.** A band takes
@@ -382,6 +389,16 @@ The T1.7 three — the score-report language, now shared by results, progress an
   is paid whether or not the optional prop is ever passed, and that page passes it nowhere. Any
   primitive tempted to reach for `Tooltip`, `Modal` or `Sheet` behind an optional prop has the same
   problem. Compose the trigger at the call site around `DomainBarLabel`.
+
+T1.8 added two `Button` options:
+
+- **`variant="soft"` is the repeated-list action.** A rail of five `primary` cards fights itself
+  and a rail of five `secondary` ones reads as disabled; `soft` is a tinted surface that still says
+  "the primary action of this card" while the page keeps one real primary. Use it for the action
+  that appears on every card in a list, and for a filter bar's submit — primary *of that bar*, not
+  of the page. It is not a quieter `primary` for one-off CTAs.
+- **`size="xs"` (h-8) is for table rows and dense toolbars**, where `sm`'s h-9 already crowds the
+  row. Keep every button in a given row at the same size or the rows change height between states.
 
 ---
 

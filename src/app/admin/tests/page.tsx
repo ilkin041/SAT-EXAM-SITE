@@ -43,7 +43,8 @@ export default async function TestsPage() {
           title="No tests yet"
           description="Create your first practice test to get started."
           action={
-            <Button asChild className="bg-gradient-primary text-white border-transparent hover:opacity-95 hover:glow-primary active-press transition-all duration-200">
+            // Solid: the navy AdminNav bar is the admin section's one gradient.
+            <Button asChild className="active-press">
               <Link href="/admin/tests/new">
                 <Plus className="h-4 w-4" />
                 Create test
