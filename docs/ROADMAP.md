@@ -47,7 +47,7 @@ Phase 8 cannot start before T2.2.
 
 A task is done when it is committed on `master`, so the `Done` column carries the commit — the
 roadmap and `git log` cannot drift apart that way. Only phases with completed work have the column.
-**15 of 65 done:** Phase 0 complete, Phase 1 through T1.8.
+**18 of 65 done:** Phase 0 and Phase 1 complete, Phase 2 through T2.2.
 
 ---
 
