@@ -47,7 +47,7 @@ Phase 8 cannot start before T2.2.
 
 A task is done when it is committed on `master`, so the `Done` column carries the commit — the
 roadmap and `git log` cannot drift apart that way. Only phases with completed work have the column.
-**13 of 65 done:** Phase 0 complete, Phase 1 through T1.6.
+**14 of 65 done:** Phase 0 complete, Phase 1 through T1.7.
 
 ---
 
@@ -75,7 +75,7 @@ Things producing no styles or failing WCAG **today**.
 | T1.4 | `Table` + `DataTable` | `5a092b1` |
 | T1.5 | `Modal`, `Tabs`, `Tooltip`, `Alert`, `SegmentedControl`, `Sheet` | `fdc84f6` |
 | T1.6 | `Pagination`, `Avatar`, `Field`, `Separator`, `Accordion` | `4b2906b` |
-| T1.7 | `Progress`, `ScoreDial`, `DomainBar` | |
+| T1.7 | `Progress`, `ScoreDial`, `DomainBar` | `d8c3dd6` |
 | T1.8 | `Button` soft/xs + page-level gradient sweep | |
 | T1.9 | Migrate 13 tables to `DataTable`; resolve zustand | |
 
