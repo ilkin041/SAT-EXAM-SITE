@@ -164,6 +164,16 @@ model Question {
   /// JSON: string[] — alternate accepted forms for SPR
   acceptedAnswers Json?
   explanation     String?
+  /// JSON: the question's rich content with `$…$` LaTeX already run through
+  /// KaTeX and sanitized, written at save time by `renderQuestionHtml`.
+  /// Shape is `RenderedQuestionHtml` in `src/lib/rendered-question.ts`:
+  /// `{ v, stem, passage, explanation, choices: [{ label, html }] }`.
+  ///
+  /// This exists so student surfaces never ship the KaTeX renderer. NULL is a
+  /// legal state — a record written before the backfill, or by a code path
+  /// that predates this column — and every reader falls back to rendering on
+  /// the server. Bump `v` and re-run the backfill when the renderer changes.
+  renderedHtml    Json?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

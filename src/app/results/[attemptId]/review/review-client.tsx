@@ -13,13 +13,13 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RichContent } from "@/components/rich-content";
+import { RichHtml } from "@/components/rich-html";
 import { AnnotatedPassage } from "@/components/annotated-passage";
 import { ResizableSplit } from "@/components/resizable-split";
 import { formatDuration } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
-type Choice = { label: "A" | "B" | "C" | "D"; text: string };
+type Choice = { label: "A" | "B" | "C" | "D"; html: string };
 
 export interface ReviewItem {
   questionId: string;
@@ -28,15 +28,16 @@ export interface ReviewItem {
   type: "MULTIPLE_CHOICE" | "STUDENT_PRODUCED_RESPONSE";
   domain: string;
   difficulty: "EASY" | "MEDIUM" | "HARD" | "MIXED";
-  passage: string | null;
-  stem: string;
+  /** Pre-rendered on the server — see `readRenderedQuestion`. */
+  passageHtml: string | null;
+  stemHtml: string;
   imageUrl: string | null;
   imagePosition: "TOP" | "INLINE";
   imageMaxWidth: number | null;
   choices: Choice[] | null;
   correctAnswer: string | null;
   acceptedAnswers: string[] | null;
-  explanation: string | null;
+  explanationHtml: string | null;
   studentResponse: string;
   isCorrect: boolean;
   timeSpentSeconds: number;
@@ -161,13 +162,13 @@ export function ReviewClient({ attemptId, testTitle, items }: Props) {
       </div>
 
       {/* ----- Question body ----- */}
-      {item.sectionType === "READING_WRITING" && item.passage ? (
+      {item.sectionType === "READING_WRITING" && item.passageHtml ? (
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
           <ResizableSplit
             left={
               <div className="h-full overflow-y-auto px-5 py-5">
                 <AnnotatedPassage
-                  passageHtml={item.passage}
+                  passageHtml={item.passageHtml}
                   attemptId={attemptId}
                   questionId={item.questionId}
                 />
@@ -261,8 +262,8 @@ function QuestionBody({ item }: { item: ReviewItem }) {
           style={item.imageMaxWidth ? { maxWidth: `${item.imageMaxWidth}px` } : undefined}
         />
       )}
-      <RichContent
-        html={item.stem}
+      <RichHtml
+        html={item.stemHtml}
         className="rich-content mb-5 text-base leading-relaxed"
       />
       {item.imageUrl && item.imagePosition === "INLINE" && (
@@ -288,7 +289,7 @@ function QuestionBody({ item }: { item: ReviewItem }) {
         />
       )}
 
-      {item.explanation && (
+      {item.explanationHtml && (
         <div className="mt-5 flex gap-3 rounded-lg border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
           <Lightbulb
             className="mt-0.5 h-5 w-5 shrink-0 text-blue-700 dark:text-blue-300"
@@ -298,8 +299,8 @@ function QuestionBody({ item }: { item: ReviewItem }) {
             <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-800 dark:text-blue-300">
               Explanation
             </div>
-            <RichContent
-              html={item.explanation}
+            <RichHtml
+              html={item.explanationHtml}
               className="rich-content text-sm leading-relaxed text-blue-950 dark:text-blue-100"
             />
           </div>
@@ -359,7 +360,7 @@ function ChoicesList({
               {c.label}
             </span>
             <div className="min-w-0 flex-1">
-              <RichContent html={c.text} className="rich-content text-sm leading-relaxed" />
+              <RichHtml html={c.html} className="rich-content text-sm leading-relaxed" />
               {label && (
                 <span
                   className={cn(

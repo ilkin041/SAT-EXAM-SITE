@@ -13,6 +13,7 @@ import {
   questionContentHash,
   selectQuestionImportIndices,
 } from "@/lib/question-content-hash";
+import { renderQuestionHtml } from "@/lib/rendered-question";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -181,6 +182,14 @@ function questionCreateData(
       : Prisma.DbNull,
     explanation: q.explanation ?? null,
     contentHash,
+    // Typeset once here so no student route ever loads KaTeX. Import is the
+    // bulk write path, so a NULL here would silently undo the backfill.
+    renderedHtml: renderQuestionHtml({
+      stem: q.stem,
+      passage: q.passage,
+      explanation: q.explanation,
+      choices: q.choices,
+    }) as unknown as Prisma.InputJsonValue,
   };
 }
 

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ReviewClient, type ReviewItem } from "./review-client";
 import { canAccessAttempt } from "@/lib/attempt-auth";
+import { readRenderedQuestion } from "@/lib/rendered-question";
 
 export const metadata = { title: "Review answers" };
 
@@ -68,6 +69,10 @@ export default async function ReviewAnswersPage({
     for (const mq of mr.module.moduleQuestions) {
       const q = mq.question;
       const a = answerByQ.get(q.id);
+      // Rendered once at authoring time; `readRenderedQuestion` falls back to
+      // rendering here when `renderedHtml` is NULL, so the client never needs
+      // KaTeX either way.
+      const rendered = readRenderedQuestion(q);
       items.push({
         questionId: q.id,
         sectionType: mr.module.section.type,
@@ -75,17 +80,15 @@ export default async function ReviewAnswersPage({
         type: q.type,
         domain: q.domain,
         difficulty: q.difficulty,
-        passage: q.passage,
-        stem: q.stem,
+        passageHtml: rendered.passage,
+        stemHtml: rendered.stem,
         imageUrl: q.imageUrl,
         imagePosition: q.imagePosition,
         imageMaxWidth: q.imageMaxWidth,
-        choices:
-          (q.choices as { label: "A" | "B" | "C" | "D"; text: string }[] | null) ??
-          null,
+        choices: rendered.choices,
         correctAnswer: q.correctAnswer ?? null,
         acceptedAnswers: (q.acceptedAnswers as string[] | null) ?? null,
-        explanation: q.explanation ?? null,
+        explanationHtml: rendered.explanation,
         studentResponse: a?.response ?? "",
         isCorrect: !!a?.isCorrect,
         timeSpentSeconds: a?.timeSpent ?? 0,

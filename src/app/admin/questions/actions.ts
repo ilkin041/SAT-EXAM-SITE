@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { questionContentHash } from "@/lib/question-content-hash";
+import { renderQuestionHtml } from "@/lib/rendered-question";
 import {
   isDomainForSection,
   normalizeQuestionDomain,
@@ -115,6 +116,12 @@ export async function createQuestion(input: QuestionInput) {
           : undefined,
       explanation: data.explanation ?? null,
       contentHash: questionContentHash({ stem: data.stem, passage: data.passage }),
+      renderedHtml: renderQuestionHtml({
+        stem: data.stem,
+        passage: data.passage,
+        explanation: data.explanation,
+        choices: data.type === "MULTIPLE_CHOICE" ? data.choices : null,
+      }) as unknown as Prisma.InputJsonValue,
     },
   });
 
@@ -179,6 +186,12 @@ export async function updateQuestion(id: string, input: QuestionInput) {
           : Prisma.DbNull,
       explanation: data.explanation ?? null,
       contentHash: questionContentHash({ stem: data.stem, passage: data.passage }),
+      renderedHtml: renderQuestionHtml({
+        stem: data.stem,
+        passage: data.passage,
+        explanation: data.explanation,
+        choices: data.type === "MULTIPLE_CHOICE" ? data.choices : null,
+      }) as unknown as Prisma.InputJsonValue,
     },
   });
 

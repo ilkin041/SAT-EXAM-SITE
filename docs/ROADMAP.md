@@ -81,11 +81,11 @@ Things producing no styles or failing WCAG **today**.
 
 ## Phase 2 — Foundations that unblock · `prompts/B-foundations-landing-auth.md`
 
-| ID | Task |
-|---|---|
-| T2.1 | KaTeX → static HTML at save time (~200 kB off a student route) |
-| T2.2 | Normalise `Question.skill` / `domain` into a controlled vocabulary |
-| T2.3 | Event pipeline so product metrics become measurable |
+| ID | Task | Done |
+|---|---|---|
+| T2.1 | KaTeX → static HTML at save time (−180 kB review, −179 kB test interface) | pending |
+| T2.2 | Normalise `Question.skill` / `domain` into a controlled vocabulary | |
+| T2.3 | Event pipeline so product metrics become measurable | |
 
 ## Phase 3 — Landing · `prompts/B-foundations-landing-auth.md`
 

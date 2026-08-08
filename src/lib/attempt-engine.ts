@@ -11,6 +11,10 @@ import { isAnswerCorrect } from "@/lib/answer-matching";
 import { chooseModule2Difficulty } from "@/lib/adaptive-routing";
 import { canAccessTest, type TestAccessUser } from "@/lib/test-access";
 import {
+  readRenderedQuestion,
+  type RenderedChoice,
+} from "@/lib/rendered-question";
+import {
   AttemptTransitionConflict,
   lockAttempt,
   transitionAttempt,
@@ -275,12 +279,16 @@ export interface ClientQuestion {
   id: string;
   order: number;
   type: "MULTIPLE_CHOICE" | "STUDENT_PRODUCED_RESPONSE";
-  passage: string | null;
-  stem: string;
+  /**
+   * Rendered and sanitized on the server. The test interface is a client
+   * component, so shipping raw `$…$` here would mean shipping KaTeX with it.
+   */
+  passageHtml: string | null;
+  stemHtml: string;
   imageUrl: string | null;
   imagePosition: "TOP" | "INLINE";
   imageMaxWidth: number | null;
-  choices: { label: "A" | "B" | "C" | "D"; text: string }[] | null;
+  choices: RenderedChoice[] | null;
 }
 
 export interface ClientAnswer {
@@ -373,17 +381,20 @@ export async function loadAttemptState(
     test: sectionTest,
     section: sectionFields,
     module: moduleFields,
-    questions: moduleQuestions.map((q, i) => ({
-      id: q.id,
-      order: i + 1, // display position within the module
-      type: q.type,
-      passage: q.passage,
-      stem: q.stem,
-      imageUrl: q.imageUrl,
-      imagePosition: q.imagePosition,
-      imageMaxWidth: q.imageMaxWidth,
-      choices: q.choices as ClientQuestion["choices"],
-    })),
+    questions: moduleQuestions.map((q, i) => {
+      const rendered = readRenderedQuestion(q);
+      return {
+        id: q.id,
+        order: i + 1, // display position within the module
+        type: q.type,
+        passageHtml: rendered.passage,
+        stemHtml: rendered.stem,
+        imageUrl: q.imageUrl,
+        imagePosition: q.imagePosition,
+        imageMaxWidth: q.imageMaxWidth,
+        choices: rendered.choices,
+      };
+    }),
     answers: attempt.answers
       .filter((a) => moduleQuestions.some((q) => q.id === a.questionId))
       .map((a) => ({

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import "katex/dist/katex.min.css";
+// KaTeX's stylesheet, minus the ten @font-face blocks the question bank never
+// reaches and with the rest glyph-subset. Regenerate with
+// `npm run gen:katex-subset` after authoring math that uses new glyphs.
+import "./katex-subset.css";
 import { Providers } from "./providers";
 import { ThemeScript } from "@/components/theme-script";
 

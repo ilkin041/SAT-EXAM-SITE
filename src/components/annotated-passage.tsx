@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Highlighter } from "lucide-react";
-import { RichContent } from "@/components/rich-content";
+import { RichHtml } from "@/components/rich-html";
 
 export type AnnotationColor = "YELLOW" | "BLUE" | "PINK";
 
@@ -17,6 +17,11 @@ export interface AnnotationRow {
 }
 
 interface Props {
+  /**
+   * The passage **already rendered and sanitized on the server**, not raw
+   * source. Highlight offsets are measured against the rendered DOM, so this
+   * has to be the same HTML every time the passage is shown.
+   */
   passageHtml: string | null | undefined;
   attemptId: string;
   questionId: string;
@@ -237,7 +242,7 @@ export function AnnotatedPassage({ passageHtml, attemptId, questionId }: Props) 
         onClick={onClick}
         className="relative"
       >
-        <RichContent html={passageHtml} />
+        <RichHtml html={passageHtml} />
 
         {popup.open && (
           <AnnotationPopup

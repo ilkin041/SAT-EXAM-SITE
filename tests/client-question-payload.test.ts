@@ -39,6 +39,18 @@ const secretQuestions = [
     correctAnswer: "B",
     acceptedAnswers: [],
     explanation: "Two plus two equals four.",
+    // The pre-rendered blob carries the explanation too. The mapping must
+    // pick fields off it rather than forward it whole.
+    renderedHtml: {
+      v: 1,
+      stem: "<p>What is 2 + 2?</p>",
+      passage: "<p>A short passage</p>",
+      explanation: "<p>Two plus two equals four.</p>",
+      choices: [
+        { label: "A", html: "3" },
+        { label: "B", html: "4" },
+      ],
+    },
   },
   {
     id: "spr-1",

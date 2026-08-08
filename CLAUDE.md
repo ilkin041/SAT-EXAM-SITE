@@ -35,9 +35,13 @@ npm run dev
 npm run build
 npx tsc --noEmit              # there is no `typecheck` script
 npx tsc --noUnusedLocals      # catches dead imports
-npm test                      # vitest, 115 tests
+npm test                      # vitest, 156 tests
 npm run lint                  # next lint --no-cache --max-warnings=0; must be clean
 npm run analyze               # ANALYZE=true next build -> .next/analyze/*.html
+npm run db:backfill-question-html   # populate Question.renderedHtml (see T2.1 below)
+npm run db:verify-question-html     # stored render == fresh render, field by field
+npm run gen:reference-sheet         # re-typeset the geometry reference sheet
+npm run gen:katex-subset            # re-derive the KaTeX CSS + font subset from the bank
 npx prisma migrate dev --name <name>
 npx prisma studio
 ```
@@ -198,6 +202,46 @@ utility behind `<DotLattice />`, and the StatCard shimmer is the `.shimmer-sweep
 
 ---
 
+## Math is typeset at save time (T2.1)
+
+A student never downloads a math renderer. KaTeX runs on the server when a question is written,
+and `Question.renderedHtml` stores the sanitized output. `/results/[attemptId]/review` went
+290 → 110 kB First Load and `/test/attempt/[attemptId]` 324 → 145 kB; per-route numbers are in
+`docs/baselines.md`.
+
+- **`RichContent` renders LaTeX. `RichHtml` displays HTML that was already rendered.** They look
+  interchangeable and are not: `RichContent` imports `@/lib/rich-content`, which imports KaTeX, so
+  a *client* component that touches it puts ~200 kB back on the route. Every student surface uses
+  `RichHtml` and takes the HTML as a prop. `RichContent` has exactly one live call site left —
+  `question-preview.tsx`, inside the admin editor's preview pane, which is the one place the
+  renderer legitimately has to run in the browser.
+- **`src/lib/rendered-question.ts` is server-only.** `renderQuestionHtml` writes, and
+  `readRenderedQuestion` reads with a fallback: a NULL or stale-version blob is re-rendered on the
+  server. That fallback is why a missing row is one slow request rather than a blank question, and
+  it is what makes the column safe to treat as a cache. `import type` from this module is fine; a
+  value import from a client component is not.
+- **Every write path must populate it** — `admin/questions/actions.ts`, the JSON importer, and the
+  seed all do. A new one that forgets does not break anything visibly, which is the problem: the
+  route silently goes back to rendering per request.
+- **Bump `RENDER_VERSION` when the renderer or sanitizer changes, then
+  `npm run db:backfill-question-html`.** Readers treat a version mismatch as "not rendered yet",
+  so the rollout is safe in either order. `npm run db:verify-question-html` diffs every stored
+  render against a fresh one field by field; `-- --spot-check <dir>` also writes a side-by-side
+  page for the twenty most math-heavy questions. Compare *fields*, not `JSON.stringify` — Postgres
+  JSONB reorders object keys, so a stringify diff reports a mismatch that is not one.
+- **The reference sheet is pre-typeset into a generated file.** `reference-sheet-formulas.ts` holds
+  the LaTeX, `reference-sheet-formulas.generated.ts` the HTML; `npm run gen:reference-sheet`
+  regenerates and `tests/rendered-question.test.ts` fails if they drift. It exists because
+  `ReferenceSheet` is a client component inside the test interface, and twelve formulas that never
+  change are not worth a renderer.
+- **KaTeX's CSS and fonts are subset, and the subset is derived from the bank.**
+  `npm run gen:katex-subset` writes `src/app/katex-subset.css` (imported by the root layout in
+  place of `katex/dist/katex.min.css`) and `public/katex/fonts/`. 20 `@font-face` blocks become
+  10, 253.7 kB of woff2 becomes 71.7 kB, and it verifies its own output by reading each font's
+  cmap back. **Re-run it after authoring math that uses new glyphs.** `middleware.ts` exempts font
+  extensions from its matcher — without that, `/katex/fonts/*.woff2` 307s to `/login` and math
+  renders in a fallback serif for exactly the logged-out visitors who cannot tell.
+
 ## Copy rules
 
 - Active voice, plain verbs. "Save changes", not "Submit".
@@ -264,6 +308,9 @@ colour alone, keyboard-traversable modals, no horizontal scroll at 360px on full
   agent. Device analytics require capture first.
 - **All 280 questions have an authored explanation.** `Question.explanation` is nullable and nothing
   enforces it at authoring time — one bulk import from being reachable.
+- **`Question.renderedHtml` (Json?, T2.1) holds the KaTeX output for `stem`, `passage`,
+  `explanation` and each choice.** Source columns stay authoritative; this is a cache with a
+  version. See "Math is typeset at save time" below.
 
 ### Radix packages
 

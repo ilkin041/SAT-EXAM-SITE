@@ -86,5 +86,13 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // Run on everything except static assets.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico)$).*)"],
+  //
+  // Fonts are in this list because `/katex/fonts/*.woff2` is requested by the
+  // stylesheet on every page, including the logged-out ones. Without the
+  // exemption each font 307s to /login and math renders in a fallback serif
+  // for exactly the visitors — anonymous test takers on /practice — who have
+  // no way to notice it is wrong.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico|woff|woff2|ttf|otf)$).*)",
+  ],
 };

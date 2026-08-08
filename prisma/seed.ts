@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { questionContentHash } from "../src/lib/question-content-hash";
 import { normalizeQuestionDomain } from "../src/lib/question-taxonomy";
+import { renderQuestionHtml } from "../src/lib/rendered-question";
 
 const prisma = new PrismaClient();
 
@@ -106,6 +107,7 @@ async function createTestFromPayload(payload: ImportPayload, createdById: string
             acceptedAnswers: q.acceptedAnswers ? (q.acceptedAnswers as unknown as object) : undefined,
             explanation: q.explanation ?? null,
             contentHash: questionContentHash(q),
+            renderedHtml: renderQuestionHtml(q) as unknown as object,
           },
         });
         // 2) Link it into this module at the right order.

@@ -10,7 +10,7 @@ import {
   MapPin,
   Battery,
 } from "lucide-react";
-import { RichContent } from "@/components/rich-content";
+import { RichHtml } from "@/components/rich-html";
 import { ResizableSplit } from "@/components/resizable-split";
 import { AnnotatedPassage } from "@/components/annotated-passage";
 import { cn } from "@/lib/utils";
@@ -316,7 +316,7 @@ export function QuestionView({
   onToggleEliminator: () => void;
   onChange: (patch: AnswerPatch) => void;
 }) {
-  const hasPassage = !!question.passage?.trim();
+  const hasPassage = !!question.passageHtml?.trim();
   const onChangeWrapper = (patch: AnswerPatch) => onChange(patch);
 
   const toggleElim = (label: "A" | "B" | "C" | "D") => {
@@ -376,7 +376,7 @@ export function QuestionView({
           />
         )}
 
-        <RichContent html={question.stem} className="mb-4 text-base leading-relaxed" />
+        <RichHtml html={question.stemHtml} className="mb-4 text-base leading-relaxed" />
 
         {question.imageUrl && question.imagePosition === "INLINE" && (
           <QuestionImage
@@ -415,8 +415,8 @@ export function QuestionView({
                     >
                       {c.label}
                     </span>
-                    <RichContent
-                      html={c.text}
+                    <RichHtml
+                      html={c.html}
                       className={cn("flex-1", eliminated && "line-through")}
                     />
                   </button>
@@ -487,7 +487,7 @@ export function QuestionView({
           left={
             <div className="p-8">
               <AnnotatedPassage
-                passageHtml={question.passage}
+                passageHtml={question.passageHtml}
                 attemptId={attemptId}
                 questionId={question.id}
               />

@@ -1,32 +1,12 @@
 "use client";
 
-import { RichContent } from "@/components/rich-content";
+import { RichHtml } from "@/components/rich-html";
+import { REFERENCE_FORMULAS_HTML } from "@/components/reference-sheet-formulas.generated";
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
-
-const FORMULAS: { title: string; latex: string }[] = [
-  { title: "Area of a circle", latex: "$$A = \\pi r^2$$" },
-  { title: "Circumference of a circle", latex: "$$C = 2\\pi r$$" },
-  { title: "Area of a rectangle", latex: "$$A = \\ell w$$" },
-  { title: "Area of a triangle", latex: "$$A = \\tfrac{1}{2} b h$$" },
-  { title: "Pythagorean theorem", latex: "$$c^2 = a^2 + b^2$$" },
-  {
-    title: "Special right triangle (45°–45°–90°)",
-    latex: "$$\\text{sides in ratio } x : x : x\\sqrt{2}$$",
-  },
-  {
-    title: "Special right triangle (30°–60°–90°)",
-    latex: "$$\\text{sides in ratio } x : x\\sqrt{3} : 2x$$",
-  },
-  { title: "Volume of a rectangular prism", latex: "$$V = \\ell w h$$" },
-  { title: "Volume of a cylinder", latex: "$$V = \\pi r^2 h$$" },
-  { title: "Volume of a sphere", latex: "$$V = \\tfrac{4}{3}\\pi r^3$$" },
-  { title: "Volume of a cone", latex: "$$V = \\tfrac{1}{3}\\pi r^2 h$$" },
-  { title: "Volume of a pyramid", latex: "$$V = \\tfrac{1}{3}\\ell w h$$" },
-];
 
 const NOTES = [
   "The arc of a circle measures 360°.",
@@ -63,14 +43,14 @@ export function ReferenceSheet({ open, onClose }: Props) {
         </div>
         <div className="max-h-[75vh] overflow-y-auto p-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {FORMULAS.map((f) => (
+            {REFERENCE_FORMULAS_HTML.map((f) => (
               <div
                 key={f.title}
                 className="rounded-md border border-neutral-200 bg-neutral-50/50 p-3"
               >
                 <div className="text-xs font-medium text-neutral-600">{f.title}</div>
                 <div className="mt-1">
-                  <RichContent html={f.latex} />
+                  <RichHtml html={f.html} />
                 </div>
               </div>
             ))}

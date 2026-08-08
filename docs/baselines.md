@@ -102,3 +102,56 @@ These were listed in plan §0.6 and cannot be recorded yet. Each needs a tool ad
 
 The product metrics in §0.6 and Appendix D are not a measurement task — they are a build task.
 There is no funnel instrumentation in this codebase at all. Treat that as its own work item.
+
+---
+
+## T2.1 — KaTeX rendered at save time (2026-08-08)
+
+Measured with `npx next build` immediately before and after the change, on the same commit
+range. The T0.1 table above is the 2026-08-06 baseline; the "before" column here is a fresh
+build of `master` at `391c481`, which had drifted upward from it (shared JS 87.2 kB in both).
+
+| Route | Before | After | Δ |
+|---|---|---|---|
+| `/test/attempt/[attemptId]` | 324 kB | **145 kB** | **−179 kB** |
+| `/results/[attemptId]/review` | 290 kB | **110 kB** | **−180 kB** |
+| `/admin/questions/[id]` | 335 kB | 335 kB | 0 — deliberate |
+| `/admin/questions/new` | 335 kB | 335 kB | 0 — deliberate |
+| First Load JS shared by all | 87.2 kB | 87.2 kB | 0 |
+
+The two admin routes keep KaTeX on purpose: the question form previews the LaTeX an author is
+typing, which is the one place a renderer has to run in the browser. They are also the two
+routes where a 335 kB payload costs the least — one admin, on a desktop, on a page they sit on.
+
+Both student routes are now free of the renderer. Confirmed by chunk inspection rather than by
+the rounded route table: gzipped, `/test/attempt` is 142.2 kB across 11 chunks and
+`/results/…/review` is 108.0 kB across 8, and the largest route-specific chunk on either is
+16.3 kB — there is no KaTeX-sized chunk left to remove.
+
+**The test interface came in at −179 kB against a −180 kB target.** The gap is the pre-typeset
+reference sheet: moving those twelve formulas out of the runtime renderer and into a string
+constant adds ~1.1 kB to that route's own JS. Deferring it with `next/dynamic` was tried and
+reverted — it moved 0.7 kB off the route and put 0.2 kB of loader runtime into the chunk every
+route shares, which is a worse trade for a 55% reduction that is already banked.
+
+### CSS and fonts
+
+Not visible in the route table, and paid by every route because the stylesheet is imported in
+the root layout.
+
+| | Before | After |
+|---|---|---|
+| Stylesheet | `katex.min.css`, 23.3 kB | `src/app/katex-subset.css`, 20.1 kB |
+| `@font-face` blocks | 20 | 10 |
+| woff2 declared | 253.7 kB | 71.7 kB |
+| woff2 actually fetched, review page | — | 46 kB across 4 files |
+
+`npm run gen:katex-subset` derives this from the bank: it reads every `Question.renderedHtml`,
+resolves each text run to a font face using the class map parsed out of `katex.min.css` itself,
+and glyph-subsets with `pyftsubset`. It then reads each output font's cmap back and fails if a
+required codepoint was dropped. Ten families the bank never reaches (Fraktur, Script,
+Caligraphic, SansSerif, Typewriter, AMS) are dropped entirely; `KaTeX_Main`, `KaTeX_Math` and
+`KaTeX_Size1`–`Size4` are kept even where unused, because `\left(…\right)` and `\sum` reach
+them with no font macro and a future question should not render in a fallback serif.
+
+Re-run it after authoring math that uses new glyphs.

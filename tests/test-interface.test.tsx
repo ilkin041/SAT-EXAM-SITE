@@ -12,11 +12,12 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/components/toast", () => ({ useToast: () => toast }));
 vi.mock("@/lib/audio-beep", () => ({ playTimeUpBeep: timeUpBeep }));
-vi.mock("@/components/rich-content", () => ({
-  RichContent: ({ content }: { content: string }) => <span>{content}</span>,
-}));
+// The interface reads pre-rendered HTML now, so there is no renderer to stub —
+// only the annotation layer, which wants a DOM and a fetch.
 vi.mock("@/components/annotated-passage", () => ({
-  AnnotatedPassage: ({ passage }: { passage: string }) => <span>{passage}</span>,
+  AnnotatedPassage: ({ passageHtml }: { passageHtml: string }) => (
+    <span>{passageHtml}</span>
+  ),
 }));
 vi.mock("@/app/test/attempt/[attemptId]/connectivity-overlays", () => ({
   ConnectivityBanner: () => null,
@@ -76,16 +77,16 @@ function state(overrides: Partial<AttemptState> = {}): AttemptState {
         id: "question-1",
         order: 1,
         type: "MULTIPLE_CHOICE",
-        passage: null,
-        stem: "Smoke-test question",
+        passageHtml: null,
+        stemHtml: "Smoke-test question",
         imageUrl: null,
         imagePosition: "INLINE",
         imageMaxWidth: null,
         choices: [
-          { label: "A", text: "One" },
-          { label: "B", text: "Two" },
-          { label: "C", text: "Three" },
-          { label: "D", text: "Four" },
+          { label: "A", html: "One" },
+          { label: "B", html: "Two" },
+          { label: "C", html: "Three" },
+          { label: "D", html: "Four" },
         ],
       },
     ],
@@ -192,7 +193,7 @@ describe("TestInterface lifecycle smoke tests", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<TestInterface initialState={state()} studentName="Student" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "A" }));
+    fireEvent.click(screen.getByRole("button", { name: "A One" }));
     fireEvent.click(screen.getByRole("button", { name: "Go to Review" }));
     fireEvent.click(screen.getByRole("button", { name: "Submit module" }));
     const submitButtons = screen.getAllByRole("button", { name: "Submit module" });
