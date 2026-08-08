@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { formatDate } from "@/lib/format-date";
 import { AdminResetPasswordModal } from "@/components/admin-reset-password-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,7 +76,7 @@ export default async function UserDetailPage({
                 <Mail className="h-3 w-3" />
                 {user.email}
               </span>
-              <span>· joined {user.createdAt.toLocaleDateString()}</span>
+              <span>· joined {formatDate(user.createdAt)}</span>
             </div>
           </div>
         </div>
@@ -171,7 +172,7 @@ export default async function UserDetailPage({
                         )}
                       </td>
                       <td className="px-4 py-3 text-caption text-muted-foreground">
-                        {a.startedAt.toLocaleDateString()}
+                        {formatDate(a.startedAt)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Button asChild variant="secondary" size="sm">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Search, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { formatDate } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -131,7 +132,7 @@ export default async function UsersPage({
                     {u._count.attempts}
                   </td>
                   <td className="px-4 py-3 text-caption text-muted-foreground">
-                    {u.createdAt.toLocaleDateString()}
+                    {formatDate(u.createdAt)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button asChild variant="secondary" size="sm">

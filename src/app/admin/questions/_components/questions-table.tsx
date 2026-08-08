@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatDate } from "@/lib/format-date";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   AlertTriangle,
@@ -322,7 +323,7 @@ export function QuestionsTable({ rows, assignableTests }: Props) {
                       )}
                     </td>
                     <td className="px-6 py-4 text-xs text-muted-foreground">
-                      {new Date(r.updatedAt).toLocaleDateString()}
+                      {formatDate(r.updatedAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">

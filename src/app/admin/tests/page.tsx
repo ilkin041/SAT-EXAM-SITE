@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { formatDate } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -99,11 +100,7 @@ export default async function TestsPage() {
                         {t._count.attempts}
                       </td>
                       <td className="px-6 py-4 text-caption text-muted-foreground">
-                        {t.createdAt.toLocaleDateString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
+                        {formatDate(t.createdAt)}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">

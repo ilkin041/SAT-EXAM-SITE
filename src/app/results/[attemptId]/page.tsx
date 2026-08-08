@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { formatDate } from "@/lib/format-date";
 import {
   ArrowLeft,
   ArrowRight,
@@ -140,11 +141,7 @@ export default async function ResultsPage({
           <Badge variant="success">Completed</Badge>
           {attempt.completedAt && (
             <span className="text-caption text-muted-foreground font-medium">
-              Completed on {attempt.completedAt.toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-              })}
+              Completed on {formatDate(attempt.completedAt)}
             </span>
           )}
         </div>

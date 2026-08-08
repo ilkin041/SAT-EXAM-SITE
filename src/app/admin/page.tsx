@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpen, FileText, Users, Activity } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { formatDateTime } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -103,13 +104,7 @@ export default async function AdminDashboard() {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-caption text-muted-foreground">
-                        {a.startedAt.toLocaleString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {formatDateTime(a.startedAt)}
                       </td>
                     </tr>
                   ))}

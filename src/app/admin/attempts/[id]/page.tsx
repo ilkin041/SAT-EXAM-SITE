@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { formatDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import {
@@ -100,7 +101,7 @@ export default async function AttemptDetailPage({
               <li key={event.id} className="flex justify-between font-mono">
                 <span>{event.type.toLowerCase()}</span>
                 <span className="text-muted-foreground">
-                  {event.occurredAt.toLocaleString()}
+                  {formatDateTime(event.occurredAt)}
                 </span>
               </li>
             ))}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDate } from "@/lib/format-date";
 import { BookOpen, ClipboardList, ShieldCheck } from "lucide-react";
 import { requireUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
@@ -324,11 +325,7 @@ function renderAttemptRow(a: HistoryAttempt) {
         )}
       </td>
       <td className="px-6 py-4 text-caption text-muted-foreground">
-        {a.startedAt.toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })}
+        {formatDate(a.startedAt)}
       </td>
       <td className="px-6 py-4 text-right">
         {isDone ? (

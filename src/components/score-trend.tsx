@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDayMonth } from "@/lib/format-date";
 
 interface ScorePoint {
   attemptId: string;
@@ -65,7 +66,7 @@ export function ScoreTrend({
               <circle cx={x(index)} cy={y(point.total)} r="5" className="fill-primary stroke-card" strokeWidth="2" />
               <text x={x(index)} y={y(point.total) - 10} textAnchor="middle" className="fill-foreground text-[11px] font-bold">{point.total}</text>
               <text x={x(index)} y={height - 3} textAnchor="middle" className="fill-muted-foreground text-[9px]">
-                {point.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                {formatDayMonth(point.date)}
               </text>
             </g>
           ))}

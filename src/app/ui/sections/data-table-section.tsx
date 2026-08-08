@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { formatDate } from "@/lib/format-date";
 import { BookOpen, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,12 +65,7 @@ const ATTEMPT_COLUMNS: Column<Attempt>[] = [
     // The cell renders "27 Apr 2026", which sorts alphabetically. ISO is the
     // value we actually mean by "submitted".
     sortValue: (row) => row.submittedAt,
-    cell: (row) =>
-      new Date(row.submittedAt).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
+    cell: (row) => formatDate(row.submittedAt),
   },
 ];
 

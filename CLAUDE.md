@@ -205,6 +205,16 @@ utility behind `<DotLattice />`, and the StatCard shimmer is the `.shimmer-sweep
 - **Errors say what happened and what to do. Never apologise, never vague.**
 - Empty states are invitations to act, with a CTA.
 - Sentence case except mono eyebrows.
+- **Dates go through `src/lib/format-date.ts`. Never call `toLocaleDateString()` / `toLocaleString()`
+  in a component.** With no locale argument they read the *runtime's* default, and the runtimes
+  disagree: this Node process resolves to `az`, so a server component rendered "5 avq 2026" while a
+  client component rendered the browser's "8/6/2026" — and `questions-table.tsx` formatting a
+  server-rendered date on the client was two hydration errors on every `/admin/questions` visit.
+  `formatDate` → `6 Aug 2026`, `formatDateTime` → `6 Aug 2026, 08:14 UTC`, `formatDayMonth` →
+  `6 Aug`. Locale `en-GB` and time zone UTC are pinned there and covered by
+  `tests/format-date.test.ts`; that file is where open decision 8 (localisation) gets made. The one
+  legitimate exception is a timestamp produced *after* an interaction and never server-rendered —
+  `test-meta-form.tsx`'s "Saved at 14:32", which wants the reader's own clock.
 - **Never state a number the product cannot back.** No hardcoded marketing stats, no invented
   percentiles, no fabricated testimonials. `tierLabel()` in `results/[attemptId]/page.tsx:316`
   currently violates this — it returns "Above Average Score" from a raw ratio against no
