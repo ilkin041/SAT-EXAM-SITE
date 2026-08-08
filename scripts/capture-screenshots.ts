@@ -84,8 +84,8 @@ interface Shot {
   steps?: Step[];
   /**
    * Must be on the page when the shutter opens. Checked **last**, after every
-   * step, because "it was there a second ago" is not the claim — the highlight
-   * in particular is applied by an effect and a later re-render takes it away.
+   * step: "it was there a second ago" is not the claim being made, and the
+   * highlight in particular is drawn by an effect rather than by the server.
    */
   waitFor: string;
 }
@@ -96,24 +96,12 @@ const SHOTS: Shot[] = [
     // choice, both seeded, plus the eliminator circles which need the ABC
     // toggle switched on.
     //
-    // The choreography is not decoration. `ResumingSplash` covers the whole
-    // screen for the first second of a resumed attempt, so nothing before
-    // 1.4s is photographable. And `AnnotatedPassage` draws its highlight in an
-    // effect when the annotation fetch resolves, after which a re-render of
-    // the passage strips the wrapper out again — a defect in the test
-    // interface, reported rather than papered over here. So: let the splash
-    // clear, toggle the eliminator, step forward and back to remount the
-    // passage, and shoot the moment the highlight reappears.
+    // `ResumingSplash` covers the whole screen for the first second of a
+    // resumed attempt, so nothing before ~1.4s is photographable.
     file: "test-interface.webp",
     as: "student",
     path: `/test/attempt/${LIVE_ATTEMPT_ID}`,
-    steps: [
-      { sleep: 1500 },
-      { click: '[title="Toggle answer eliminator"]' },
-      { clickText: "Next" },
-      { sleep: 400 },
-      { clickText: "Back" },
-    ],
+    steps: [{ sleep: 1500 }, { click: '[title="Toggle answer eliminator"]' }, { sleep: 400 }],
     waitFor: "[data-annotation-id]",
   },
   {

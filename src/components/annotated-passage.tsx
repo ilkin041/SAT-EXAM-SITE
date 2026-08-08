@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Highlighter } from "lucide-react";
 import { RichHtml } from "@/components/rich-html";
 
@@ -67,6 +67,10 @@ export function AnnotatedPassage({ passageHtml, attemptId, questionId }: Props) 
   // ---------- Load existing annotations ----------
   useEffect(() => {
     let cancelled = false;
+    // Clear first. Offsets are measured against *this* question's passage, so
+    // carrying the previous question's rows over until the fetch lands paints
+    // its highlights onto the wrong words.
+    setAnnotations([]);
     fetch(`/api/attempts/${attemptId}/annotations?questionId=${questionId}`)
       .then((r) => r.json())
       .then((d) => {
@@ -85,14 +89,44 @@ export function AnnotatedPassage({ passageHtml, attemptId, questionId }: Props) 
     [annotations],
   );
 
+  /** What is currently drawn, so a re-render can tell whether it still matches. */
+  const signature = useMemo(
+    () =>
+      sortedAnnotations
+        .map((a) => `${a.id}:${a.startOffset}-${a.endOffset}:${a.color}:${a.note ? 1 : 0}`)
+        .join("|"),
+    [sortedAnnotations],
+  );
+
   // ---------- Apply highlights to DOM ----------
-  useEffect(() => {
+  //
+  // Deliberately has no dependency array: it runs after **every** render.
+  //
+  // The highlights are spans this component splices into HTML that React owns
+  // through `dangerouslySetInnerHTML`, and React will rebuild that subtree
+  // whenever it re-renders the passage — which used to happen once a second in
+  // the test interface and took every highlight with it. `RichHtml` is memoised
+  // now, so it should not, but "should not" is the wrong guarantee for a
+  // feature a student watches disappear. Checking for the spans on each render
+  // and redrawing when they are gone costs one `querySelector` and cannot get
+  // out of step.
+  //
+  // Layout effect, not `useEffect`: this runs in the same commit that rebuilt
+  // the passage, so the highlight is never absent in a painted frame.
+  useLayoutEffect(() => {
     const root = wrapperRef.current;
     if (!root) return;
-    // Reset: remove any existing highlight wrappers, restoring original text nodes.
-    unwrapHighlights(root);
-    if (sortedAnnotations.length === 0) return;
+    const drawn = root.querySelector("[data-annotation-id]") !== null;
 
+    if (sortedAnnotations.length === 0) {
+      if (drawn) unwrapHighlights(root);
+      delete root.dataset.annotationSignature;
+      return;
+    }
+    // Already correct: same annotations, and the spans are still in the DOM.
+    if (drawn && root.dataset.annotationSignature === signature) return;
+
+    unwrapHighlights(root);
     for (const ann of sortedAnnotations) {
       try {
         wrapRange(root, ann.startOffset, ann.endOffset, ann);
@@ -100,7 +134,8 @@ export function AnnotatedPassage({ passageHtml, attemptId, questionId }: Props) 
         /* annotation may no longer fit (passage changed); skip silently */
       }
     }
-  }, [sortedAnnotations, passageHtml]);
+    root.dataset.annotationSignature = signature;
+  });
 
   // ---------- Selection → popup ----------
   function onMouseUp() {

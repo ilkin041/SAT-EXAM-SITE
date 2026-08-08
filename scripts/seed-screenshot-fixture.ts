@@ -501,13 +501,18 @@ async function seedLiveAttempt() {
   };
   const existing = await prisma.annotation.findFirst({
     where: { attemptId: LIVE_ATTEMPT_ID, questionId: DEMO_RW_QUESTION_ID },
+    orderBy: { createdAt: "asc" },
     select: { id: true },
   });
-  if (existing) {
-    await prisma.annotation.update({ where: { id: existing.id }, data: annotation });
-  } else {
-    await prisma.annotation.create({ data: annotation });
-  }
+  const kept = existing
+    ? await prisma.annotation.update({ where: { id: existing.id }, data: annotation })
+    : await prisma.annotation.create({ data: annotation });
+  // Exactly one highlight, however many times someone has clicked around in
+  // the fixture attempt since the last run. A stray second one would be in the
+  // next screenshot.
+  await prisma.annotation.deleteMany({
+    where: { attemptId: LIVE_ATTEMPT_ID, NOT: { id: kept.id } },
+  });
 }
 
 async function seedReviewAttempt() {

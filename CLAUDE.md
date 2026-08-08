@@ -226,6 +226,18 @@ and `Question.renderedHtml` stores the sanitized output. `/results/[attemptId]/r
   `RichHtml` and takes the HTML as a prop. `RichContent` has exactly one live call site left —
   `question-preview.tsx`, inside the admin editor's preview pane, which is the one place the
   renderer legitimately has to run in the browser.
+- **`RichHtml` is `memo`-wrapped, and that is correctness, not performance. Do not unwrap it.**
+  Without it, a parent re-render re-applies `dangerouslySetInnerHTML` and rebuilds the subtree even
+  though the string has not changed — measured in the built app at **six rewrites a second** across
+  the passage, the stem and the four choices, driven by the test interface's timer. Anything
+  spliced into that HTML from outside React is destroyed each time, which is exactly what
+  `AnnotatedPassage`'s highlight spans are: a student's passage highlight disappeared about a
+  second after they made it, in the interface *and* in review, while the header still read
+  "1 saved". `AnnotatedPassage` now also redraws on every render if it finds its spans gone —
+  belt and braces, since it does not own the HTML it writes into. `tests/annotated-passage.test.tsx`
+  covers both, and its ticking parent renders the passage itself rather than taking it as
+  `children`: an element passed through `children` is the same object every render, React bails out
+  of the subtree, and the test passes whether or not the bug is there.
 - **`src/lib/rendered-question.ts` is server-only.** `renderQuestionHtml` writes, and
   `readRenderedQuestion` reads with a fallback: a NULL or stale-version blob is re-rendered on the
   server. That fallback is why a missing row is one slow request rather than a blank question, and
@@ -527,14 +539,10 @@ npm run gen:screenshots              # Chrome, 1440x900 at DSF 2, WebP straight 
   picture otherwise (the test interface has a pre-existing hydration mismatch in `TopBar`), and
   `NEXTAUTH_URL` names port 3000, so signing in on any other port fails — `npm run build && npm
   start` (which defaults to 3000), not `next start --port` anything else.
-- **The interface shot is choreographed, and the choreography is a bug report.** `ResumingSplash`
-  covers the screen for the first second, so nothing before 1.4s is photographable. Worse,
-  `AnnotatedPassage` draws its highlight in an effect and **a later re-render of the passage strips
-  it back out** — highlights do not survive on screen, in the interface or in review. The script
-  therefore steps forward and back to remount the passage and shoots the moment the highlight
-  reappears. **Fix that defect before anyone leans harder on the highlighter claim**; it is in
-  `src/components/annotated-passage.tsx`, which the test-interface freeze does not cover, but its
-  only in-exam call site does.
+- **The interface shot waits out `ResumingSplash`**, which covers the whole screen for the first
+  second of a resumed attempt. Nothing before ~1.4s is photographable. Taking this shot is also
+  what turned up the highlight-erasure bug below — the highlighter was drawing correctly and being
+  wiped a second later, and it took a screenshot to notice.
 - **One frame, one ratio, or the acceptance criterion is gone.** All four files are 2880×1800 and
   the frame is an `aspect-[8/5]` box that has its height before the image loads.
   `tests/screenshot-tabs.test.ts` reads the WebP headers off disk and fails if a capture drifts.
