@@ -47,7 +47,7 @@ Phase 8 cannot start before T2.2.
 
 A task is done when it is committed on `master`, so the `Done` column carries the commit — the
 roadmap and `git log` cannot drift apart that way. Only phases with completed work have the column.
-**24 of 65 done:** Phase 0, Phase 1 and Phase 2 complete; Phase 3 started.
+**25 of 65 done:** Phase 0, Phase 1, Phase 2 and Phase 3 complete; Phase 4 started.
 
 ---
 
@@ -102,11 +102,11 @@ Things producing no styles or failing WCAG **today**.
 
 ## Phase 4 — Auth & onboarding · `prompts/B-foundations-landing-auth.md`
 
-| ID | Task |
-|---|---|
+| ID | Task | Done |
+|---|---|---|
 | T4.1 | Auth visual unification + mobile brand band: four copy-pasted pages become `AuthShell`, the panel earns its half with `AUTH_HIGHLIGHTS` (five mono eyebrows, not a rotating stem — only three questions are licensable and `/` already shows them), a 96px `bg-primary` band below `lg` instead of dropping the brand, the page's one gradient on the new `Button variant="gradient"`, and the panel's `text-white/70` (4.25:1, and 3.62:1 in dark) replaced by full-opacity `text-primary-foreground` | `1b339a1` |
-| T4.2 | Form quality + error copy |
-| T4.3 | `StudentProfile` + `/welcome` |
+| T4.2 | Form quality + error copy | |
+| T4.3 | `StudentProfile` + `/welcome` | |
 
 ## Phase 5 — Dashboard & progress · `prompts/C-student.md`
 
