@@ -16,6 +16,9 @@ import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
+import { DomainBarList } from "@/components/ui/domain-bar";
+import { Progress } from "@/components/ui/progress";
+import { ScoreDial } from "@/components/ui/score-dial";
 import {
   computeDifficultyBreakdown,
   computeDomainBreakdown,
@@ -116,8 +119,6 @@ export default async function ResultsPage({
     attempt.answers.map((a) => ({ response: a.response, timeSpent: a.timeSpent })),
   );
 
-  const scorePct = Math.max(0, Math.min(100, Math.round(((scaled.total - 400) / 1200) * 100)));
-
   return (
     <main className="container mx-auto max-w-4xl px-4 py-10 animate-fade-in">
       <Link
@@ -169,34 +170,7 @@ export default async function ResultsPage({
           {scoreFidelity === "ESTIMATE" ? "Estimated Performance" : "Overall Performance"}
         </span>
 
-        {/* Dynamic Pure SVG Circle Gauge */}
-        <div className="relative flex h-48 w-48 items-center justify-center">
-          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 120 120">
-            <circle
-              cx="60"
-              cy="60"
-              r="50"
-              className="stroke-muted/50 fill-none"
-              strokeWidth="9"
-            />
-            <circle
-              cx="60"
-              cy="60"
-              r="50"
-              className="stroke-primary fill-none transition-all duration-1000 ease-out"
-              strokeWidth="9"
-              strokeDasharray={314.16}
-              strokeDashoffset={314.16 - (scorePct / 100) * 314.16}
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className="text-center z-10">
-            <span className="block text-display text-foreground tabular">
-              {scaled.total}
-            </span>
-            <span className="text-body font-bold text-muted-foreground mt-0.5 block">/ 1600</span>
-          </div>
-        </div>
+        <ScoreDial value={scaled.total} max={1600} sublabel="/ 1600" />
 
         {scoreFidelity === "FULL_LENGTH" ? (
         <div className="mt-6 flex flex-col items-center">
@@ -340,7 +314,6 @@ function SectionScore({
   raw: string;
   progressColor?: string;
 }) {
-  const pct = Math.max(0, Math.min(100, Math.round(((value - 200) / 600) * 100)));
   return (
     <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs hover:border-primary/20 hover:shadow-sm transition-all duration-200">
       <div className="flex items-center justify-between gap-2">
@@ -356,12 +329,17 @@ function SectionScore({
         <span className="text-h1 tabular text-foreground">{value}</span>
         <span className="text-body font-semibold text-muted-foreground">/ 800</span>
       </div>
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted/60">
-        <div
-          className={cn("h-full rounded-full transition-all duration-500", progressColor)}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      {/* The gradient stays a call-site decision: `--gradient-accent` is
+          unassigned in CLAUDE.md and the page's gradient budget belongs to
+          T1.8, so this passes its own fill rather than teaching Progress a
+          tone it may not keep. */}
+      <Progress
+        value={value}
+        min={200}
+        max={800}
+        barClassName={progressColor}
+        className="mt-4"
+      />
     </div>
   );
 }
@@ -429,12 +407,10 @@ function DifficultyTable({
                   </td>
                   <td className="py-4 text-center font-bold tabular text-foreground">{pct}%</td>
                   <td className="py-4 pl-6 min-w-[120px]">
-                    <div className="h-2 overflow-hidden rounded-full bg-muted/65">
-                      <div
-                        className={cn("h-full rounded-full transition-all duration-500", cfg.bar)}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                    {/* Difficulty colours, not grades: 40% on hard questions is
+                        not the same news as 40% on easy ones, so the bar keeps
+                        the row's own colour. */}
+                    <Progress value={pct} barClassName={cfg.bar} />
                   </td>
                 </tr>
               );
@@ -488,39 +464,7 @@ function DomainTable({
       {stats.length === 0 ? (
         <p className="text-caption text-muted-foreground py-2">No domain data logged for this attempt.</p>
       ) : (
-        <ul className="space-y-4">
-          {stats.map((s) => {
-            const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0;
-            const barColor =
-              pct >= 75
-                ? "bg-emerald-500"
-                : pct >= 50
-                  ? "bg-blue-500"
-                  : pct >= 25
-                    ? "bg-amber-500"
-                    : "bg-destructive";
-            return (
-              <li key={s.domain} className="text-body">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="truncate font-medium text-foreground">{s.domain}</span>
-                  <span className="shrink-0 text-caption tabular text-muted-foreground font-semibold">
-                    {s.correct} / {s.total}{" "}
-                    <span className="ml-1 font-bold text-foreground">{pct}%</span>
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted/65">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-500",
-                      barColor,
-                    )}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <DomainBarList stats={stats} />
       )}
     </div>
   );

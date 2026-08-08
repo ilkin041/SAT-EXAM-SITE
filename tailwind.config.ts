@@ -249,6 +249,14 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        // ScoreDial sweeps from an empty ring to its score. Both endpoints are
+        // custom properties because the target is per-instance and set inline —
+        // a static server render has no value change for a transition to catch,
+        // which is why this is keyframes and not `transition-all`.
+        "score-dial": {
+          from: { strokeDashoffset: "var(--dial-circumference)" },
+          to: { strokeDashoffset: "var(--dial-offset)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 200ms ease-out",
@@ -261,6 +269,11 @@ const config: Config = {
         shimmer: "shimmer 2s ease-in-out infinite",
         "accordion-down": "accordion-down 200ms ease-out",
         "accordion-up": "accordion-up 200ms ease-out",
+        // `forwards` is load-bearing twice over: it holds the final offset
+        // after the sweep, and it is what makes the global reduced-motion
+        // override (duration 0.01ms) land on a full ring rather than an empty
+        // one.
+        "score-dial": "score-dial 1s ease-out forwards",
       },
     },
   },

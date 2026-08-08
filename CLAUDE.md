@@ -267,13 +267,13 @@ T1.5 checked it after adding `react-tabs` and `react-tooltip`: tooltip pulls the
 onto the override, tabs does not use it at all. One stack. T1.6 checked it again after adding
 `react-accordion`, which does not pull the layer either.
 
-### Existing primitives (20, in `src/components/ui/`)
+### Existing primitives (23, in `src/components/ui/`)
 
 `Button` (107 LOC, 6 variants, 4 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
 · `Select` (sizes sm/default, error state, leading icon, clearable) · `Table` · `DataTable` ·
 `Pagination` · `Modal` · `Sheet` · `Tabs` · `Accordion` · `Tooltip` · `Alert` ·
-`SegmentedControl` · `Field` · `Avatar` · `Separator` · `EmptyState` · `PageHeader` (admin only) ·
-`StatCard`. Everything else in the plan is greenfield.
+`SegmentedControl` · `Field` · `Avatar` · `Separator` · `Progress` · `ScoreDial` · `DomainBar` ·
+`EmptyState` · `PageHeader` (admin only) · `StatCard`. Everything else in the plan is greenfield.
 
 Two app-level compositions sit outside `ui/` because they are *uses* of the primitives, not
 primitives: `src/components/password-field.tsx` (a `Field` + `Input` + show/hide toggle, used by all
@@ -351,6 +351,37 @@ The T1.6 five:
   trigger in an `<h3>`, which is right under an `<h2>` and wrong under an `<h1>`, and only the page
   knows. The panel animation reads `--radix-accordion-content-height`, so its two keyframes live in
   `tailwind.config.ts` rather than `globals.css`.
+
+The T1.7 three — the score-report language, now shared by results, progress and admin:
+
+- **`Progress` grades by default, and `gradeOf()` owns the cuts** — emerald ≥75, blue ≥50, amber
+  ≥25, red below. They came from the results page's domain breakdown and are now the product's one
+  grading scale; `tests/ui-primitives.test.ts` pins them, because no score is stored and every bar
+  in every historical attempt is recomputed on render. Difficulty colours are *not* this scale and
+  must not be folded into it: 40% on hard is not the same news as 40% on easy, so a difficulty bar
+  passes `barClassName`. That escape hatch also carries the two section-score gradients, which stay
+  a call-site decision — `--gradient-accent` is unassigned and the page's gradient budget is T1.8's.
+  **A bar with no `label` is `aria-hidden`**, because it nearly always sits under text that already
+  reads "12 / 15 · 80%"; pass `label` only when the bar is the only place the number appears.
+- **`variant="scoreBand"` is the relative reading, `ScoreDial` is the absolute one.** A band takes
+  `min`, so 200–1600 and 200–800 both work and a 200 correctly draws empty. A dial does not: it is
+  `value / max`, and the bug this extraction fixed was the results page mapping 400–1600 onto the
+  ring, so an SAT floor of 400 — a real score, not an absent student — rendered as an empty circle.
+  Ticks are `scoreBandTicks()`, the smallest round step giving at most eight intervals; only three
+  are labelled, because eight 11px labels do not fit 360px.
+- **`ScoreDial` puts `role="img"` on the wrapper, not the SVG**, so the number, the sublabel and the
+  delta chip announce as one sentence — ARIA makes an `img`'s children presentational. Everything
+  visible must therefore also be in the label. The sweep is **keyframes, not a transition**: a
+  server render has no value change for a transition to catch, so the old `transition-all
+  duration-1000` never fired. `score-dial` interpolates between two inline custom properties and
+  lives in `tailwind.config.ts` for the same reason the accordion's does; `forwards` is what makes
+  the global reduced-motion override land on a full ring instead of an empty one.
+- **`DomainBar` takes `label` as a node rather than a `tooltip` prop, and that is a bundle
+  decision.** It was written with a `tooltip` prop first and it cost `/results/[attemptId]` 31 kB of
+  client JavaScript — 94.2 kB first load to 125 kB — because a static import of a client component
+  is paid whether or not the optional prop is ever passed, and that page passes it nowhere. Any
+  primitive tempted to reach for `Tooltip`, `Modal` or `Sheet` behind an optional prop has the same
+  problem. Compose the trigger at the call site around `DomainBarLabel`.
 
 ---
 

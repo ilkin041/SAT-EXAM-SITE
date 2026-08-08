@@ -5,6 +5,9 @@ import { AvatarSection, AvatarSpecimens } from "./avatar-section";
 import { BadgeSection, BadgeSpecimens } from "./badge-section";
 import { ButtonSection, ButtonSpecimens } from "./button-section";
 import { DataTableSection, DataTableSpecimens } from "./data-table-section";
+import { DomainBarSection, DomainBarSpecimens } from "./domain-bar-section";
+import { ProgressSection, ProgressSpecimens } from "./progress-section";
+import { ScoreDialSection, ScoreDialSpecimens } from "./score-dial-section";
 import { EmptyStateSection, EmptyStateSpecimens } from "./empty-state-section";
 import { FieldSection, FieldSpecimens } from "./field-section";
 import { InputSection, InputSpecimens } from "./input-section";
@@ -53,6 +56,12 @@ export const GALLERY: GalleryEntry[] = [
     Section: SeparatorSection,
     Specimens: SeparatorSpecimens,
   },
+  {
+    id: "progress",
+    title: "Progress",
+    Section: ProgressSection,
+    Specimens: ProgressSpecimens,
+  },
   { id: "input", title: "Input", Section: InputSection, Specimens: InputSpecimens },
   { id: "field", title: "Field", Section: FieldSection, Specimens: FieldSpecimens },
   { id: "select", title: "Select", Section: SelectSection, Specimens: SelectSpecimens },
@@ -90,6 +99,18 @@ export const GALLERY: GalleryEntry[] = [
     title: "Pagination",
     Section: PaginationSection,
     Specimens: PaginationSpecimens,
+  },
+  {
+    id: "score-dial",
+    title: "ScoreDial",
+    Section: ScoreDialSection,
+    Specimens: ScoreDialSpecimens,
+  },
+  {
+    id: "domain-bar",
+    title: "DomainBar",
+    Section: DomainBarSection,
+    Specimens: DomainBarSpecimens,
   },
   {
     id: "stat-card",
