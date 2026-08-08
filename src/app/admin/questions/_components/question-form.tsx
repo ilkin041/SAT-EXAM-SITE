@@ -41,6 +41,7 @@ interface FormValues {
   correctAnswer: string;
   acceptedAnswers: string[] | null;
   explanation: string;
+  publicDemo: boolean;
 }
 
 interface Props {
@@ -98,6 +99,7 @@ export function QuestionForm({
     correctAnswer: initial?.correctAnswer ?? "A",
     acceptedAnswers: initial?.acceptedAnswers ?? [""],
     explanation: initial?.explanation ?? "",
+    publicDemo: initial?.publicDemo ?? false,
   };
   const [values, setValues] = useState<FormValues>(initialValues);
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialValues));
@@ -271,6 +273,7 @@ export function QuestionForm({
           ? (values.acceptedAnswers ?? []).map((a) => a.trim()).filter(Boolean)
           : null,
       explanation: values.explanation.trim() || null,
+      publicDemo: values.publicDemo,
     };
 
     startTransition(async () => {
@@ -551,6 +554,33 @@ export function QuestionForm({
             placeholder="<p>Subtract 5, then divide by 3.</p>"
           />
         </Field>
+
+        {/*
+          T3.3. A licensing claim, not a publish state — see the note on
+          `Question.publicDemo`. Deliberately a plain checkbox with the warning
+          attached: nothing else in this form puts content in front of the open
+          web, and it should be the one control that makes you read a sentence.
+        */}
+        <div className="rounded-md border border-border bg-muted/30 p-3">
+          <label className="flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={values.publicDemo}
+              onChange={(e) => update("publicDemo", e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-primary"
+            />
+            <span>
+              <span className="font-medium">Show in the public demo</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Publishes this question, its choices and its explanation to logged-out
+                visitors on the landing page. Only tick it for questions you wrote
+                yourself — anything derived from a College Board test must stay off.
+                Multiple choice with an explanation only; the first three flagged
+                questions are the ones shown.
+              </span>
+            </span>
+          </label>
+        </div>
 
         {error && (
           <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">

@@ -4,6 +4,7 @@ import { CtaBanner } from "@/components/marketing/cta-banner";
 import { Features } from "@/components/marketing/features";
 import { Hero } from "@/components/marketing/hero";
 import { HowItWorks } from "@/components/marketing/how-it-works";
+import { LiveQuestionDemo } from "@/components/marketing/live-question-demo";
 import { LandingHeader } from "@/components/marketing/landing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { StatsBanner } from "@/components/marketing/stats-banner";
@@ -34,6 +35,7 @@ export default function Home() {
       <main>
         <Hero />
         <StatsBanner />
+        <LiveQuestionDemo />
         <Features />
         <HowItWorks />
         <CtaBanner />

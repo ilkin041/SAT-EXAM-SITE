@@ -41,6 +41,7 @@ npm run analyze               # ANALYZE=true next build -> .next/analyze/*.html
 npm run db:backfill-question-html   # populate Question.renderedHtml (see T2.1 below)
 npm run db:verify-question-html     # stored render == fresh render, field by field
 npm run db:seed-taxonomy            # upsert Domain/Skill from question-taxonomy.ts
+npm run db:seed-demo-questions      # the three originally-authored landing-demo questions
 npm run db:verify-taxonomy          # taxonomy invariants: no fold collisions, no cross-domain tags
 npm run gen:reference-sheet         # re-typeset the geometry reference sheet
 npm run gen:katex-subset            # re-derive the KaTeX CSS + font subset from the bank
@@ -399,6 +400,62 @@ product.
   the same on the route as it actually renders and survives T3.3/T3.4 adding more dynamic work.
 - **A failed count hides the strip; it never guesses.** `/` is the one page that otherwise touches
   no database, so an outage used to leave it standing — the try/catch keeps that true.
+
+## The landing demo is three questions and no attempt (T3.3)
+
+Recon W3: `/practice` already lets a logged-out visitor take a **full**, timed, real test, bound to
+their browser by an HMAC cookie. So the demo is not the unauthenticated path — it is the entry
+point to it, and every exit it offers points at `/practice`. Sections on `/` are composed in
+`page.tsx`; the demo is `src/components/marketing/live-question-demo.tsx` (server) plus
+`-client.tsx` (the island).
+
+- **`Question.publicDemo` is a licensing flag, not a publish state.** Ticking it asserts the
+  question is originally authored and safe on the open web. The bank references "Official SAT
+  Practice Test 4" (open decision 4), so the default is `false`, no bulk action or import can set
+  it, and **a clone does not inherit it** — a clone is about to be edited into something else.
+  **T10.3's draft/published state is a different axis and must not be folded into this one:** a
+  question can be published to students and still not licensable to the public.
+- **The three demo questions live in `scripts/seed-demo-questions.ts`, not `prisma/seed.ts`.**
+  They were written for this repo. Keeping them in their own file is what makes that claim
+  auditable — adding to that file is asserting the same thing about what you add. Fixed ids,
+  upserted, so `npm run db:seed-demo-questions` is idempotent and re-renders `renderedHtml`.
+- **They contain no `$` currency signs, deliberately.** `renderRichToHtml` treats `$…$` as inline
+  LaTeX, so "costs $80, marked down" silently opens a math span. The rate question uses kilometres
+  for exactly this reason.
+- **The key and the explanation are not in the page payload.** `/` is the most-crawled page in the
+  app; server-rendering `correctAnswer` next to the stem makes "view source" the whole demo.
+  The shell ships stems and choices, and `/api/demo/answer` releases the verdict once a visitor has
+  committed. That route has `publicDemo: true` **in its `where`**, not checked after the read —
+  without it, it is a public endpoint that returns the answer key for any id in the bank. IP
+  rate-limited at 30/min via `lib/rate-limit.ts`, and whitelisted in `middleware.ts` because a
+  logged-out visitor has no session.
+- **No attempt row, no cookie, nothing migrated on signup.** Progress is `sessionStorage`, per tab,
+  gone when the tab closes — deliberately weaker than `/practice`'s anonymous attempt.
+  `parseDemoProgress` discards anything that does not parse or names a question no longer served,
+  and derives the position from the answer count rather than a stored index, so a hand-edited blob
+  restarts the demo instead of throwing during hydration.
+- **The timer starts on the first interaction, not on page load.** A visitor who scrolls past has
+  spent no time on it, and a clock already running when they arrive is pressure the demo has no
+  business applying. It reads total elapsed — recorded per-question times plus the running one —
+  so the header clock and the summary can never disagree.
+- **The summary is `2 of 3 · 1m 12s` and nothing else.** Three questions cannot support a score
+  projection; `buildDemoSummary` returns four fields and a test pins that list, so no caller can
+  render a number the product cannot back. Same rule as the stats strip.
+- **The geometry is the real interface's; the colours are not.** Same letter disc, same
+  strike-through eliminator circle to the right of each row, same ABC toggle in the question
+  header — that interaction is the product's most distinctive and nobody knows it exists. But the
+  Bluebook hardcoded-colour exemption is scoped to `src/app/test/attempt/**`, and this is
+  marketing: every colour here is a token. The ABC toggle is an explicit button for everyone,
+  which is what makes the eliminator reachable on touch without a hover affordance.
+- **Nothing flagged → the section does not exist.** Not an empty box, not a placeholder. Same
+  degradation as the stats strip, including the try/catch that hides it when the database is
+  unreachable.
+- **Cost: 2.97 kB** of route JS on `/` (6.44 → 9.41 kB, 120 → 123 kB First Load), measured by
+  building with and without the section. It stays cheap because the island imports `RichHtml` and
+  never `RichContent` — the T2.1 rule — and because `demo-question.ts` is pure, so the island can
+  share logic with the route handler without dragging Prisma or KaTeX toward the browser.
+- **`id="demo"` is a section anchor, not a nav item.** `MARKETING_NAV` is untouched; adding an
+  entry there is T3.4's call when it rebuilds the hero.
 
 ## Copy rules
 

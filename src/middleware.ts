@@ -56,6 +56,10 @@ const PUBLIC_PREFIXES = [
   "/api/attempts/",
   // Cron handlers authenticate their own Vercel bearer token.
   "/api/cron/",
+  // T3.3. The landing demo grades answers for logged-out visitors, so the
+  // handler has to resolve without a session. It rate-limits by IP and will
+  // only ever read a question carrying `publicDemo`.
+  "/api/demo/",
   // The gallery's viewport-simulator iframes live under /ui/frame.
   "/ui/",
 ];

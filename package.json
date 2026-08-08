@@ -14,6 +14,7 @@
     "db:backfill-question-html": "tsx scripts/backfill-question-html.ts",
     "db:finalize-stale-attempts": "tsx scripts/finalize-stale-attempts.ts",
     "db:seed-taxonomy": "tsx scripts/seed-taxonomy.ts",
+    "db:seed-demo-questions": "tsx scripts/seed-demo-questions.ts",
     "db:verify-taxonomy": "tsx scripts/verify-taxonomy.ts",
     "db:studio": "prisma studio",
     "gen:reference-sheet": "tsx scripts/generate-reference-sheet.ts",

@@ -36,6 +36,11 @@ export default async function NewQuestionPage({
         correctAnswer: source.correctAnswer,
         acceptedAnswers: (source.acceptedAnswers as string[] | null) ?? null,
         explanation: source.explanation ?? "",
+        // T3.3: `publicDemo` deliberately does not clone. It asserts the
+        // question is originally authored, and a clone is about to be edited
+        // into something else — inheriting the claim would publish content
+        // nobody looked at.
+        publicDemo: false,
       }
     : undefined;
 

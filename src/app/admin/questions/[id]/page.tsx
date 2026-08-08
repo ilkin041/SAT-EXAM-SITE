@@ -75,6 +75,7 @@ export default async function EditQuestionPage({
     correctAnswer: question.correctAnswer,
     acceptedAnswers: (question.acceptedAnswers as string[] | null) ?? null,
     explanation: question.explanation ?? "",
+    publicDemo: question.publicDemo,
   };
 
   return (

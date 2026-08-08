@@ -230,6 +230,17 @@ model Question {
   /// JSON: string[] — alternate accepted forms for SPR
   acceptedAnswers Json?
   explanation     String?
+  /// T3.3: this question may be shown to a logged-out visitor in the landing
+  /// page's three-question demo.
+  ///
+  /// It is a *licensing* flag, not a publish state. Setting it asserts the
+  /// question is originally authored and safe to expose publicly — the bank
+  /// references "Official SAT Practice Test 4", so the default is false and
+  /// nothing is opted in by a bulk operation or an import. T10.3's draft /
+  /// published state is a different axis and must not be folded into this one:
+  /// a question can be published to students and still not licensable to the
+  /// open web.
+  publicDemo      Boolean       @default(false)
   /// JSON: the question's rich content with `$…$` LaTeX already run through
   /// KaTeX and sanitized, written at save time by `renderQuestionHtml`.
   /// Shape is `RenderedQuestionHtml` in `src/lib/rendered-question.ts`:
@@ -255,6 +266,7 @@ model Question {
   @@index([skillId])
   @@index([difficulty])
   @@index([contentHash])
+  @@index([publicDemo])
 }
 
 /// Join table linking a question in the global bank to a specific module of a

@@ -1,13 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { questionContentHash } from "@/lib/question-content-hash";
 import { renderQuestionHtml } from "@/lib/rendered-question";
 import { createSkillRow, loadTaxonomy, type TaxonomyTables } from "@/lib/taxonomy-db";
+import { DEMO_QUESTIONS_TAG } from "@/lib/demo-question";
 
 const choiceSchema = z.object({
   label: z.enum(["A", "B", "C", "D"]),
@@ -45,6 +46,13 @@ const baseSchema = z.object({
   correctAnswer: z.string().min(1, "Correct answer is required"),
   acceptedAnswers: z.array(z.string()).optional().nullable(),
   explanation: z.string().optional().nullable(),
+  /**
+   * T3.3. Opt-in to the landing page's public demo. Defaults to false and is
+   * only ever set from the question form: it asserts the question is
+   * originally authored, which is a claim no bulk action or import can make on
+   * a tutor's behalf.
+   */
+  publicDemo: z.boolean().optional().default(false),
 });
 
 export type QuestionInput = z.infer<typeof baseSchema>;
@@ -100,6 +108,25 @@ async function validate(input: QuestionInput) {
       };
     }
   }
+  // T3.3. The demo serves multiple-choice only and shows the explanation as
+  // its payoff, so a flagged question missing either would render a broken
+  // section on the landing page. Fail here, where the person who flagged it is
+  // reading the message.
+  if (data.publicDemo) {
+    if (data.type !== "MULTIPLE_CHOICE") {
+      return {
+        ok: false as const,
+        error: "The public demo shows multiple-choice questions only. Turn it off, or change the question type.",
+      };
+    }
+    if (!data.explanation?.trim()) {
+      return {
+        ok: false as const,
+        error: "A public demo question needs an explanation — that is what the visitor reads after answering.",
+      };
+    }
+  }
+
   return { ok: true as const, data };
 }
 
@@ -128,6 +155,7 @@ export async function createQuestion(input: QuestionInput) {
           ? (data.acceptedAnswers as unknown as object)
           : undefined,
       explanation: data.explanation ?? null,
+      publicDemo: data.publicDemo,
       contentHash: questionContentHash({ stem: data.stem, passage: data.passage }),
       renderedHtml: renderQuestionHtml({
         stem: data.stem,
@@ -139,6 +167,9 @@ export async function createQuestion(input: QuestionInput) {
   });
 
   revalidatePath("/admin/questions");
+  // T3.3: the landing demo caches its query for an hour. Flagging a question
+  // should show up on `/` when the tutor goes to look, not an hour later.
+  revalidateTag(DEMO_QUESTIONS_TAG);
   return { ok: true as const, id: created.id };
 }
 
@@ -198,6 +229,7 @@ export async function updateQuestion(id: string, input: QuestionInput) {
           ? (data.acceptedAnswers as unknown as Prisma.InputJsonValue)
           : Prisma.DbNull,
       explanation: data.explanation ?? null,
+      publicDemo: data.publicDemo,
       contentHash: questionContentHash({ stem: data.stem, passage: data.passage }),
       renderedHtml: renderQuestionHtml({
         stem: data.stem,
@@ -217,6 +249,7 @@ export async function updateQuestion(id: string, input: QuestionInput) {
 
   revalidatePath("/admin/questions");
   revalidatePath(`/admin/questions/${id}`);
+  revalidateTag(DEMO_QUESTIONS_TAG);
   return { ok: true as const, id };
 }
 
