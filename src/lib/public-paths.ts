@@ -26,6 +26,12 @@ export const PUBLIC_PATHS: readonly string[] = [
   // T3.7. In the footer and the sitemap, and the whole point of it is to answer
   // someone who has not signed up.
   "/faq",
+  // T3.8. Same category: the scoring policy, the format guide and the tutor
+  // page all exist to answer somebody who has no account, and `/sat-format` is
+  // the one written to be found from a search rather than from this site.
+  "/scoring",
+  "/sat-format",
+  "/for-tutors",
   // Dev-only component gallery. `notFound()`s in a production build, so
   // whitelisting it here cannot expose anything — but without the entry it
   // redirects to /login in dev, which is the one place it needs to work.

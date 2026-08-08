@@ -21,19 +21,29 @@ export interface MarketingNavItem {
  * is a broken link, so `MarketingHeader` renders the subset the page declares
  * through its `sections` prop and `/` declares only what it actually contains.
  * T3.7 shipped the FAQ and added `faq` to `LANDING_SECTIONS` below, which is the
- * whole of what it took to light that item up; `for-tutors` and `scoring` still
- * wait on T3.8.
+ * whole of what it took to light that item up, and T3.8 shipped the last two —
+ * the scoring block and the tutor band — so all five items are live.
+ *
+ * The order is the order the sections appear on `/`. A nav that lists them in a
+ * different sequence from the page they scroll within reads as five unrelated
+ * destinations rather than as a map of one page.
  */
 export const MARKETING_NAV: readonly MarketingNavItem[] = [
   { id: "product", label: "Product", href: "/#product" },
   { id: "how-it-works", label: "How it works", href: "/#how-it-works" },
-  { id: "for-tutors", label: "For tutors", href: "/#for-tutors" },
   { id: "scoring", label: "Scoring", href: "/#scoring" },
+  { id: "for-tutors", label: "For tutors", href: "/#for-tutors" },
   { id: "faq", label: "FAQ", href: "/#faq" },
 ];
 
 /** Section ids `src/app/page.tsx` renders today. See the note above. */
-export const LANDING_SECTIONS: readonly string[] = ["product", "how-it-works", "faq"];
+export const LANDING_SECTIONS: readonly string[] = [
+  "product",
+  "how-it-works",
+  "scoring",
+  "for-tutors",
+  "faq",
+];
 
 export interface FooterColumn {
   heading: string;
@@ -50,17 +60,16 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     ],
   },
   {
-    // Mostly points at sections of `/` rather than at articles: there is still
-    // no editorial content, and inventing `/blog` links that 404 is worse than a
-    // column that repeats the tour. `/faq` is the first real page in here — T3.7
-    // gave it its own URL because it is the one a search result should land on.
-    // T3.8 gives the other two real destinations.
+    // T3.7 gave `/faq` its own URL and T3.8 added the other three, so this
+    // column is now four real pages rather than anchors back into the tour. All
+    // four are in the sitemap and all four answer somebody who has not signed
+    // up, which is what earns a footer slot.
     heading: "Learn",
     links: [
-      { label: "Adaptive modules", href: "/#product" },
-      { label: "From sign-up to score", href: "/#how-it-works" },
+      { label: "The Digital SAT format", href: "/sat-format" },
+      { label: "How scoring works", href: "/scoring" },
       { label: "FAQ", href: "/faq" },
-      { label: "Ask a question", href: "/contact" },
+      { label: "For tutors", href: "/for-tutors" },
     ],
   },
   {

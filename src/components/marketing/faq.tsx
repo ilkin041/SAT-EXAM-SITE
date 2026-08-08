@@ -89,7 +89,13 @@ export function Faq({
 
         {/* Outside the disclosure list on purpose: an answer is a plain string
             in the structured data, so a link inside one would be content the
-            graph cannot carry. These belong to the section. */}
+            graph cannot carry. These belong to the section.
+
+            The `/scoring` link is the one T3.7 could not add. The prompt asked
+            for it on the score answer; there was no such route, and an anchor
+            to a page that does not exist is a broken link. T3.8 built the page,
+            and the link lands here rather than inside the answer string for the
+            reason above — the answer still says everything it said. */}
         <p className="mt-8 text-center text-body text-muted-foreground">
           Still deciding?{" "}
           <Link
@@ -98,7 +104,14 @@ export function Faq({
           >
             Take a practice test
           </Link>{" "}
-          without an account, or{" "}
+          without an account, read{" "}
+          <Link
+            href="/scoring"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            how the score is worked out
+          </Link>
+          , or{" "}
           <Link
             href="/contact"
             className="font-medium text-primary underline-offset-4 hover:underline"

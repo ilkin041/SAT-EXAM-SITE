@@ -9,8 +9,10 @@ import { HowItWorks } from "@/components/marketing/how-it-works";
 import { loadDemoQuestions } from "@/components/marketing/demo-questions";
 import { LandingHeader } from "@/components/marketing/landing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { ScoringBlock } from "@/components/marketing/scoring-block";
 import { ScreenshotTabs } from "@/components/marketing/screenshot-tabs";
 import { StatsBanner } from "@/components/marketing/stats-banner";
+import { TutorBand } from "@/components/marketing/tutor-band";
 import { organizationJsonLd, webApplicationJsonLd } from "@/lib/json-ld";
 import { SITE_TITLE, pageMetadata } from "@/lib/site";
 
@@ -53,6 +55,14 @@ export default async function Home() {
         <ScreenshotTabs />
         <Capabilities adaptive={adaptive} />
         <HowItWorks />
+        {/* T3.8. Scoring follows the sequence that produces a score, and it
+            prints the conversion table rather than asserting anything about it —
+            this page has no testimonials and is not getting any. */}
+        <ScoringBlock />
+        {/* Then the audience switch: everything above is the student product,
+            and the navy band is the admin one. Last thing before the FAQ, so a
+            tutor who was never the reader of the rest still finds it. */}
+        <TutorBand />
         {/* Last before the CTA: the objections a visitor has left are the ones
             standing between the tour and signing up. */}
         <Faq />

@@ -4,7 +4,18 @@ import { BarChart3, ListChecks, UserPlus } from "lucide-react";
  * "Three easy steps" — sign-up to first scored attempt.
  *
  * Carries `id="how-it-works"` for the header nav; `scroll-mt-16` clears the
- * sticky bar, same as `Features`.
+ * sticky bar.
+ *
+ * T3.8 kept the three numbered steps — they are a real sequence, which is the
+ * one thing that earns a numbered list — and changed two things. The section
+ * was `py-24` flat while every other one is `py-16 md:py-24`, so it was the
+ * tallest block on the page for the least content. And the connector between
+ * the steps was a `linear-gradient` at `--primary / 0.2`, which measured about
+ * 1.1:1 against the section behind it: not a faint line, an invisible one. It
+ * is now a solid `bg-border`, which is the rule the rest of the app draws, and
+ * it is inset to run between the step badges instead of fading out at the page
+ * edges — the fade existed to hide ends that no longer stick out. Losing the
+ * gradient is a bonus: `/`'s budget is one and the hero's demo rail has it.
  */
 export function HowItWorks() {
   return (
@@ -12,7 +23,7 @@ export function HowItWorks() {
       id="how-it-works"
       className="scroll-mt-16 border-y border-border/40 bg-card/30"
     >
-      <div className="container mx-auto max-w-6xl px-4 py-24">
+      <div className="container mx-auto max-w-6xl px-4 py-16 md:py-24">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-caption font-semibold text-primary">
             How it works
@@ -25,12 +36,27 @@ export function HowItWorks() {
 
         {/* Steps with connecting line */}
         <div className="relative mt-14">
-          {/* Connecting gradient line (desktop) */}
+          {/*
+            The line sits *behind* three opaque cards, so the only parts of it
+            anybody ever sees are the two `gap-6` gaps between them. The old
+            fade to transparent at 10%/90% was therefore spent on ends the cards
+            already cover, while the gaps got the flat middle of a
+            `--primary / 0.2` gradient — measured against the section behind it,
+            **1.35:1**.
+
+            `bg-border` is the obvious replacement and it is *worse*: 1.24:1.
+            The app's divider colour is tuned to sit next to a border it is
+            separating, not to be seen on its own across a 24px gap. So this is
+            `muted-foreground / 50`, measured at **1.96:1** — the same neutral
+            the section's own body copy is drawn in, at half strength. It
+            inverts with the theme for free, which a hand-picked grey would not.
+
+            A ratio, not a floor: the element is `aria-hidden` decoration and the
+            sequence is already carried by the numbered badges, so 3:1 is not the
+            bar. It just has to be a line you can see.
+          */}
           <div
-            className="pointer-events-none absolute left-0 right-0 top-10 hidden h-[2px] md:block"
-            style={{
-              background: "linear-gradient(90deg, transparent 10%, hsl(var(--primary) / 0.2) 20%, hsl(var(--primary) / 0.2) 80%, transparent 90%)",
-            }}
+            className="pointer-events-none absolute inset-x-0 top-10 hidden h-0.5 bg-muted-foreground/50 md:block"
             aria-hidden
           />
 

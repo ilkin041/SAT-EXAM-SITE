@@ -126,7 +126,10 @@ cannot reach it. Same category as the Bluebook chrome.
 shared chrome, 8 before T1.8 did the pages). Per-route before/after counts are in
 `docs/gradient-audit.md`. The only residual is `/dashboard` at 2 total — the `TestCard` left accent
 strip (which does clear the fold at 1280×800, and is the page's one above it) and the warm
-`Continue test` in the history table two sections below. Both are deliberate. There are **no hand-rolled `bg-gradient-*` buttons left**, and since T3.4 **no gradient button at all**:
+`Continue test` in the history table two sections below. Both are deliberate. T3.8 took `/` to
+exactly one counted gradient element on the *whole page*, not just above the fold: the
+How-it-works connector was an inline `linear-gradient` and is now a flat line, and neither of
+the two sections T3.8 added carries one. There are **no hand-rolled `bg-gradient-*` buttons left**, and since T3.4 **no gradient button at all**:
 `/`'s one gradient moved off the hero CTA and onto the rail across the top of the demo panel,
 which is the hero signature. `Button variant="accent"` now has no call site — check the budget
 before giving it one.
@@ -380,9 +383,11 @@ groups; still `src/app/`.
   and fails AA; over the plain background it is 4.59:1 and passes. Measured in both themes. A link
   whose contrast depends on scroll position fails somewhere, so the nav takes the ~15:1 reading.
 - **`MARKETING_NAV` holds five items; the header renders only those whose section the page
-  declares.** `/` declares `product`, `how-it-works` and — since T3.7 — `faq`. `for-tutors` and
-  `scoring` arrive with T3.8; each adds its id to `LANDING_SECTIONS` and the item appears. An
-  anchor to a section that does not exist is a broken link, not a placeholder.
+  declares.** T3.8 shipped the last two, so `LANDING_SECTIONS` now holds all five and every nav
+  item is live. The mechanism stays: a new section adds its id to that array and the item
+  appears, and an anchor to a section that does not exist is a broken link, not a placeholder.
+  Nav order is page order — a nav that lists five sections in a different sequence from the page
+  it scrolls within reads as five destinations rather than as a map of one page.
 - **JSON-LD claims nothing the product cannot back.** `Organization` + `WebApplication` in
   `src/lib/json-ld.ts`, no `aggregateRating`, no `review`, and **no `offers`** — a `price: 0` would
   answer open decision 3 in Google's index before anyone answers it here. A test pins all three.
@@ -647,9 +652,11 @@ the `FAQPage` JSON-LD — **one source, so the structured data cannot drift from
   (open decision 3, the same thing `json-ld.ts` refuses to answer by omitting `offers`). `devices`
   describes the interface's size rather than promising a phone warning, because **no phone warning
   is implemented** — that is T7.4, blocked on open decision 7.
-- **The prompt asked for a `/scoring` link on the score question and there is no such route** —
-  the scoring block is T3.8. So that item answers in full from `docs/scoring-policy.md` and links
-  nowhere. When T3.8 lands, a link belongs in the section, not inside the answer string.
+- **The `/scoring` link the prompt asked for is in the section, not in the answer.** T3.7 could
+  not add it at all — there was no such route — so the item answers in full from
+  `docs/scoring-policy.md`. T3.8 built the page and put the link in the paragraph *below* the
+  disclosure list, which is where every link on this section lives, and the answer string is
+  unchanged.
 - **`/faq` needed a `middleware.ts` whitelist entry**, and shipping without one 307'd the page to
   `/login` — a public FAQ answering only people who had signed up. The two path lists moved to
   `src/lib/public-paths.ts` (pure data) so `tests/site-metadata.test.ts` can assert every sitemap
@@ -658,6 +665,68 @@ the `FAQPage` JSON-LD — **one source, so the structured data cannot drift from
 - **`LANDING_SECTIONS` gained `faq`, which is the whole of what it took to light up the header's
   FAQ item.** `for-tutors` and `scoring` still wait on T3.8. Route cost: `/` unchanged at 16.3 kB /
   139 kB First Load, `/faq` 638 B / 102 kB — the same as the other chrome-only pages.
+
+## The scoring page prints the table (T3.8)
+
+The landing page's last three sections and six public content pages. `Scoring` is
+`id="scoring"`, the navy `TutorBand` is `id="for-tutors"`, and `LANDING_SECTIONS` now holds all
+five ids, so every item in `MARKETING_NAV` is finally live. Route cost unchanged: `/` is
+16.3 kB / 139 kB, and the three new content pages are 649 B / 102 kB each — the same as `/faq`.
+
+- **`src/lib/scoring-facts.ts` derives every number `/scoring` shows from `src/lib/scoring.ts`.**
+  The acceptance criterion was "matches what `scoring.ts` actually does", and the way that fails
+  is silently: somebody edits a conversion table, the page keeps rendering the old figures, and
+  nothing breaks. So the page quotes nothing — `sampleConversion()` reads the arrays, the worked
+  example is the return value of `scaleScore(5, 10, DEFAULT_RW_TABLE)`, and the full tables are
+  `DEFAULT_RW_TABLE.map(...)`. Same split as `site-stats.ts` against `stats-banner.tsx`.
+  `tests/scoring-facts.test.ts` pins the derivation, including that each table still indexes its
+  section's full-length raw score.
+- **The full tables are behind `<details>`, all 100 rows.** Same reasoning as the FAQ: a closed
+  disclosure keeps its content in the markup, costs the route zero client JavaScript and works
+  before hydration. "We show our work" is not a slogan if the work is a screenshot.
+- **`/scoring` says nothing about a performance tier**, and a test asserts `FIDELITY_FACTS`
+  never mentions one. `tierLabel()` is the copy-rule violation T6.1 removes; a page documenting
+  it would have to be rewritten by that task.
+- **`TutorBand` is flat `bg-brand-navy`, not `AdminNav`'s three-stop wash.** The token means
+  "the admin product", which is what the band is about, so this is the one sanctioned use
+  outside `/admin` — but reproducing the gradient would put a second gradient element on a page
+  whose budget is one. Its CTA is white-on-navy through a `className`, because `secondary` is
+  `bg-card text-foreground` and therefore a *dark* button in the dark theme on a surface that is
+  navy in both; the focus ring follows `theme-toggle.tsx` (`ring-white ring-offset-brand-navy`),
+  since `ring-ring` is indigo and falls below 3:1 here.
+- **`src/lib/tutor-features.ts` carries the route each claim lives at**, and every one was read
+  before it was written. The band shows six and `/for-tutors` shows all seven; a test asserts
+  the band is a prefix, so the page cannot drop one the landing page is already showing.
+- **The closing band went from three buttons to one.** `Log in` is in the header at every scroll
+  position and the sample test is the hero's own CTA and the FAQ's, so nothing was lost. Its
+  sub-line is a fact about the code (no payment step exists) rather than the social proof with
+  the number filed off that it replaced ("Join students already practicing…").
+- **`bg-border` was the wrong fix for the How-it-works connector and measuring caught it.** The
+  old `--primary / 0.2` gradient measured 1.35:1 at its solid middle; `bg-border` is **1.24:1**,
+  i.e. worse. The divider colour is tuned to sit beside the border it separates, not to be seen
+  alone across a 24px gap. It is `bg-muted-foreground/50`, measured at **1.96:1**, and it
+  inverts with the theme for free. The line is also only ever visible *in* those two gaps — it
+  runs behind three opaque cards — which is why the old fade to transparent at the ends was
+  spent on pixels nobody sees.
+- **Three answers on the content pages are narrower than they look, and deliberately.** Analytics
+  retention: nothing prunes those tables, so `/privacy` says they are not deleted automatically
+  rather than naming a window with no job behind it — `docs/analytics-events.md` records where
+  the number goes when there is one. Operator and governing law: nothing in the repo names an
+  entity or a jurisdiction, so `/terms` says "the operator of this site" and carries no
+  governing-law clause. Deletion: there is no delete button and no export in `src/`, so
+  `/privacy` describes the by-hand request route and promises no turnaround.
+- **`/contact` was rewritten although it was not in the task's five.** `/privacy` sends a data
+  request there and `/terms` sends a question about the terms there; both landing on "This page
+  is a placeholder" is the same failure with an extra click. It routes each reason to the page
+  that answers it and states plainly that no direct address is published yet. **That is the open
+  item: there is no contact channel, so a deletion request currently has nowhere to go.**
+- **`/sat-format` reads its domain names out of `TAXONOMY`**, so the words a reader meets in the
+  guide are the words on their score report, and a taxonomy correction corrects the guide. Its
+  structure table is the only wide element on any new page; it lives in an `overflow-x-auto`
+  container and the page body does not scroll at 360px.
+- **The `/scoring` link the FAQ wanted is in the section, not in an answer.** T3.7 could not add
+  it (no route) and noted where it should land. `faq.ts` answer strings are still link-free
+  markup-free plain text, which is what keeps the `FAQPage` graph equal to the rendered DOM.
 
 ## Copy rules
 

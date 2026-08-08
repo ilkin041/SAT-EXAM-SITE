@@ -15,8 +15,8 @@ import { absoluteUrl } from "@/lib/site";
  *
  * The list is static because every public route is. There is no public
  * per-test or per-question URL to enumerate — `/practice` is one page that
- * renders whatever `Test.isPublic` currently holds. When T3.8 adds content
- * pages they go here.
+ * renders whatever `Test.isPublic` currently holds. T3.8's three content pages
+ * are in the list below.
  */
 
 interface Entry {
@@ -28,7 +28,13 @@ interface Entry {
 const PUBLIC_ROUTES: readonly Entry[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
   { path: "/practice", changeFrequency: "weekly", priority: 0.9 },
+  // T3.8's content pages. `/sat-format` is the one written to stand on its own
+  // in a search result rather than as a page of this site, which is why it sits
+  // above `/signup`: it is the likeliest first thing anybody reads here.
+  { path: "/sat-format", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/scoring", changeFrequency: "monthly", priority: 0.7 },
   { path: "/signup", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/for-tutors", changeFrequency: "monthly", priority: 0.6 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.6 },
   { path: "/login", changeFrequency: "monthly", priority: 0.5 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },

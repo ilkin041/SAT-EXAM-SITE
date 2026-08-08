@@ -126,6 +126,14 @@ away — that is the whole fix.
 
 ## Retention
 
-Nothing prunes these tables yet. `AnalyticsEvent.createdAt` is indexed for exactly that sweep;
-setting a retention window is a T3.8 decision, because the number that goes in the privacy copy
-and the number the job uses have to be the same one.
+Nothing prunes these tables. `AnalyticsEvent.createdAt` is indexed for exactly that sweep.
+
+**T3.8 decided not to set a window, and `/privacy` says so in as many words.** The choice was
+between stating a period and building the job, or stating the truth; a period written into a
+privacy policy with no sweeper behind it is a promise the code breaks on the day it is written,
+and it is invisible for however long nobody checks. So the page says these rows are not deleted
+automatically and that no window is set.
+
+When a window is set it goes in three places at once, with the same number in each: the sweeper,
+this file, and the "How long it is kept" section of `src/app/privacy/page.tsx`. That page is
+written so the paragraph can be swapped without touching anything around it.
