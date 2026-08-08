@@ -47,7 +47,7 @@ Phase 8 cannot start before T2.2.
 
 A task is done when it is committed on `master`, so the `Done` column carries the commit — the
 roadmap and `git log` cannot drift apart that way. Only phases with completed work have the column.
-**14 of 65 done:** Phase 0 complete, Phase 1 through T1.7.
+**15 of 65 done:** Phase 0 complete, Phase 1 through T1.8.
 
 ---
 
@@ -76,7 +76,7 @@ Things producing no styles or failing WCAG **today**.
 | T1.5 | `Modal`, `Tabs`, `Tooltip`, `Alert`, `SegmentedControl`, `Sheet` | `fdc84f6` |
 | T1.6 | `Pagination`, `Avatar`, `Field`, `Separator`, `Accordion` | `4b2906b` |
 | T1.7 | `Progress`, `ScoreDial`, `DomainBar` | `d8c3dd6` |
-| T1.8 | `Button` soft/xs + page-level gradient sweep | |
+| T1.8 | `Button` soft/xs + page-level gradient sweep | `317fc4d` |
 | T1.9 | Migrate 13 tables to `DataTable`; resolve zustand | |
 
 ## Phase 2 — Foundations that unblock · `prompts/B-foundations-landing-auth.md`
