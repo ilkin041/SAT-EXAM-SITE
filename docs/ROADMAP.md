@@ -1,4 +1,4 @@
-# Roadmap v2 — corrected against `docs/recon.md`
+﻿# Roadmap v2 — corrected against `docs/recon.md`
 
 65 tasks, 12 phases. One task per Claude Code session (`+` for a new chat, or `/clear`).
 
@@ -77,7 +77,7 @@ Things producing no styles or failing WCAG **today**.
 | T1.6 | `Pagination`, `Avatar`, `Field`, `Separator`, `Accordion` | `4b2906b` |
 | T1.7 | `Progress`, `ScoreDial`, `DomainBar` | `d8c3dd6` |
 | T1.8 | `Button` soft/xs + page-level gradient sweep | `317fc4d` |
-| T1.9 | Migrate 13 tables to `DataTable`; resolve zustand | |
+| T1.9 | Migrate 13 tables to `DataTable`; resolve zustand (removed) | `40ad293` |
 
 ## Phase 2 — Foundations that unblock · `prompts/B-foundations-landing-auth.md`
 
