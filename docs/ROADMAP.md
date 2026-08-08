@@ -95,7 +95,7 @@ Things producing no styles or failing WCAG **today**.
 | T3.2 | Real stats strip: four hardcoded tiles → live counts rounded down (`250+` questions, `5` free tests); `1600 Max SAT Score` and the sub-threshold completed tile removed | `efcaded` |
 | T3.3 | `LiveQuestionDemo`: `Question.publicDemo` + admin toggle, three originally-authored demo questions, `/api/demo/answer` (IP rate-limited), real eliminator geometry, hands off to `/practice` | `28eda2f` |
 | T3.4 | Hero rebuild: demo folded into the hero as the signature (and the page's one gradient, off the CTA), student-first Appendix B copy minus the unbacked "adaptive", `MockTestCard` + green-check items deleted, answer-bubble lattice, `.hero-rise` 60ms stagger | `d90fd17` |
-| T3.5 | `ScreenshotTabs`: four real screens (`gen:screenshots`, hand-rolled CDP) in one fixed-ratio frame, three original R&W questions + a seeded fixture so no licensed content is published, AVIF+WebP, callout labels in `lib/product-screens.ts` | |
+| T3.5 | `ScreenshotTabs`: four real screens (`gen:screenshots`, hand-rolled CDP) in one fixed-ratio frame, three original R&W questions + a seeded fixture so no licensed content is published, AVIF+WebP, callout labels in `lib/product-screens.ts` | `bff5be9` |
 | T3.6 | Capability bento | |
 | T3.7 | FAQ + JSON-LD | |
 | T3.8 | Scoring block, tutor band, closing CTA, content pages | |
