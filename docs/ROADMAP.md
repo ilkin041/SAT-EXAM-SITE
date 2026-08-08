@@ -47,7 +47,7 @@ Phase 8 cannot start before T2.2.
 
 A task is done when it is committed on `master`, so the `Done` column carries the commit — the
 roadmap and `git log` cannot drift apart that way. Only phases with completed work have the column.
-**20 of 65 done:** Phase 0, Phase 1 and Phase 2 complete; Phase 3 started.
+**21 of 65 done:** Phase 0, Phase 1 and Phase 2 complete; Phase 3 started.
 
 ---
 
@@ -92,7 +92,7 @@ Things producing no styles or failing WCAG **today**.
 | ID | Task | Done |
 |---|---|---|
 | T3.1 | Marketing chrome + SEO: landing split into `components/marketing/`, shared header/footer, canonicals on all 33 pages, `sitemap.ts`, `robots.ts`, dynamic OG, Organization + WebApplication JSON-LD | `c7fde63` |
-| T3.2 | Real stats strip: four hardcoded tiles → live counts rounded down (`250+` questions, `5` free tests); `1600 Max SAT Score` and the sub-threshold completed tile removed | |
+| T3.2 | Real stats strip: four hardcoded tiles → live counts rounded down (`250+` questions, `5` free tests); `1600 Max SAT Score` and the sub-threshold completed tile removed | `efcaded` |
 | T3.3 | `LiveQuestionDemo` | |
 | T3.4 | Hero rebuild | |
 | T3.5 | `ScreenshotTabs` | |
