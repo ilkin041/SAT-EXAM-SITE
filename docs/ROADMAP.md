@@ -84,7 +84,7 @@ Things producing no styles or failing WCAG **today**.
 | ID | Task | Done |
 |---|---|---|
 | T2.1 | KaTeX → static HTML at save time (−180 kB review, −179 kB test interface) | `e0f1594` |
-| T2.2 | Normalise `Question.skill` / `domain` into a controlled vocabulary (8 domains, 29 skills; 240 mapped, 40 queued for review) | |
+| T2.2 | Normalise `Question.skill` / `domain` into a controlled vocabulary (8 domains, 29 skills; 240 mapped, 40 queued for review) | `d8e7181` |
 | T2.3 | Event pipeline so product metrics become measurable | |
 
 ## Phase 3 — Landing · `prompts/B-foundations-landing-auth.md`
