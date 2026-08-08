@@ -29,7 +29,7 @@ reads as "the gradient thing" because of them.
 | Route | Kept | Why that one |
 |---|---|---|
 | `/` | `Sign Up Free` hero CTA (`Button variant="accent"`) | The single primary CTA. A headline and a CTA cannot both be the signature, and only one of them is clickable |
-| `/dashboard` | `--gradient-warm` on `Continue test` in the history table | `--gradient-warm` is reserved for resume, and this is the dashboard's resume affordance |
+| `/dashboard` | `TestCard` left accent strip above the fold; `--gradient-warm` on `Continue test` in the history table below it | `--gradient-warm` is reserved for resume, and this is the dashboard's resume affordance. The strip is kept by instruction — see the residual note |
 | `/results/[attemptId]` | The `ScoreDial` ring | Policy allows `--gradient-primary` to be the score gauge **or** the hero signature; the gauge is the reason the page exists |
 | all 15 `/admin/*` | The `AdminNav` navy bar | `--brand-navy` is admin chrome and nothing else on the page carries it |
 | `/practice` | Page wash | Already at budget; untouched |
@@ -37,7 +37,7 @@ reads as "the gradient thing" because of them.
 
 ## Changes, route by route
 
-### `/dashboard` — 6 → 2 (0 above the fold)
+### `/dashboard` — 6 → 2 (1 above the fold)
 
 | Element | Before | After |
 |---|---|---|
@@ -53,11 +53,16 @@ reads as "the gradient thing" because of them.
 The three stat figures were three different colours for three numbers that mean the same kind of
 thing. They are one colour now; the greeting carries the page's only tinted text.
 
-**Residual: 2, by instruction.** The accent strip and the warm resume button are both kept — the
-strip is a 6px rule that costs nothing and marks the card, the warm button is the one gradient the
-policy actually assigns to resume. Neither is above the fold, and they sit in different sections
-(the card rail vs. the history table). Whether they can share a 1280×800 viewport depends on how
-many tests the account can see; at 360px they cannot.
+**Residual: 2, by instruction — 1 above the fold.** The accent strip and the warm resume button are
+both kept: the strip is a 6px rule that costs nothing and marks the card, the warm button is the
+one gradient the policy actually assigns to resume.
+
+Measured at 1280×800 on a seeded admin account with 5 visible tests: the first row of `TestCard`s
+clears the fold, so **the accent strip is the one gradient above it** — the hero banner, the
+greeting and the three stat figures are all flat now, so nothing competes with it. The warm resume
+button is two sections further down, in the history table, and only renders when an attempt is
+`IN_PROGRESS`; it never shares a viewport with the card rail at 360px, and at 1280px it would take
+a longer test list than the seed has. Verified: `scrollWidth === innerWidth` at 360px.
 
 ### `/` — 5 → 1
 
@@ -221,7 +226,7 @@ Everything else:
 |---|---|---|---|
 | `/` | 5 | 5 | **1** |
 | `/account` | 2 | 0 | **0** |
-| `/dashboard` | 8 | 6 | **2** (0 above the fold) |
+| `/dashboard` | 8 | 6 | **2** (1 above the fold) |
 | `/login`, `/signup`, `/forgot-password`, `/reset-password` | 2 each | 2 each | **0** |
 | `/practice` | 1 | 1 | **1** |
 | `/results/[attemptId]` | 4 | 4 | **1** |

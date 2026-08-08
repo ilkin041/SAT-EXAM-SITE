@@ -110,9 +110,9 @@ pair — along with a third class constant the rule never saw, a function-scoped
 
 **No route exceeds one gradient element above the fold** (was 17 of 30 over budget before T0.6 did
 shared chrome, 8 before T1.8 did the pages). Per-route before/after counts are in
-`docs/gradient-audit.md`. The only residual is `/dashboard` at 2 total, both below the fold and
-both deliberate: the `TestCard` left accent strip and the warm `Continue test` in the history
-table. There are **no hand-rolled `bg-gradient-*` buttons left** — `Button variant="accent"` on the
+`docs/gradient-audit.md`. The only residual is `/dashboard` at 2 total — the `TestCard` left accent
+strip (which does clear the fold at 1280×800, and is the page's one above it) and the warm
+`Continue test` in the history table two sections below. Both are deliberate. There are **no hand-rolled `bg-gradient-*` buttons left** — `Button variant="accent"` on the
 `/` hero is the app's one gradient button.
 
 | Token | Reserved for |
