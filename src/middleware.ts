@@ -5,6 +5,7 @@ import {
   ANALYTICS_SESSION_HEADER,
   ANALYTICS_SESSION_MAX_AGE_SECONDS,
 } from "@/lib/analytics-events";
+import { isPublicPath } from "@/lib/public-paths";
 
 /**
  * Edge middleware — kept deliberately thin to stay under Vercel's 1 MB limit.
@@ -18,56 +19,6 @@ import {
  * `jwt` callback in src/auth.ts (`id` and `role`). The role is trustworthy
  * because the JWT is signed with AUTH_SECRET.
  */
-
-const PUBLIC_PATHS = [
-  "/",
-  "/login",
-  "/signup",
-  "/practice",
-  "/forgot-password",
-  "/reset-password",
-  // Linked from the marketing footer, so they must resolve logged out.
-  "/privacy",
-  "/terms",
-  "/contact",
-  // Dev-only component gallery. `notFound()`s in a production build, so
-  // whitelisting it here cannot expose anything — but without the entry it
-  // redirects to /login in dev, which is the one place it needs to work.
-  "/ui",
-  // T3.1. The matcher below exempts static *files*, but these three are routes
-  // — Next generates them from `sitemap.ts`, `robots.ts` and the OG handler.
-  // Without the entries a crawler asking for /robots.txt gets a 307 to /login,
-  // which is both a useless robots file and an indexed login redirect.
-  "/sitemap.xml",
-  "/robots.txt",
-  "/api/og",
-];
-
-const PUBLIC_PREFIXES = [
-  "/api/auth",
-  "/_next",
-  "/favicon",
-  "/practice/", // public test taking
-  // The test, attempt, and results pages handle public/anonymous access in
-  // the route handler itself (anonymous attempts on public tests).
-  "/test/",
-  "/results/",
-  "/api/tests/",
-  "/api/attempts/",
-  // Cron handlers authenticate their own Vercel bearer token.
-  "/api/cron/",
-  // T3.3. The landing demo grades answers for logged-out visitors, so the
-  // handler has to resolve without a session. It rate-limits by IP and will
-  // only ever read a question carrying `publicDemo`.
-  "/api/demo/",
-  // The gallery's viewport-simulator iframes live under /ui/frame.
-  "/ui/",
-];
-
-function isPublic(pathname: string): boolean {
-  if (PUBLIC_PATHS.includes(pathname)) return true;
-  return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
-}
 
 /**
  * The T2.3 analytics session id.
@@ -107,7 +58,7 @@ function withAnalyticsSession(
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (isPublic(pathname)) {
+  if (isPublicPath(pathname)) {
     return withAnalyticsSession(req, (headers) =>
       NextResponse.next({ request: { headers } }),
     );

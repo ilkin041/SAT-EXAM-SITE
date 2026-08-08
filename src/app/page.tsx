@@ -3,6 +3,7 @@ import { JsonLd } from "@/components/json-ld";
 import { loadAdaptiveCapability } from "@/components/marketing/adaptive-capability";
 import { Capabilities } from "@/components/marketing/capabilities";
 import { CtaBanner } from "@/components/marketing/cta-banner";
+import { Faq } from "@/components/marketing/faq";
 import { Hero } from "@/components/marketing/hero";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { loadDemoQuestions } from "@/components/marketing/demo-questions";
@@ -52,6 +53,9 @@ export default async function Home() {
         <ScreenshotTabs />
         <Capabilities adaptive={adaptive} />
         <HowItWorks />
+        {/* Last before the CTA: the objections a visitor has left are the ones
+            standing between the tour and signing up. */}
+        <Faq />
         <CtaBanner />
       </main>
 

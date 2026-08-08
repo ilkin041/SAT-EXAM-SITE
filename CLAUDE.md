@@ -380,8 +380,8 @@ groups; still `src/app/`.
   and fails AA; over the plain background it is 4.59:1 and passes. Measured in both themes. A link
   whose contrast depends on scroll position fails somewhere, so the nav takes the ~15:1 reading.
 - **`MARKETING_NAV` holds five items; the header renders only those whose section the page
-  declares.** `/` declares `product` and `how-it-works` today. `for-tutors` and `scoring` arrive
-  with T3.8 and `faq` with T3.7 — each adds its id to `LANDING_SECTIONS` and the item appears. An
+  declares.** `/` declares `product`, `how-it-works` and — since T3.7 — `faq`. `for-tutors` and
+  `scoring` arrive with T3.8; each adds its id to `LANDING_SECTIONS` and the item appears. An
   anchor to a section that does not exist is a broken link, not a placeholder.
 - **JSON-LD claims nothing the product cannot back.** `Organization` + `WebApplication` in
   `src/lib/json-ld.ts`, no `aggregateRating`, no `review`, and **no `offers`** — a `price: 0` would
@@ -620,6 +620,44 @@ score report, then iPad support and no-account-needed across the bottom.
   unresolved and `json-ld.ts` deliberately omits `offers` so as not to answer it in Google's index —
   a pricing tile would answer it on the page instead. The prompt allowed a fourth capability and
   this one is backed by `/practice`'s anonymous attempts.
+
+## The FAQ is one array, and it is `<details>` (T3.7)
+
+Eight items in `src/lib/faq.ts`. That array renders the section on `/`, the whole of `/faq`, and
+the `FAQPage` JSON-LD — **one source, so the structured data cannot drift from the page.**
+
+- **The `Accordion` primitive is deliberately not used here, and the reason is not taste.** Radix
+  renders `isOpen && children`, so a closed panel is *absent* from the DOM rather than hidden, and
+  `forceMount` does not give you the other option — it seeds the presence state to true, so every
+  panel renders permanently open. Either way the HTML holds one answer while the graph claims
+  eight, and Googlebot renders a page but never clicks it. `<details>`/`<summary>` keeps all eight
+  in the markup, costs the route **zero client JavaScript**, works before hydration, and is a
+  native disclosure control — focusable, Enter/Space-operable, state exposed without an
+  `aria-expanded` to maintain, and `globals.css` already names `<summary>` in its `:focus-visible`
+  ring. `Accordion` is still right anywhere the content is not being crawled.
+- **An answer is `readonly string[]` and carries no links or markup.** `acceptedAnswer.text` is a
+  plain string, so anything rendered that is not in that string is drift. The section's links sit
+  *outside* the disclosure list; an answer that needs to point somewhere names the destination in
+  words. `tests/faq.test.tsx` compares the emitted graph against the **rendered DOM**, not against
+  `FAQ_ITEMS` — reading both out of the same array would pass however far the page had drifted.
+- **Three answers are narrower than the question that prompted them, because the decision behind
+  them is open.** `questions` does not say who owns the bank (open decision 4) and states only the
+  provenance fact that is certain — nothing here is a live exam question. `cost` says there is no
+  payment step *in the product*, which is a fact about the code, and does not say "free forever"
+  (open decision 3, the same thing `json-ld.ts` refuses to answer by omitting `offers`). `devices`
+  describes the interface's size rather than promising a phone warning, because **no phone warning
+  is implemented** — that is T7.4, blocked on open decision 7.
+- **The prompt asked for a `/scoring` link on the score question and there is no such route** —
+  the scoring block is T3.8. So that item answers in full from `docs/scoring-policy.md` and links
+  nowhere. When T3.8 lands, a link belongs in the section, not inside the answer string.
+- **`/faq` needed a `middleware.ts` whitelist entry**, and shipping without one 307'd the page to
+  `/login` — a public FAQ answering only people who had signed up. The two path lists moved to
+  `src/lib/public-paths.ts` (pure data) so `tests/site-metadata.test.ts` can assert every sitemap
+  entry is reachable logged out. Nothing else catches this: `tsc` cannot, the build cannot, and the
+  page renders perfectly for whoever is signed in while writing it.
+- **`LANDING_SECTIONS` gained `faq`, which is the whole of what it took to light up the header's
+  FAQ item.** `for-tutors` and `scoring` still wait on T3.8. Route cost: `/` unchanged at 16.3 kB /
+  139 kB First Load, `/faq` 638 B / 102 kB — the same as the other chrome-only pages.
 
 ## Copy rules
 

@@ -16,12 +16,13 @@ export interface MarketingNavItem {
  * Header nav, in order.
  *
  * Four entries were specified — Product · For tutors · Scoring · FAQ — but the
- * last three scroll to sections that do not exist yet: the tutor band and the
- * scoring block are T3.8 and the FAQ is T3.7. A nav item that scrolls nowhere
+ * last three scrolled to sections that did not exist: the tutor band and the
+ * scoring block are T3.8 and the FAQ was T3.7. A nav item that scrolls nowhere
  * is a broken link, so `MarketingHeader` renders the subset the page declares
  * through its `sections` prop and `/` declares only what it actually contains.
- * When T3.7 and T3.8 land they add their `id` to that list and the item appears
- * — no change needed here.
+ * T3.7 shipped the FAQ and added `faq` to `LANDING_SECTIONS` below, which is the
+ * whole of what it took to light that item up; `for-tutors` and `scoring` still
+ * wait on T3.8.
  */
 export const MARKETING_NAV: readonly MarketingNavItem[] = [
   { id: "product", label: "Product", href: "/#product" },
@@ -32,7 +33,7 @@ export const MARKETING_NAV: readonly MarketingNavItem[] = [
 ];
 
 /** Section ids `src/app/page.tsx` renders today. See the note above. */
-export const LANDING_SECTIONS: readonly string[] = ["product", "how-it-works"];
+export const LANDING_SECTIONS: readonly string[] = ["product", "how-it-works", "faq"];
 
 export interface FooterColumn {
   heading: string;
@@ -49,13 +50,16 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     ],
   },
   {
-    // Deliberately points at sections of `/` rather than at articles: there is
-    // no editorial content yet, and inventing `/blog` links that 404 is worse
-    // than a column that repeats the tour. T3.8 gives these real destinations.
+    // Mostly points at sections of `/` rather than at articles: there is still
+    // no editorial content, and inventing `/blog` links that 404 is worse than a
+    // column that repeats the tour. `/faq` is the first real page in here — T3.7
+    // gave it its own URL because it is the one a search result should land on.
+    // T3.8 gives the other two real destinations.
     heading: "Learn",
     links: [
       { label: "Adaptive modules", href: "/#product" },
       { label: "From sign-up to score", href: "/#how-it-works" },
+      { label: "FAQ", href: "/faq" },
       { label: "Ask a question", href: "/contact" },
     ],
   },

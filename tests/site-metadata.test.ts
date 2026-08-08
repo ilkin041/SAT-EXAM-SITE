@@ -3,6 +3,7 @@ import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import { organizationJsonLd, webApplicationJsonLd } from "@/lib/json-ld";
 import { FOOTER_COLUMNS, LANDING_SECTIONS, MARKETING_NAV } from "@/lib/marketing-nav";
+import { PUBLIC_PATHS, PUBLIC_PREFIXES } from "@/lib/public-paths";
 import {
   SITE_NAME,
   SITE_URL,
@@ -109,6 +110,19 @@ describe("sitemap", () => {
   it("excludes the password-reset flow", () => {
     expect(urls.some((u) => u.includes("forgot-password"))).toBe(false);
     expect(urls.some((u) => u.includes("reset-password"))).toBe(false);
+  });
+
+  it("submits nothing the middleware would bounce to /login", () => {
+    // A sitemap entry that 307s is worse than an absent one: it asks a crawler
+    // to index a redirect to a page already in the list. `/faq` shipped in T3.7
+    // missing its whitelist entry, which nothing else caught.
+    for (const url of urls) {
+      const pathname = new URL(url).pathname;
+      const publicPath =
+        PUBLIC_PATHS.includes(pathname) ||
+        PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+      expect(publicPath, `${pathname} is not whitelisted in middleware`).toBe(true);
+    }
   });
 
   it("includes the landing page and the free sample", () => {

@@ -32,6 +32,16 @@ import { cn } from "@/lib/utils";
  * The panel animates on a height custom property Radix measures; the global
  * reduced-motion block flattens it to 0.01ms, so the panel appears and
  * disappears instead of sliding, with no other behaviour changed.
+ *
+ * **A closed panel is absent from the DOM, not hidden — so do not use this for
+ * content that has to be crawled.** Radix renders `isOpen && children`, and
+ * `forceMount` does not give you "mounted but hidden": it seeds the presence
+ * state to true, so every panel ends up permanently open. A crawler renders a
+ * page and does not click it, which means an FAQ built on this ships one answer
+ * in its HTML. T3.7's FAQ is `<details>`/`<summary>` in
+ * `components/marketing/faq.tsx` for that reason, and only that reason — this
+ * is still the right primitive anywhere the content is behind a login or is not
+ * mirrored into structured data.
  */
 
 export const Accordion = AccordionPrimitive.Root;
