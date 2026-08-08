@@ -104,7 +104,7 @@ Things producing no styles or failing WCAG **today**.
 
 | ID | Task |
 |---|---|
-| T4.1 | Auth visual unification + mobile brand band: four copy-pasted pages become `AuthShell`, the panel earns its half with `AUTH_HIGHLIGHTS` (five mono eyebrows, not a rotating stem — only three questions are licensable and `/` already shows them), a 96px `bg-primary` band below `lg` instead of dropping the brand, the page's one gradient on the new `Button variant="gradient"`, and the panel's `text-white/70` (4.25:1, and 3.62:1 in dark) replaced by full-opacity `text-primary-foreground` | |
+| T4.1 | Auth visual unification + mobile brand band: four copy-pasted pages become `AuthShell`, the panel earns its half with `AUTH_HIGHLIGHTS` (five mono eyebrows, not a rotating stem — only three questions are licensable and `/` already shows them), a 96px `bg-primary` band below `lg` instead of dropping the brand, the page's one gradient on the new `Button variant="gradient"`, and the panel's `text-white/70` (4.25:1, and 3.62:1 in dark) replaced by full-opacity `text-primary-foreground` | `1b339a1` |
 | T4.2 | Form quality + error copy |
 | T4.3 | `StudentProfile` + `/welcome` |
 
