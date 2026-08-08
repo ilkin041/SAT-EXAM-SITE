@@ -1,10 +1,17 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { GraduationCap, ShieldCheck } from "lucide-react";
 import { DotLattice } from "@/components/dot-lattice";
 import { ResetPasswordForm } from "./reset-form";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Reset password — SAT Practice" };
+export const metadata: Metadata = pageMetadata({
+  title: "Reset password",
+  description: "Set a new password for your SAT Practice account.",
+  path: "/reset-password",
+  noindex: true,
+});
 
 export default function ResetPasswordPage() {
   return (

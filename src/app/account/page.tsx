@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -5,8 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
 import { StudentNav } from "@/components/student-nav";
 import { ChangeNameForm, ChangePasswordForm } from "./account-forms";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Account settings — SAT Practice" };
+export const metadata: Metadata = pageMetadata({ title: "Account settings", path: "/account", noindex: true });
 
 export default async function AccountPage() {
   const sessionUser = await requireUser();

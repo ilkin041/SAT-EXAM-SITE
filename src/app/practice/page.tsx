@@ -1,14 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Clock, LockKeyhole, ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { MarketingHeader } from "@/components/marketing/marketing-header";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Free SAT practice sample",
   description: "Try a public Digital SAT-style practice test without creating an account.",
-};
+  path: "/practice",
+  og: { eyebrow: "Free sample" },
+});
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +42,12 @@ export default async function PracticePage() {
   );
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background">
-      <div className="container mx-auto max-w-5xl px-4 py-14">
-        <Link href="/" className="text-body font-semibold text-primary hover:underline">← Back home</Link>
-        <header className="mt-8 max-w-3xl">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-primary/5 via-background to-background">
+      {/* T3.1: the shared chrome replaces the lone "← Back home" link. */}
+      <MarketingHeader />
+
+      <main className="container mx-auto max-w-5xl px-4 py-14">
+        <header className="max-w-3xl">
           <Badge variant="info">Free sample</Badge>
           <h1 className="mt-4 text-display">
             Experience the test before creating an account
@@ -106,8 +114,10 @@ export default async function PracticePage() {
           Want saved progress across devices and access to assigned private tests?{" "}
           <Link href="/signup" className="font-semibold text-primary hover:underline">Create an account</Link>.
         </p>
-      </div>
-    </main>
+      </main>
+
+      <MarketingFooter />
+    </div>
   );
 }
 

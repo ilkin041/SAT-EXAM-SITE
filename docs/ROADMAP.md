@@ -47,7 +47,7 @@ Phase 8 cannot start before T2.2.
 
 A task is done when it is committed on `master`, so the `Done` column carries the commit — the
 roadmap and `git log` cannot drift apart that way. Only phases with completed work have the column.
-**19 of 65 done:** Phase 0 and Phase 1 complete, Phase 2 complete.
+**20 of 65 done:** Phase 0, Phase 1 and Phase 2 complete; Phase 3 started.
 
 ---
 
@@ -89,16 +89,16 @@ Things producing no styles or failing WCAG **today**.
 
 ## Phase 3 — Landing · `prompts/B-foundations-landing-auth.md`
 
-| ID | Task |
-|---|---|
-| T3.1 | Header, footer, metadata, sitemap, robots, OG |
-| T3.2 | Real stats strip |
-| T3.3 | `LiveQuestionDemo` |
-| T3.4 | Hero rebuild |
-| T3.5 | `ScreenshotTabs` |
-| T3.6 | Capability bento |
-| T3.7 | FAQ + JSON-LD |
-| T3.8 | Scoring block, tutor band, closing CTA, content pages |
+| ID | Task | Done |
+|---|---|---|
+| T3.1 | Marketing chrome + SEO: landing split into `components/marketing/`, shared header/footer, canonicals on all 33 pages, `sitemap.ts`, `robots.ts`, dynamic OG, Organization + WebApplication JSON-LD | `HEAD` |
+| T3.2 | Real stats strip | |
+| T3.3 | `LiveQuestionDemo` | |
+| T3.4 | Hero rebuild | |
+| T3.5 | `ScreenshotTabs` | |
+| T3.6 | Capability bento | |
+| T3.7 | FAQ + JSON-LD | |
+| T3.8 | Scoring block, tutor band, closing CTA, content pages | |
 
 ## Phase 4 — Auth & onboarding · `prompts/B-foundations-landing-auth.md`
 

@@ -34,6 +34,13 @@ const PUBLIC_PATHS = [
   // whitelisting it here cannot expose anything — but without the entry it
   // redirects to /login in dev, which is the one place it needs to work.
   "/ui",
+  // T3.1. The matcher below exempts static *files*, but these three are routes
+  // — Next generates them from `sitemap.ts`, `robots.ts` and the OG handler.
+  // Without the entries a crawler asking for /robots.txt gets a 307 to /login,
+  // which is both a useless robots file and an indexed login redirect.
+  "/sitemap.xml",
+  "/robots.txt",
+  "/api/og",
 ];
 
 const PUBLIC_PREFIXES = [

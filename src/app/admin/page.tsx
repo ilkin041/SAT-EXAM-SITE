@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen, FileText, Users, Activity } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -14,8 +15,9 @@ import {
   THead,
   TR,
 } from "@/components/ui/table";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Admin — SAT Practice" };
+export const metadata: Metadata = pageMetadata({ title: "Admin", path: "/admin", noindex: true });
 
 export default async function AdminDashboard() {
   const [testCount, questionCount, studentCount, attemptCount, recentAttempts] =

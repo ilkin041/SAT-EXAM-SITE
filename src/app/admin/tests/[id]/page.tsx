@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -5,8 +6,9 @@ import { loadTaxonomy } from "@/lib/taxonomy-db";
 import { TestMetaForm } from "./test-meta-form";
 import { SectionEditor } from "./section-editor";
 import { DeleteTestButton } from "./delete-test-button";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Edit test — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Edit test — Admin", noindex: true });
 
 export default async function TestDetailPage({
   params,

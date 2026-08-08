@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Privacy — SAT Practice" };
+export const metadata: Metadata = pageMetadata({
+  title: "Privacy",
+  description: "What SAT Practice stores about an account and an attempt, and what it does not.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

@@ -64,6 +64,18 @@ module.exports = {
       },
     },
     {
+      // Permanent, not debt. `next/og` renders through satori, which has no
+      // stylesheet and no cascade — it lays out inline styles only, so
+      // `hsl(var(--primary))` resolves to nothing and the card renders black on
+      // black. The design tokens cannot reach this file, exactly as they cannot
+      // reach the Bluebook chrome above.
+      files: ["src/app/api/og/route.tsx"],
+      rules: {
+        "sat/no-raw-color": "off",
+        "sat/no-inline-color-style": "off",
+      },
+    },
+    {
       // TODO(T6.1): remove with the test-interface refactor. `useCallback` at
       // test-interface.tsx:210 omits `toast` from its deps. Suppressed here
       // rather than inline because CLAUDE.md forbids editing this file outside

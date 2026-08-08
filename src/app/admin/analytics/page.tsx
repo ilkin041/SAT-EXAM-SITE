@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Activity, BarChart3, Smartphone } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -19,8 +20,9 @@ import {
   windowStart,
 } from "@/lib/funnel";
 import { cn } from "@/lib/utils";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Analytics — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Analytics — Admin", path: "/admin/analytics", noindex: true });
 
 /**
  * The T2.3 funnel. Deliberately one page of counts: the full analytics surface

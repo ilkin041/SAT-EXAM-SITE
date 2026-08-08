@@ -1,11 +1,17 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { MarketingHeader } from "@/components/marketing/marketing-header";
 
 /**
  * Shell for the footer's Privacy / Terms / Contact stubs.
  *
  * These exist so the footer links resolve instead of 404ing. T3.8 replaces the
  * bodies with real content; this wrapper can stay.
+ *
+ * T3.1 gave it the shared marketing chrome. It previously offered a lone "Back
+ * to home" link, which is the wrong exit for a page reached from the footer of
+ * the page it goes back to. `sections` is empty: the header's nav items are
+ * in-page anchors on `/`, and an anchor that navigates *and* jumps is a
+ * different control from the one the reader clicked on the landing page.
  */
 export function LegalPage({
   title,
@@ -15,22 +21,18 @@ export function LegalPage({
   children: React.ReactNode;
 }) {
   return (
-    <main className="container mx-auto max-w-2xl px-4 py-16">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        Back to home
-      </Link>
+    <div className="flex min-h-screen flex-col bg-background">
+      <MarketingHeader />
 
-      <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground">
-        {title}
-      </h1>
+      <main className="container mx-auto max-w-2xl px-4 py-16">
+        <h1 className="text-h1 text-ink">{title}</h1>
 
-      <div className="mt-6 space-y-4 max-w-[52ch] text-[1.0625rem] leading-relaxed text-muted-foreground">
-        {children}
-      </div>
-    </main>
+        <div className="mt-6 max-w-[52ch] space-y-4 text-body-lg text-muted-foreground">
+          {children}
+        </div>
+      </main>
+
+      <MarketingFooter />
+    </div>
   );
 }

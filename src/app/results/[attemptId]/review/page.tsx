@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -5,8 +6,9 @@ import { ReviewClient, type ReviewItem } from "./review-client";
 import { canAccessAttempt } from "@/lib/attempt-auth";
 import { readRenderedQuestion } from "@/lib/rendered-question";
 import { track } from "@/lib/track";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Review answers" };
+export const metadata: Metadata = pageMetadata({ title: "Review answers", noindex: true });
 
 export default async function ReviewAnswersPage({
   params,

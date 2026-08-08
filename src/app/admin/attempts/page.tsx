@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Download } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/format-date";
@@ -15,8 +16,9 @@ import {
   AttemptsTable,
   type AttemptRow,
 } from "./_components/attempts-table";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Attempts — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Attempts — Admin", path: "/admin/attempts", noindex: true });
 
 const PAGE_SIZE = 25;
 

@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { GraduationCap, Sparkles } from "lucide-react";
 import { DotLattice } from "@/components/dot-lattice";
 import { SignupForm } from "./signup-form";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Sign up — SAT Practice" };
+export const metadata: Metadata = pageMetadata({
+  title: "Sign up",
+  description:
+    "Create an account to take full-length, timed Digital SAT practice tests and track every attempt.",
+  path: "/signup",
+});
 
 export default function SignupPage() {
   return (

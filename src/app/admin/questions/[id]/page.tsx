@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
@@ -5,8 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { loadTaxonomy } from "@/lib/taxonomy-db";
 import { QuestionForm } from "../_components/question-form";
 import type { PreviewChoice } from "@/components/question-preview";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Edit question — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Edit question — Admin", noindex: true });
 
 export default async function EditQuestionPage({
   params,

@@ -7,6 +7,16 @@ import "./globals.css";
 import "./katex-subset.css";
 import { Providers } from "./providers";
 import { ThemeScript } from "@/components/theme-script";
+import {
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_WIDTH,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_OG_SUBTITLE,
+  SITE_TITLE,
+  SITE_URL,
+  ogImageUrl,
+} from "@/lib/site";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -29,9 +39,37 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
+/**
+ * Site-wide metadata defaults (T3.1).
+ *
+ * `metadataBase` is what makes a page's `alternates.canonical: "/practice"`
+ * resolve to an absolute URL — without it Next emits the relative path and logs
+ * a build warning, and a relative canonical is ignored by most crawlers.
+ *
+ * The `template` is why no page writes "— SAT Practice" into its own title any
+ * more. `/` opts out with `title.absolute`, since its title already ends in the
+ * product name.
+ */
 export const metadata: Metadata = {
-  title: "SAT Practice Platform",
-  description: "Self-hosted digital SAT-style practice testing platform.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: `%s — ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_GB",
+    images: [
+      {
+        url: ogImageUrl({ title: SITE_TITLE, subtitle: SITE_OG_SUBTITLE }),
+        width: OG_IMAGE_WIDTH,
+        height: OG_IMAGE_HEIGHT,
+        alt: SITE_TITLE,
+      },
+    ],
+  },
+  twitter: { card: "summary_large_image" },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,11 +1,13 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createGroup } from "./actions";
 import { GroupsTable, type GroupRow } from "./_components/groups-table";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Groups — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Groups — Admin", path: "/admin/groups", noindex: true });
 
 export default async function AdminGroupsPage() {
   const groups = await prisma.group.findMany({

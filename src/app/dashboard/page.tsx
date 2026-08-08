@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { formatDate } from "@/lib/format-date";
 import { BookOpen, ClipboardList, ShieldCheck } from "lucide-react";
@@ -18,8 +19,9 @@ import {
   computeScaledScores,
   getScoreFidelity,
 } from "@/lib/scoring";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Dashboard — SAT Practice" };
+export const metadata: Metadata = pageMetadata({ title: "Dashboard", path: "/dashboard", noindex: true });
 
 /** Named so `HistoryAttempt` below can be derived from the query's own shape. */
 function fetchAttempts(userId: string) {

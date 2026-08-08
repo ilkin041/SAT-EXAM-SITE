@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 ﻿import sanitizeHtml from "sanitize-html";
 import { BarChart3, Flag, Gauge } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { ItemsTable, type ItemRow } from "./_components/items-table";
 
-export const metadata = { title: "Item analysis — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Item analysis — Admin", path: "/admin/analytics/items", noindex: true });
 
 const PAGE_SIZE = 50;
 

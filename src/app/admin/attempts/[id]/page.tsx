@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -11,8 +12,9 @@ import {
   getScoreFidelity,
 } from "@/lib/scoring";
 import { summarizeFocusEvents } from "@/lib/analytics";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Attempt — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Attempt — Admin", noindex: true });
 
 export default async function AttemptDetailPage({
   params,

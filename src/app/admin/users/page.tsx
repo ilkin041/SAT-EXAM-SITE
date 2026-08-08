@@ -1,11 +1,13 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format-date";
 import { orderByFrom, readTableParams } from "@/lib/table-params";
 import type { Prisma } from "@prisma/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { UsersTable, type UserRow } from "./_components/users-table";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Users — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Users — Admin", path: "/admin/users", noindex: true });
 
 const PAGE_SIZE = 25;
 

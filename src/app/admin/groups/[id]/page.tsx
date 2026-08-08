@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Activity, ArrowLeft, TrendingUp, Users } from "lucide-react";
@@ -24,20 +25,24 @@ import {
   addStudentToGroup,
   assignTestToGroup,
 } from "../actions";
+import { pageMetadata } from "@/lib/site";
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
-}) {
+}): Promise<Metadata> {
   const { id } = await params;
   const group = await prisma.group.findUnique({
     where: { id },
     select: { name: true },
   });
-  return {
+  // No canonical: the URL carries a group id and the page is admin-only, so a
+  // self-referential canonical would point a crawler at a login redirect.
+  return pageMetadata({
     title: group ? `${group.name} — Groups — Admin` : "Group — Admin",
-  };
+    noindex: true,
+  });
 }
 
 export default async function GroupDetailsPage({

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
@@ -19,7 +21,7 @@ import {
   type UserAttemptRow,
 } from "./_components/user-attempts-table";
 
-export const metadata = { title: "User detail — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "User detail — Admin", noindex: true });
 
 const STATUS_LABELS = {
   IN_PROGRESS: "In progress",

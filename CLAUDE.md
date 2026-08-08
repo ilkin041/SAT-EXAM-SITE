@@ -35,7 +35,7 @@ npm run dev
 npm run build
 npx tsc --noEmit              # there is no `typecheck` script
 npx tsc --noUnusedLocals      # catches dead imports
-npm test                      # vitest, 185 tests
+npm test                      # vitest, 235 tests
 npm run lint                  # next lint --no-cache --max-warnings=0; must be clean
 npm run analyze               # ANALYZE=true next build -> .next/analyze/*.html
 npm run db:backfill-question-html   # populate Question.renderedHtml (see T2.1 below)
@@ -58,8 +58,8 @@ below. Each is covered by `tests/eslint-rules.test.ts`.
 | Rule | Fails on |
 |---|---|
 | `sat/no-unresolved-tailwind-class` | A class that compiles to no CSS. Asks Tailwind's own JIT, so `py-4.5`, `bg-primary/8` and `dark:text-emerald-350` are caught; classes declared in `globals.css` are accepted |
-| `sat/no-raw-color` | Hex / `rgb()` / `hsla()` in `.tsx`. `hsl(var(--token))` passes. Off under `src/app/test/attempt/**` |
-| `sat/no-inline-color-style` | A colour property in `style={{ }}` — raw or computed in JS. Dynamic width/transform is untouched |
+| `sat/no-raw-color` | Hex / `rgb()` / `hsla()` in `.tsx`. `hsl(var(--token))` passes. Off under `src/app/test/attempt/**` and in `src/app/api/og/route.tsx` |
+| `sat/no-inline-color-style` | A colour property in `style={{ }}` — raw or computed in JS. Dynamic width/transform is untouched. Same two exemptions |
 | `sat/no-class-constants` | Module-level `*_CLS` / `*_CLASSES` string constants |
 | `sat/no-client-page` | `"use client"` in any `page.tsx` / `layout.tsx` |
 
@@ -74,6 +74,10 @@ allowed. T0.7 cleared five: the StatCard shimmer and the auth dot lattice (4×) 
 `globals.css`, where a colour is not a violation. T1.3 cleared the last two, the `SELECT_CLS`
 pair — along with a third class constant the rule never saw, a function-scoped `selectClass` in
 `admin/analytics/items/page.tsx`. It only goes down.
+
+T3.1 added a third file-scoped colour override, `src/app/api/og/route.tsx`. It is **not** debt and
+carries no task id: satori renders the OG card from inline styles with no cascade, so the tokens
+cannot reach it. Same category as the Bluebook chrome.
 
 ---
 
@@ -321,6 +325,49 @@ Full detail, including the retention decision T3.8 has to make, is in `docs/anal
 - **`SYSTEM_SESSION_ID` is one shared row and nothing browser-shaped may be written to it.** The
   cron sweeper's `attempt_abandoned` rows belong to it; a `userId` there would be whichever attempt
   the sweeper happened to close last.
+
+## Marketing chrome and SEO (T3.1)
+
+`src/app/page.tsx` was 460 lines with every section inline. It is now composition only — the
+sections live in `src/components/marketing/` and that is where T3.4–T3.8 work. Still no route
+groups; still `src/app/`.
+
+- **`pageMetadata()` in `src/lib/site.ts` builds every page's `metadata`.** All 33 pages go through
+  it (or, for `/admin/groups/[id]`, through it inside `generateMetadata`). It emits the canonical,
+  the Open Graph block, the Twitter card and the robots directive together, so none of them can be
+  half-set. The root layout owns `metadataBase` and `title.template` (`%s — SAT Practice`), which is
+  why **no page writes the site name into its own title any more**; `/` opts out with
+  `titleAbsolute`. `SITE_URL` resolves `NEXT_PUBLIC_SITE_URL` → `VERCEL_URL` → `NEXTAUTH_URL` →
+  localhost, and production must set the first.
+- **Canonical only where the path is stable; `noindex` on everything authenticated.** A route with
+  an id in the URL gets no canonical — it would point a crawler at a login redirect. `robots.ts`
+  disallows the same prefixes, because `Disallow` stops the fetch and `noindex` stops the entry and
+  a URL with only the first can still be indexed from an inbound link.
+- **`/sitemap.xml`, `/robots.txt` and `/api/og` are whitelisted in `middleware.ts`.** The matcher
+  exempts static *files*; these three are routes, and without the entries a crawler asking for
+  robots.txt gets a 307 to `/login`. `tests/site-metadata.test.ts` asserts the sitemap and the
+  footer contain no authenticated path.
+- **One OG template, `src/app/api/og/route.tsx`, parameterised by `?title/subtitle/eyebrow`.** Build
+  the URL with `ogImageUrl()` — it clamps on a word boundary. The route is the second file exempted
+  from `sat/no-raw-color` / `sat/no-inline-color-style`, and unlike the Bluebook exemption this one
+  is permanent: satori has no stylesheet, so `hsl(var(--primary))` renders black on black. It
+  registers no fonts, deliberately — a runtime font fetch that fails is a blank card.
+- **`MarketingHeader` takes the mobile sheet as a `mobileNav` slot, and that is a bundle decision.**
+  Importing `Sheet` there cost `/privacy`, `/terms`, `/contact` and `/practice` 26 kB each for a
+  panel they can never open, and **`next/dynamic` does not fix it** — the route's client-reference
+  manifest still lists the chunk. Only `LandingHeader` fills the slot. Same lesson as `DomainBar`
+  and `Tooltip`; measure with `npm run build` before adding a client import to shared chrome.
+- **Header nav links are `text-foreground`, not `text-muted-foreground`.** At rest the bar is
+  transparent over the hero bloom (`--primary` at 10%), where muted-foreground measures **3.97:1**
+  and fails AA; over the plain background it is 4.59:1 and passes. Measured in both themes. A link
+  whose contrast depends on scroll position fails somewhere, so the nav takes the ~15:1 reading.
+- **`MARKETING_NAV` holds five items; the header renders only those whose section the page
+  declares.** `/` declares `product` and `how-it-works` today. `for-tutors` and `scoring` arrive
+  with T3.8 and `faq` with T3.7 — each adds its id to `LANDING_SECTIONS` and the item appears. An
+  anchor to a section that does not exist is a broken link, not a placeholder.
+- **JSON-LD claims nothing the product cannot back.** `Organization` + `WebApplication` in
+  `src/lib/json-ld.ts`, no `aggregateRating`, no `review`, and **no `offers`** — a `price: 0` would
+  answer open decision 3 in Google's index before anyone answers it here. A test pins all three.
 
 ## Copy rules
 

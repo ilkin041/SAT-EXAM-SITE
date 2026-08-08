@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -5,8 +6,9 @@ import { formatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { TestsTable, type TestRow } from "./_components/tests-table";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Tests — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Tests — Admin", path: "/admin/tests", noindex: true });
 
 export default async function TestsPage({
   searchParams,

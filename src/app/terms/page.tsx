@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Terms — SAT Practice" };
+export const metadata: Metadata = pageMetadata({
+  title: "Terms",
+  description: "The terms of use for the SAT Practice platform.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

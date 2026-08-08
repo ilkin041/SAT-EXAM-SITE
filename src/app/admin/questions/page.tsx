@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -9,8 +10,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { listAssignableModules } from "./actions";
 import { loadTaxonomy } from "@/lib/taxonomy-db";
 import { QuestionsTable, type QuestionRow } from "./_components/questions-table";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Questions — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "Questions — Admin", path: "/admin/questions", noindex: true });
 
 const PAGE_SIZE = 100;
 

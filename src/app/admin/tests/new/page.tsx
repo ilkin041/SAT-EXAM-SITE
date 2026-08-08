@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { NewTestForm } from "./new-test-form";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "New test — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "New test — Admin", path: "/admin/tests/new", noindex: true });
 
 export default function NewTestPage() {
   return (

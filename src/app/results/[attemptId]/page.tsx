@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { formatDate } from "@/lib/format-date";
@@ -35,8 +36,9 @@ import {
 import { cn } from "@/lib/utils";
 import { canAccessAttempt } from "@/lib/attempt-auth";
 import { track } from "@/lib/track";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Results" };
+export const metadata: Metadata = pageMetadata({ title: "Results", noindex: true });
 
 export default async function ResultsPage({
   params,

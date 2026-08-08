@@ -1,10 +1,12 @@
+import type { Metadata } from "next";
 import { QuestionForm } from "../_components/question-form";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadTaxonomy } from "@/lib/taxonomy-db";
 import type { PreviewChoice } from "@/components/question-preview";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "New question — Admin" };
+export const metadata: Metadata = pageMetadata({ title: "New question — Admin", path: "/admin/questions/new", noindex: true });
 
 export default async function NewQuestionPage({
   searchParams,

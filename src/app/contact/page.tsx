@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Contact — SAT Practice" };
+export const metadata: Metadata = pageMetadata({
+  title: "Contact",
+  description: "How to reach us about a test, a score, or access to a group.",
+  path: "/contact",
+});
 
 export default function ContactPage() {
   return (

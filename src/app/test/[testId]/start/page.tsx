@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,8 +18,9 @@ import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import { BeginButton } from "./begin-button";
 import { canAccessTest } from "@/lib/test-access";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Begin test" };
+export const metadata: Metadata = pageMetadata({ title: "Begin test", noindex: true });
 
 export default async function PreTestPage({
   params,

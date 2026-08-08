@@ -1,10 +1,17 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { GraduationCap, Sparkles } from "lucide-react";
 import { DotLattice } from "@/components/dot-lattice";
 import { LoginForm } from "./login-form";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Log in — SAT Practice" };
+export const metadata: Metadata = pageMetadata({
+  title: "Log in",
+  description:
+    "Log in to take timed Digital SAT practice tests and review your scored attempts.",
+  path: "/login",
+});
 
 export default function LoginPage() {
   return (
