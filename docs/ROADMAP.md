@@ -91,7 +91,7 @@ Things producing no styles or failing WCAG **today**.
 
 | ID | Task | Done |
 |---|---|---|
-| T3.1 | Marketing chrome + SEO: landing split into `components/marketing/`, shared header/footer, canonicals on all 33 pages, `sitemap.ts`, `robots.ts`, dynamic OG, Organization + WebApplication JSON-LD | `HEAD` |
+| T3.1 | Marketing chrome + SEO: landing split into `components/marketing/`, shared header/footer, canonicals on all 33 pages, `sitemap.ts`, `robots.ts`, dynamic OG, Organization + WebApplication JSON-LD | `c7fde63` |
 | T3.2 | Real stats strip | |
 | T3.3 | `LiveQuestionDemo` | |
 | T3.4 | Hero rebuild | |
