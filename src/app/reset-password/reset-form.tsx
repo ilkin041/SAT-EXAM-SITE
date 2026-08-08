@@ -104,7 +104,14 @@ export function ResetPasswordForm() {
         error={mismatch ? "Passwords don't match." : undefined}
       />
 
-      <Button type="submit" loading={pending} disabled={mismatch} className="mt-2 w-full">
+      {/* T4.1: the page's one gradient. The brand panel beside it is flat. */}
+      <Button
+        type="submit"
+        variant="gradient"
+        loading={pending}
+        disabled={mismatch}
+        className="mt-2 w-full"
+      >
         {pending ? "Updating…" : "Update password"}
       </Button>
     </form>

@@ -289,7 +289,19 @@
   .bg-brand-navy :focus-visible,
   .from-brand-navy :focus-visible,
   .from-primary :focus-visible,
-  .from-indigo-500 :focus-visible {
+  .from-indigo-500 :focus-visible,
+  /*
+   * T4.1: and the surface itself, when the saturated fill is on a focusable
+   * element rather than around one. The auth pages' mobile brand band is a
+   * `.bg-primary` link, so the descendant selectors above never reach it and it
+   * drew an indigo ring on indigo — `--ring` is `hsl(228 …)` and so is
+   * `--primary`, in both themes.
+   */
+  .bg-gradient-primary:focus-visible,
+  .bg-gradient-accent:focus-visible,
+  .bg-gradient-warm:focus-visible,
+  .bg-primary:focus-visible,
+  .bg-brand-navy:focus-visible {
     outline-color: hsl(0 0% 100%);
   }
 }

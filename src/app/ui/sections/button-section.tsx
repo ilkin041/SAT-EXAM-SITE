@@ -12,6 +12,7 @@ const VARIANTS = [
   "ghost",
   "link",
   "accent",
+  "gradient",
 ] as const;
 
 const SIZES = ["xs", "sm", "default", "lg"] as const;
@@ -132,7 +133,7 @@ export function ButtonSection() {
     <GallerySection
       id="button"
       title="Button"
-      description="Seven variants, five sizes. `soft` is the repeated-list action — a tinted surface that stays quiet across a rail of cards, so the page keeps one real primary. `loading` swaps in a spinner and disables the button; it is ignored under `asChild`, where Slot requires exactly one child. Icon-only buttons need an aria-label."
+      description="Eight variants, five sizes. `soft` is the repeated-list action — a tinted surface that stays quiet across a rail of cards, so the page keeps one real primary. `gradient` paints `--gradient-primary` and is a page's single primary CTA: check the gradient budget in CLAUDE.md before adding a call site, and note it is not `accent`, which hardcodes indigo→violet and so cannot sit beside a flat `bg-primary` surface without showing two blues. `loading` swaps in a spinner and disables the button; it is ignored under `asChild`, where Slot requires exactly one child. Icon-only buttons need an aria-label."
     >
       <ButtonSpecimens />
     </GallerySection>

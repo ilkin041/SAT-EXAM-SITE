@@ -129,10 +129,13 @@ strip (which does clear the fold at 1280×800, and is the page's one above it) a
 `Continue test` in the history table two sections below. Both are deliberate. T3.8 took `/` to
 exactly one counted gradient element on the *whole page*, not just above the fold: the
 How-it-works connector was an inline `linear-gradient` and is now a flat line, and neither of
-the two sections T3.8 added carries one. There are **no hand-rolled `bg-gradient-*` buttons left**, and since T3.4 **no gradient button at all**:
-`/`'s one gradient moved off the hero CTA and onto the rail across the top of the demo panel,
-which is the hero signature. `Button variant="accent"` now has no call site — check the budget
-before giving it one.
+the two sections T3.8 added carries one. There are **no hand-rolled `bg-gradient-*` buttons left**. T3.4 left the app with no gradient button
+at all — `/`'s one gradient moved off the hero CTA and onto the rail across the top of the demo
+panel, which is the hero signature. T4.1 put one back, on the four auth pages' submit button, via
+the new `Button variant="gradient"`; those pages had been at zero since T1.8 flattened their brand
+panel. `Button variant="accent"` still has no call site, and could not have taken that one — it
+hardcodes indigo→violet, so it cannot sample `--primary`. Check the budget before giving either
+one a call site.
 
 | Token | Reserved for |
 |---|---|
@@ -728,6 +731,51 @@ five ids, so every item in `MARKETING_NAV` is finally live. Route cost unchanged
   it (no route) and noted where it should land. `faq.ts` answer strings are still link-free
   markup-free plain text, which is what keeps the `FAQPage` graph equal to the rendered DOM.
 
+## The auth pages are one component (T4.1)
+
+`/login`, `/signup`, `/forgot-password` and `/reset-password` were the same 80 lines four times.
+They are now `AuthShell` in `src/components/auth-shell.tsx` — band, panel, card — and each page is
+six props. Route cost is unchanged and all four are still statically prerendered (`○`): the shell
+and the panel are server components, so the panel's content costs **zero client JavaScript**.
+
+- **The panel is flat `--primary` and the gradient is on the submit button.** T1.8 already
+  flattened the panel, which left the pages with no gradient at all; `--gradient-primary` is
+  reserved for a page's single primary CTA and on an auth page that is unambiguous. The new
+  `Button variant="gradient"` takes it. **It is not `accent`** — `accent` hardcodes
+  `from-indigo-500 to-violet-500` and so cannot match a `bg-primary` surface, which is the
+  two-blues fault this task exists to end. Its hover is `brightness`, a *filter*, deliberately:
+  `hover:bg-*` sets `background-color`, which beats the `background` shorthand
+  `.bg-gradient-primary` sets and would drop the gradient exactly when the pointer is on it.
+- **Below `lg` the panel becomes a 96px band, it does not disappear.** The band carries the
+  wordmark and one line and is the link home, which is why the in-column logo link is `lg:` only:
+  brand appears exactly once at every width from 360px, and the gradient count is one at every
+  width too.
+- **`AUTH_HIGHLIGHTS` in `src/lib/auth-highlights.ts` is what makes the panel worth half a
+  screen** — five mono eyebrows, each with one line, replacing an icon, two lines and a pill. Same
+  split as `tutor-features.ts` against the tutor band, including the `route` field that makes each
+  claim checkable; `tests/auth-highlights.test.ts` pins the routes against a list of ones that
+  exist. **Nothing claims `/progress` — there is no such route yet**, whatever this file says
+  elsewhere about its charts.
+- **The other option was a rotating question stem, and it was rejected on three counts**, recorded
+  in full at the top of `auth-highlights.ts`: only `publicDemo` questions may go on the open web
+  (open decision 4) and `/`'s demo already shows those three interactively one scroll above the
+  `Sign up` link; rotation is state plus a timer, so a client island on four routes that currently
+  ship nothing but their form; and a practice question beside "set a new password" is noise.
+- **`text-white/70` on the panel was failing AA and nobody had measured it.** It is **4.25:1** on
+  `--primary`, and in the dark theme `--primary` is a *light* indigo where even solid white is
+  **3.62:1**. Everything on the panel is now full-opacity `text-primary-foreground` — 6.83:1 light,
+  5.40:1 dark — and hierarchy comes from the mono eyebrow against body text rather than from
+  dimming. Opacity is left only on non-text surfaces (the bloom, the icon chip, the hairline).
+- **`globals.css`'s saturated-fill focus block gained self-selectors**, not just descendant ones.
+  The band is a `.bg-primary` *link*, so `.bg-primary :focus-visible` never reached it and it drew
+  an indigo ring on indigo — `--ring` is `hsl(228 …)` and so is `--primary`, in both themes. The
+  band also sets `outline-offset: -4px`: it is full-bleed, so the default +2px offset puts three of
+  the ring's four edges off-screen.
+- **Two orbs became one soft bloom**, and the panel's list is left-aligned rather than centred. A
+  blur in each corner reads as a vignette, and a five-item list centred on its own axis is not
+  readable. `py-12` and `gap-5`, not the marketing `py-16`: at `py-16` the panel measured 810px
+  against a 1280×800 laptop, i.e. it put a scrollbar on a page that is one screen by construction.
+
 ## Copy rules
 
 - Active voice, plain verbs. "Save changes", not "Submit".
@@ -819,7 +867,7 @@ onto the override, tabs does not use it at all. One stack. T1.6 checked it again
 
 ### Existing primitives (23, in `src/components/ui/`)
 
-`Button` (7 variants, 5 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
+`Button` (8 variants, 5 sizes, 25 importers) · `Badge` (9 variants) · `Input` (no variants)
 · `Select` (sizes sm/default, error state, leading icon, clearable) · `Table` · `DataTable` ·
 `Pagination` · `Modal` · `Sheet` · `Tabs` · `Accordion` · `Tooltip` · `Alert` ·
 `SegmentedControl` · `Field` · `Avatar` · `Separator` · `Progress` · `ScoreDial` · `DomainBar` ·

@@ -97,7 +97,14 @@ export function SignupForm() {
         error={mismatch ? "Passwords don't match." : undefined}
       />
 
-      <Button type="submit" loading={pending} className="mt-2 w-full" disabled={mismatch}>
+      {/* T4.1: the page's one gradient. The brand panel beside it is flat. */}
+      <Button
+        type="submit"
+        variant="gradient"
+        loading={pending}
+        className="mt-2 w-full"
+        disabled={mismatch}
+      >
         {pending ? "Creating account…" : "Create account"}
       </Button>
     </form>

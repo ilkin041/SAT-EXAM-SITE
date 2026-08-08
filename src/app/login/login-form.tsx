@@ -69,7 +69,8 @@ export function LoginForm() {
         }
       />
 
-      <Button type="submit" loading={pending} className="mt-2 w-full">
+      {/* T4.1: the page's one gradient. The brand panel beside it is flat. */}
+      <Button type="submit" variant="gradient" loading={pending} className="mt-2 w-full">
         {pending ? "Signing in…" : "Sign in"}
       </Button>
     </form>

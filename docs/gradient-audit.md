@@ -33,7 +33,7 @@ reads as "the gradient thing" because of them.
 | `/results/[attemptId]` | The `ScoreDial` ring | Policy allows `--gradient-primary` to be the score gauge **or** the hero signature; the gauge is the reason the page exists |
 | all 15 `/admin/*` | The `AdminNav` navy bar | `--brand-navy` is admin chrome and nothing else on the page carries it |
 | `/practice` | Page wash | Already at budget; untouched |
-| `/login`, `/signup`, `/forgot-password`, `/reset-password` | none | The panel is now flat `--primary`, which is the point — see below |
+| `/login`, `/signup`, `/forgot-password`, `/reset-password` | The submit button (`Button variant="gradient"`, T4.1) | T1.8 flattened the panel and left the page with none. T4.1 gave the one back to the element that is actually usable — an auth page's submit button is unambiguously its single primary CTA. Measured on `/forgot-password`: exactly one `linear-gradient` element in the document, at 1280×800 and at 360×780, in both themes |
 
 ## Changes, route by route
 
@@ -116,6 +116,20 @@ unification is here, the layout is there.**
 
 The `.dot-lattice` overlay is unchanged and is not a counted gradient (it is a radial dot texture,
 same class as the hero dot fields).
+
+#### T4.1 — back to 1 each, on the button
+
+T1.8 left the auth pages at zero, which is under budget rather than at it. T4.1 spends the one on
+`Button variant="gradient"`, a new variant painting `--gradient-primary`; the panel stays flat.
+
+`variant="accent"` could not have done this. It hardcodes `from-indigo-500 to-violet-500`, so it
+cannot sample `--primary` and the page would have shown two blues again — the exact fault this
+audit's auth section exists to record. The new variant's first stop is `hsl(228 …)` and `--primary`
+is `hsl(228 …)`, in both themes.
+
+Below `lg` the panel is replaced by a 96px `bg-primary` band rather than dropped, so the count is
+the same at every width: flat brand surface plus one gradient button. Verified in the built app at
+1280×800 and 360×780, light and dark — one `linear-gradient` element, the button.
 
 ### Admin — the four hand-rolled gradient buttons
 
@@ -232,7 +246,7 @@ Everything else:
 | `/` | 5 | 5 | **1** |
 | `/account` | 2 | 0 | **0** |
 | `/dashboard` | 8 | 6 | **2** (1 above the fold) |
-| `/login`, `/signup`, `/forgot-password`, `/reset-password` | 2 each | 2 each | **0** |
+| `/login`, `/signup`, `/forgot-password`, `/reset-password` | 2 each | 2 each | **0** → **1** after T4.1 |
 | `/practice` | 1 | 1 | **1** |
 | `/results/[attemptId]` | 4 | 4 | **1** |
 | `/results/[attemptId]/review` | 0 | 0 | **0** |

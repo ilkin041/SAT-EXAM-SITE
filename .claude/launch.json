@@ -22,6 +22,13 @@
       "port": 3200
     },
     {
+      "//": "Third production port, for when 3100 and 3200 are both held. Public pages only — NEXTAUTH_URL names 3000, so sign-in fails here.",
+      "name": "prod-preview-3",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--", "--port", "3300"],
+      "port": 3300
+    },
+    {
       "//": "Production build on 3000, which is what NEXTAUTH_URL points at — sign-in fails on any other port. Used by `npm run gen:screenshots`.",
       "name": "prod-auth",
       "runtimeExecutable": "npm",

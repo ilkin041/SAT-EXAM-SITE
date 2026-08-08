@@ -55,6 +55,24 @@ const buttonVariants = cva(
           "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md",
           "hover:from-indigo-600 hover:to-violet-600 hover:shadow-glow-accent hover:-translate-y-0.5",
         ].join(" "),
+        /*
+         * `--gradient-primary` as a button (T4.1). Reserved for a page's single
+         * primary CTA — check the gradient budget before adding a call site.
+         *
+         * It is not the same thing as `accent`, which hardcodes indigo→violet
+         * and so cannot match `--primary`. This one's first stop is `hsl(228 …)`
+         * and `--primary` is `hsl(228 …)`, which is what lets the auth pages put
+         * a flat `bg-primary` panel beside the submit button without the page
+         * showing two different blues.
+         *
+         * Hover is `brightness`, a filter, deliberately: `hover:bg-*` sets
+         * `background-color`, which wins over the `background` shorthand
+         * `.bg-gradient-primary` sets and would drop the gradient on hover.
+         */
+        gradient: [
+          "bg-gradient-primary text-white shadow-md",
+          "hover:brightness-110 hover:shadow-glow hover:-translate-y-0.5",
+        ].join(" "),
       },
       size: {
         // Table rows and dense toolbars, where h-9 already crowds the row.
