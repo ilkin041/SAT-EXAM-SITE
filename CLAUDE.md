@@ -35,7 +35,7 @@ npm run dev
 npm run build
 npx tsc --noEmit              # there is no `typecheck` script
 npx tsc --noUnusedLocals      # catches dead imports
-npm test                      # vitest, 235 tests
+npm test                      # vitest, 250 tests
 npm run lint                  # next lint --no-cache --max-warnings=0; must be clean
 npm run analyze               # ANALYZE=true next build -> .next/analyze/*.html
 npm run db:backfill-question-html   # populate Question.renderedHtml (see T2.1 below)
@@ -368,6 +368,37 @@ groups; still `src/app/`.
 - **JSON-LD claims nothing the product cannot back.** `Organization` + `WebApplication` in
   `src/lib/json-ld.ts`, no `aggregateRating`, no `review`, and **no `offers`** — a `price: 0` would
   answer open decision 3 in Google's index before anyone answers it here. A test pins all three.
+
+## Every landing figure is a live count, rounded down (T3.2)
+
+The strip under the hero was four hardcoded tiles. Two were claims the product could not back and
+one of those was wrong in the direction that matters — `236+ Practice Questions` against a bank of
+280. `1600 Max SAT Score` is gone entirely: a fact about the exam is not a statistic about this
+product.
+
+- **`roundDownStat()` in `src/lib/site-stats.ts` rounds down and never up.** It floors onto a ladder
+  of round steps chosen so the step is at most a fifth of the value, which makes the displayed
+  figure always more than 80% of the truth — `tests/site-stats.test.ts` asserts both directions over
+  every value to 3000. A figure already on a step keeps its exact value and takes **no `+`**: five
+  public tests is `5`, because inventing imprecision is its own dishonesty.
+- **That module is pure and `stats-banner.tsx` owns the query.** Same split as `funnel.ts` against
+  `track.ts`: the rounding rule and the hide-a-weak-tile rule are pinned by a test rather than by
+  looking at the page.
+- **A count of zero removes its tile, and completed attempts below `MIN_COMPLETED_ATTEMPTS` (50)
+  removes that one.** There is no wording that makes a small number impressive, so the strip renders
+  two, three or four tiles and the row is a centred `flex-wrap` — a three-tile strip in a
+  four-column grid sits off-centre.
+- **The public-test count is `/practice`'s predicate, not `isPublic` alone.** A public test with an
+  empty module cannot be started, and a strip claiming five while that page offers three is the
+  hardcoded-number problem with extra steps. Prisma cannot say "every module has a question", so the
+  `where` says "no section is broken" instead.
+- **`export const revalidate` on `src/app/page.tsx` would do nothing.** `LandingHeader` calls
+  `auth()`, which reads cookies, so `/` is a dynamic route and always has been (`docs/baselines.md`
+  lists it as `ƒ`). Segment revalidation only applies to a segment Next can statically generate. The
+  counts are cached at the query instead, `unstable_cache(..., { revalidate: 3600 })`, which behaves
+  the same on the route as it actually renders and survives T3.3/T3.4 adding more dynamic work.
+- **A failed count hides the strip; it never guesses.** `/` is the one page that otherwise touches
+  no database, so an outage used to leave it standing — the try/catch keeps that true.
 
 ## Copy rules
 

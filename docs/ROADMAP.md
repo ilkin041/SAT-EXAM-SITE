@@ -92,7 +92,7 @@ Things producing no styles or failing WCAG **today**.
 | ID | Task | Done |
 |---|---|---|
 | T3.1 | Marketing chrome + SEO: landing split into `components/marketing/`, shared header/footer, canonicals on all 33 pages, `sitemap.ts`, `robots.ts`, dynamic OG, Organization + WebApplication JSON-LD | `c7fde63` |
-| T3.2 | Real stats strip | |
+| T3.2 | Real stats strip: four hardcoded tiles → live counts rounded down (`250+` questions, `5` free tests); `1600 Max SAT Score` and the sub-threshold completed tile removed | |
 | T3.3 | `LiveQuestionDemo` | |
 | T3.4 | Hero rebuild | |
 | T3.5 | `ScreenshotTabs` | |
