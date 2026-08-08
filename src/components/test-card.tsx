@@ -56,7 +56,12 @@ export function TestCard({
 
   function startFresh() {
     startTransition(async () => {
-      const res = await fetch(`/api/tests/${testId}/start?fresh=1`, { method: "POST" });
+      const res = await fetch(`/api/tests/${testId}/start?fresh=1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // See begin-button.tsx — the server cannot measure the viewport.
+        body: JSON.stringify({ viewportWidth: window.innerWidth }),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
         toast(data.error || "Could not start a new attempt.", "error");

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { track } from "@/lib/track";
 
 const schema = z.object({
   email: z.string().email().max(254),
@@ -51,6 +52,13 @@ export async function POST(req: Request) {
       role: "STUDENT",
     },
     select: { id: true, email: true, name: true, role: true },
+  });
+
+  // Fire-and-forget. The account exists; nothing about analytics may delay or
+  // fail the response that tells the browser so.
+  void track("signup_completed", {
+    userId: user.id,
+    props: { providedName: Boolean(parsed.data.name) },
   });
 
   return NextResponse.json({ user }, { status: 201 });

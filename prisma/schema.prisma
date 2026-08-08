@@ -61,6 +61,17 @@ enum ImagePosition {
   INLINE
 }
 
+/// Coarse device class derived from the request User-Agent by
+/// `deviceTypeFromUserAgent` (`src/lib/device.ts`). Deliberately coarse: the
+/// question T10.1 has to answer is "does mobile matter", not "which phone".
+enum DeviceType {
+  MOBILE
+  TABLET
+  DESKTOP
+  BOT
+  UNKNOWN
+}
+
 // ---------- Models ----------
 
 model User {
@@ -382,6 +393,62 @@ model ModuleResult {
 
   @@unique([attemptId, moduleId])
   @@index([attemptId])
+}
+
+/// One browser's analytics session, keyed by the `sat_sid` cookie issued in
+/// `middleware.ts`. Exists so device and viewport are stored **once** rather
+/// than copied onto every event.
+///
+/// A row is created lazily by the first `track()` of that session, so a visitor
+/// who never does anything countable leaves no row at all. `deviceType` and
+/// `userAgent` come from the request; `viewportWidth` is the one thing the
+/// server cannot know, so a client sends it with the attempt-start request.
+model AnalyticsSession {
+  id            String     @id
+  /// Who this browser was signed in as the first time it produced an event.
+  /// NULL for a session that stayed anonymous. Not a FK — analytics must
+  /// survive a user deletion without cascading.
+  userId        String?
+  deviceType    DeviceType @default(UNKNOWN)
+  /// CSS pixels, sent by the client at attempt start. NULL until then.
+  viewportWidth Int?
+  /// Raw UA string, truncated. It is a fingerprinting surface, so it lives
+  /// here (one row per browser) and never in `AnalyticsEvent.props`.
+  userAgent     String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  events AnalyticsEvent[]
+
+  @@index([createdAt])
+  @@index([deviceType])
+  @@index([userId])
+}
+
+/// One product event. Append-only: nothing in the app updates or deletes a row.
+///
+/// `name` is one of `ANALYTICS_EVENTS` in `src/lib/analytics-events.ts` — a
+/// plain String rather than an enum so adding an event is a code change, not a
+/// migration, and an unknown name from an old deploy still records.
+///
+/// **`props` must never contain PII.** `sanitizeProps()` drops identifying keys
+/// and anything that looks like an email before the write. See
+/// `docs/analytics-events.md`.
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  /// NULL for anonymous. Not a FK, same reason as `AnalyticsSession.userId`.
+  userId    String?
+  sessionId String
+  name      String
+  props     Json?
+  createdAt DateTime @default(now())
+
+  session AnalyticsSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([name, createdAt])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Group {

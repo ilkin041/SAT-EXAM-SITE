@@ -34,6 +34,7 @@ import {
 } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 import { canAccessAttempt } from "@/lib/attempt-auth";
+import { track } from "@/lib/track";
 
 export const metadata = { title: "Results" };
 
@@ -97,6 +98,19 @@ export default async function ResultsPage({
         : "/dashboard",
     );
   }
+
+  // After the access check and the redirect, so this counts people who saw the
+  // report — not people who were bounced to /dashboard on the way to it.
+  // Re-renders of the same page do count again; the funnel asks "did anyone
+  // look", and de-duplicating would need a read per render.
+  void track("results_viewed", {
+    userId: attempt.userId,
+    props: {
+      attemptId: attempt.id,
+      testId: attempt.testId,
+      anonymous: attempt.userId === null,
+    },
+  });
 
   const moduleResults = liveResults.map((r) => ({
     sectionType: r.module.section.type,

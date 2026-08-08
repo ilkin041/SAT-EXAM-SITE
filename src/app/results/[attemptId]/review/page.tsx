@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ReviewClient, type ReviewItem } from "./review-client";
 import { canAccessAttempt } from "@/lib/attempt-auth";
 import { readRenderedQuestion } from "@/lib/rendered-question";
+import { track } from "@/lib/track";
 
 export const metadata = { title: "Review answers" };
 
@@ -48,6 +49,17 @@ export default async function ReviewAnswersPage({
         : "/dashboard",
     );
   }
+
+  // Same placement rule as `results_viewed`: after the access check and the
+  // redirect, so a bounced request is not counted as a read.
+  void track("review_opened", {
+    userId: attempt.userId,
+    props: {
+      attemptId: attempt.id,
+      testId: attempt.testId,
+      anonymous: attempt.userId === null,
+    },
+  });
 
   // Sort modules in test order, then flatten to a one-question-per-row list.
   // Each item carries everything the review client needs to render that

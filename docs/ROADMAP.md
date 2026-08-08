@@ -47,7 +47,7 @@ Phase 8 cannot start before T2.2.
 
 A task is done when it is committed on `master`, so the `Done` column carries the commit — the
 roadmap and `git log` cannot drift apart that way. Only phases with completed work have the column.
-**18 of 65 done:** Phase 0 and Phase 1 complete, Phase 2 through T2.2.
+**19 of 65 done:** Phase 0 and Phase 1 complete, Phase 2 complete.
 
 ---
 
@@ -85,7 +85,7 @@ Things producing no styles or failing WCAG **today**.
 |---|---|---|
 | T2.1 | KaTeX → static HTML at save time (−180 kB review, −179 kB test interface) | `e0f1594` |
 | T2.2 | Normalise `Question.skill` / `domain` into a controlled vocabulary (8 domains, 29 skills; 240 mapped, 40 queued for review) | `d8e7181` |
-| T2.3 | Event pipeline so product metrics become measurable | |
+| T2.3 | Event pipeline so product metrics become measurable (11 events catalogued, 7 live; device per attempt; `/admin/analytics` funnel) | |
 
 ## Phase 3 — Landing · `prompts/B-foundations-landing-auth.md`
 
@@ -164,7 +164,7 @@ Things producing no styles or failing WCAG **today**.
 
 | ID | Task |
 |---|---|
-| T10.1 | `/admin/analytics` index (no device breakdown until T2.3) |
+| T10.1 | `/admin/analytics` index — T2.3 shipped the funnel + device breakdown; this is the full page |
 | T10.2 | Discrimination index + Needs-attention tab |
 | T10.3 | Bank workflow: bulk, preview, draft/published, versions |
 | T10.4 | Groups, roster, student progress table |

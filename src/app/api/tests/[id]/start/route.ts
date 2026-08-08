@@ -5,6 +5,7 @@ import { reconcileAttemptLifecycle, startAttempt } from "@/lib/attempt-engine";
 import { canAccessTest } from "@/lib/test-access";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { abandonAttempt } from "@/lib/attempt-transitions";
+import { track } from "@/lib/track";
 import {
   ANONYMOUS_ATTEMPT_COOKIE,
   anonymousAttemptCookieOptions,
@@ -37,16 +38,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // `fresh` may come from query string or JSON body — accept both so the
   // client doesn't need to know about the HTTP nuance.
+  //
+  // The body also carries `viewportWidth`. It is the one thing the server
+  // cannot observe about the device, and T10.1 has to answer "does mobile
+  // matter" — so it is captured here, on the request that starts an attempt,
+  // rather than by a tracking beacon on every page.
   const url = new URL(req.url);
   let fresh = url.searchParams.get("fresh") === "1";
-  if (!fresh) {
-    try {
-      const body = (await req.json().catch(() => null)) as { fresh?: boolean } | null;
-      if (body?.fresh === true) fresh = true;
-    } catch {
-      /* no body — fine */
-    }
-  }
+  const body = (await req.json().catch(() => null)) as {
+    fresh?: boolean;
+    viewportWidth?: number;
+  } | null;
+  if (!fresh && body?.fresh === true) fresh = true;
+  const viewportWidth =
+    typeof body?.viewportWidth === "number" ? body.viewportWidth : null;
 
   const userId = session?.user?.id ?? null;
   let existingToAbandon: string | null = null;
@@ -88,11 +93,29 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   if (existingToAbandon) {
-    await abandonAttempt(existingToAbandon);
+    const abandoned = await abandonAttempt(existingToAbandon);
+    if (abandoned) {
+      void track("attempt_abandoned", {
+        userId,
+        viewportWidth,
+        props: { attemptId: existingToAbandon, testId: id, reason: "restarted" },
+      });
+    }
   }
 
   try {
     const attempt = await startAttempt({ testId: id, userId });
+    void track("attempt_started", {
+      userId,
+      viewportWidth,
+      props: {
+        attemptId: attempt.id,
+        testId: id,
+        mode: test.mode,
+        isPublic: test.isPublic,
+        anonymous: userId === null,
+      },
+    });
     const response = NextResponse.json({ ok: true, attemptId: attempt.id, resumed: false });
     if (!userId) {
       response.cookies.set(

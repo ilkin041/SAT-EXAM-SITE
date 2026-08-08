@@ -836,20 +836,31 @@ export async function completeAttempt(attemptId: string) {
   }
 }
 
-/** Reconcile every open attempt. Intended for the nightly Vercel cron. */
+/**
+ * Reconcile every open attempt. Intended for the nightly Vercel cron.
+ *
+ * `expiredAttempts` is returned rather than just a count so the caller can record an
+ * `attempt_abandoned` event per attempt (T2.3). The tracking lives in the cron
+ * route, not here: this module is imported by the integration tests and by a
+ * plain `tsx` script, neither of which has a request scope.
+ */
 export async function sweepStaleAttempts(now = new Date()) {
   const attempts = await prisma.testAttempt.findMany({
     where: { status: "IN_PROGRESS" },
-    select: { id: true },
+    select: { id: true, userId: true, testId: true },
     orderBy: { startedAt: "asc" },
     take: 1_000,
   });
+  const expiredAttempts: { id: string; userId: string | null; testId: string }[] = [];
   let expired = 0;
   let advanced = 0;
   for (const attempt of attempts) {
     const result = await reconcileAttemptLifecycle(attempt.id, now);
-    if (result === "expired") expired++;
+    if (result === "expired") {
+      expired++;
+      expiredAttempts.push(attempt);
+    }
     if (result === "advanced") advanced++;
   }
-  return { examined: attempts.length, expired, advanced };
+  return { examined: attempts.length, expired, advanced, expiredAttempts };
 }

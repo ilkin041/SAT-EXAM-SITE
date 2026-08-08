@@ -27,7 +27,15 @@ export function BeginButton({ testId }: Props) {
       /* ignore */
     }
     startTransition(async () => {
-      const res = await fetch(`/api/tests/${testId}/start`, { method: "POST" });
+      // `viewportWidth` is the one device fact the server cannot observe, and
+      // T10.1 needs it to answer whether mobile matters. Sent here rather than
+      // by a page-load beacon so nothing is recorded about a visitor who never
+      // starts a test.
+      const res = await fetch(`/api/tests/${testId}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ viewportWidth: window.innerWidth }),
+      });
       const data = await res.json();
       if (!res.ok || !data.ok) {
         setError(data.error ?? "Could not start test.");

@@ -282,6 +282,46 @@ College Board's own list. There is **no code path that writes a taxonomy string*
 - **`?domain=` and `?skill=` carry ids now**, not names. The ids are stable slugs (`algebra`,
   `algebra-linear-functions`), so an old bookmark matches nothing rather than erroring.
 
+## Events are first-party, and `props` never hold PII (T2.3)
+
+Product metrics were unmeasurable before this. `AnalyticsEvent` is the append-only funnel;
+`AnalyticsSession` holds what is true of a *browser* — device, viewport, user agent — so those are
+stored once instead of on every row. **There is no third-party analytics anywhere in the app.**
+Full detail, including the retention decision T3.8 has to make, is in `docs/analytics-events.md`.
+
+- **`track()` from `src/lib/track.ts`, always `void`, never `await`.** It returns a promise that
+  always resolves and swallows its own errors. An analytics row is worth less than the request it
+  would delay, and a failed insert must never be the reason a submission 500s. The cost: a
+  floating write can be lost on a platform that freezes the process at response time. Moving to
+  Next 15 and wrapping the body in `after()` is the whole fix.
+- **`src/lib/track.ts` is server-only** — it reads `next/headers` and imports `prisma`. Same rule as
+  `rendered-question.ts`. `src/lib/analytics-events.ts` and `src/lib/device.ts` are pure and safe
+  anywhere.
+- **`props` are scalar labels: ids, enums, booleans, counts.** `sanitizeProps()` drops identifying
+  keys and email-shaped values at the write, caps strings at 120 chars, and refuses nested objects.
+  It matches `ip` and `name` as whole keys and everything longer as a substring, because `skipped`
+  contains `ip` and `domainName` contains `name` — `tests/analytics-events.test.ts` pins both
+  directions.
+- **Eleven events are catalogued; seven have call sites.** `onboarding_completed` /
+  `onboarding_skipped` wait on T4.3 and `drill_started` / `drill_completed` on T8.3. They render on
+  `/admin/analytics` with an "Awaiting T4.3/T8.3" badge, so a zero there reads as "the feature does
+  not exist" rather than "nobody did it". A new event goes in **both** `ANALYTICS_EVENTS` and
+  `FUNNEL_STEPS`; a test asserts the two agree, so no event can be invisible.
+- **Fire after the authorization check, not before.** `results_viewed` above the `notFound()` would
+  count people who were refused the page.
+- **`viewportWidth` is the one thing the client sends**, and it rides on the attempt-start request
+  rather than a page-load beacon — so nothing is recorded about a visitor who never starts a test.
+  `deviceType` is derived server-side from the UA by `deviceTypeFromUserAgent`, which is
+  deliberately three buckets plus a bot escape hatch and must not grow into a device database.
+- **The `sat_sid` cookie is minted in `middleware.ts`,** not in a route handler: a Server Component
+  cannot set a cookie and `results_viewed` is one. The id is forwarded on the
+  `x-sat-analytics-session` request header as well, because on the request that mints it the
+  `Set-Cookie` is not yet readable — without the header the first event of every session would land
+  on a different id than the second.
+- **`SYSTEM_SESSION_ID` is one shared row and nothing browser-shaped may be written to it.** The
+  cron sweeper's `attempt_abandoned` rows belong to it; a `userId` there would be whichever attempt
+  the sweeper happened to close last.
+
 ## Copy rules
 
 - Active voice, plain verbs. "Save changes", not "Submit".
@@ -344,8 +384,9 @@ colour alone, keyboard-traversable modals, no horizontal scroll at 360px on full
   (`src/lib/adaptive-routing.ts`, `ModuleResult.routedTo`, 600-point EASY-route cap). "Every test is
   LINEAR" is a statement about seeded data, not capability.
 - **`TestAttempt.userId` is nullable** — that is the anonymous path.
-- **`AttemptEvent` records only BLUR/FOCUS/FULLSCREEN_ENTER/EXIT.** No device, viewport, or user
-  agent. Device analytics require capture first.
+- **`AttemptEvent` records only BLUR/FOCUS/FULLSCREEN_ENTER/EXIT** — in-test focus telemetry, not
+  product metrics. **Product events live in `AnalyticsEvent` / `AnalyticsSession` (T2.3)**, which is
+  where device, viewport and user agent are captured. See "Events are first-party" below.
 - **All 280 questions have an authored explanation.** `Question.explanation` is nullable and nothing
   enforces it at authoring time — one bulk import from being reachable.
 - **`Question.renderedHtml` (Json?, T2.1) holds the KaTeX output for `stem`, `passage`,

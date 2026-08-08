@@ -9,7 +9,9 @@ const NAV = [
   { href: "/admin/tests", label: "Tests" },
   { href: "/admin/questions", label: "Questions" },
   { href: "/admin/attempts", label: "Attempts" },
-  { href: "/admin/analytics/items", label: "Analytics" },
+  // The index is the funnel (T2.3); item analysis is one link off it. `isActive`
+  // is a prefix match, so both pages light the same tab.
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/import", label: "Import" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/groups", label: "Groups" },

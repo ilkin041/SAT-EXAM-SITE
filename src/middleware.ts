@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import {
+  ANALYTICS_SESSION_COOKIE,
+  ANALYTICS_SESSION_HEADER,
+  ANALYTICS_SESSION_MAX_AGE_SECONDS,
+} from "@/lib/analytics-events";
 
 /**
  * Edge middleware — kept deliberately thin to stay under Vercel's 1 MB limit.
@@ -53,9 +58,49 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+/**
+ * The T2.3 analytics session id.
+ *
+ * A random opaque value, httpOnly so page scripts cannot read it, and carrying
+ * nothing about the person — it exists to join a signup to the attempt that
+ * followed it, and for no other purpose. See `docs/analytics-events.md`.
+ *
+ * Minted here rather than in a route handler because a Server Component cannot
+ * set a cookie, and `results_viewed` is a Server Component. The id is forwarded
+ * on a request header as well as set as a cookie: on the request that mints it
+ * the `Set-Cookie` is not yet readable by the app, so without the header the
+ * first event of every session would land on a different id than the second.
+ */
+function withAnalyticsSession(
+  req: NextRequest,
+  build: (requestHeaders: Headers) => NextResponse,
+): NextResponse {
+  const existing = req.cookies.get(ANALYTICS_SESSION_COOKIE)?.value;
+  const sessionId = existing || crypto.randomUUID();
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set(ANALYTICS_SESSION_HEADER, sessionId);
+
+  const res = build(requestHeaders);
+  if (!existing) {
+    res.cookies.set(ANALYTICS_SESSION_COOKIE, sessionId, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: ANALYTICS_SESSION_MAX_AGE_SECONDS,
+    });
+  }
+  return res;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (isPublic(pathname)) return NextResponse.next();
+  if (isPublic(pathname)) {
+    return withAnalyticsSession(req, (headers) =>
+      NextResponse.next({ request: { headers } }),
+    );
+  }
 
   // Decode the JWT session cookie. No DB, no providers — just AUTH_SECRET +
   // crypto. Returns `null` if the cookie is absent, invalid, or expired.
@@ -67,21 +112,27 @@ export async function middleware(req: NextRequest) {
     secureCookie: process.env.NODE_ENV === "production",
   });
 
-  // Not signed in → bounce to login with a return path.
+  // Not signed in → bounce to login with a return path. The redirect still
+  // carries the cookie: a visitor who signs up next should keep the session id
+  // they arrived with, or the funnel loses its own first step.
   if (!token) {
     const url = new URL("/login", req.nextUrl.origin);
     url.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(url);
+    return withAnalyticsSession(req, () => NextResponse.redirect(url));
   }
 
   // Admin-only area. Role lives on the JWT (set by the `jwt` callback in
   // src/auth.ts) so this works without a DB hit.
   const role = (token as { role?: string }).role;
   if (pathname.startsWith("/admin") && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
+    return withAnalyticsSession(req, () =>
+      NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin)),
+    );
   }
 
-  return NextResponse.next();
+  return withAnalyticsSession(req, (headers) =>
+    NextResponse.next({ request: { headers } }),
+  );
 }
 
 export const config = {
