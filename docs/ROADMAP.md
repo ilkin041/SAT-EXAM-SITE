@@ -83,7 +83,7 @@ Things producing no styles or failing WCAG **today**.
 
 | ID | Task | Done |
 |---|---|---|
-| T2.1 | KaTeX → static HTML at save time (−180 kB review, −179 kB test interface) | pending |
+| T2.1 | KaTeX → static HTML at save time (−180 kB review, −179 kB test interface) | `e0f1594` |
 | T2.2 | Normalise `Question.skill` / `domain` into a controlled vocabulary | |
 | T2.3 | Event pipeline so product metrics become measurable | |
 
