@@ -25,7 +25,9 @@
     "test:all": "npm test && npm run test:integration",
     "test:watch": "vitest",
     "analyze": "cross-env ANALYZE=true next build",
-    "db:verify-question-html": "tsx scripts/verify-question-html.ts"
+    "db:verify-question-html": "tsx scripts/verify-question-html.ts",
+    "db:seed-screenshot-fixture": "tsx scripts/seed-screenshot-fixture.ts",
+    "gen:screenshots": "tsx scripts/capture-screenshots.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -58,6 +60,7 @@
     "react-dom": "^18.3.1",
     "resend": "^6.12.4",
     "sanitize-html": "^2.13.1",
+    "sharp": "^0.35.3",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8"

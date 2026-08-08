@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 // KaTeX's stylesheet, minus the ten @font-face blocks the question bank never
@@ -50,6 +50,20 @@ const plexMono = IBM_Plex_Mono({
  * more. `/` opts out with `title.absolute`, since its title already ends in the
  * product name.
  */
+/**
+ * Next's default viewport tag already allows pinch zoom; this states it, so
+ * nobody can quietly take it away. T3.5's screenshots are the reason it matters
+ * on this site in particular — a 1440px-wide screen shrunk to a 360px phone is
+ * legible only if the reader can zoom into it — but `maximum-scale=1` is a
+ * WCAG 1.4.4 failure on every page, not just that one.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: SITE_TITLE, template: `%s — ${SITE_NAME}` },

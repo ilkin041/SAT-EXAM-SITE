@@ -45,6 +45,8 @@ npm run db:seed-demo-questions      # the three originally-authored landing-demo
 npm run db:verify-taxonomy          # taxonomy invariants: no fold collisions, no cross-domain tags
 npm run gen:reference-sheet         # re-typeset the geometry reference sheet
 npm run gen:katex-subset            # re-derive the KaTeX CSS + font subset from the bank
+npm run db:seed-screenshot-fixture  # the account + attempts the landing screenshots photograph
+npm run gen:screenshots             # re-photograph them (needs a server; see T3.5 below)
 npx prisma migrate dev --name <name>
 npx prisma studio
 ```
@@ -492,6 +494,64 @@ body weight what the stats strip says one section down with numbers.
   would describe the code rather than what a visitor gets. Same reason the demo's summary lost
   "timed and adaptive". `Features`' `Adaptive Testing` tile still claims it — that is T3.6's, which
   has the instruction in its prompt. Route cost unchanged: `/` is 9.42 kB / 123 kB First Load.
+
+## The screenshots are photographs, and they are regenerated (T3.5)
+
+`ScreenshotTabs` — "See it before you sign up." — is four real screens in one frame: the test
+interface, the score report, the answer review, and the question editor. Nothing is drawn and
+nothing is retouched. Two commands produce them:
+
+```bash
+npm run db:seed-screenshot-fixture   # the account, the test, the three attempts
+npm run gen:screenshots              # Chrome, 1440x900 at DSF 2, WebP straight out of CDP
+```
+
+- **Open decision 4 decides what may be in a shot.** The pixels land on the most-crawled page in
+  the app, so no third-party question may appear in one. The three Reading and Writing questions
+  the fixture authors are original, carry `publicDemo`, and live in `seed-screenshot-fixture.ts`
+  under the same assertion `seed-demo-questions.ts` makes. **That is also why the interface shot
+  reads `Question 2 of 4`** — four is how many originally-authored R&W questions exist. A short
+  practice module is a real product configuration and no callout claims otherwise; author more
+  questions in that file and the number grows. The score report is the one shot that can stand on
+  the licensed bank, because that page renders scores, domains and difficulty and never a stem.
+- **The landing demo still shows its own three.** `loadDemoQuestions` takes the three *oldest*
+  `publicDemo` questions, so the fixture's four sort after them — but only if the demo seed ran
+  first, which the fixture script asserts rather than assumes.
+- **`gen:screenshots` is hand-rolled CDP over Node's global `WebSocket`, and adds no dependency.**
+  Chrome speaks DevTools over one socket and `Page.captureScreenshot` encodes WebP itself. It
+  emulates `prefers-reduced-motion: reduce` — not for accessibility but because the global block
+  collapses every intro animation to its final frame, so a capture cannot catch a card at opacity
+  0.3 — and forces the light scheme. Student and admin get **separate browser contexts**; one
+  profile is one cookie jar and the second sign-in would evict the first.
+- **Capture against a production build on port 3000.** `next dev`'s error badge is part of the
+  picture otherwise (the test interface has a pre-existing hydration mismatch in `TopBar`), and
+  `NEXTAUTH_URL` names port 3000, so signing in on any other port fails — `npm run build && npm
+  start` (which defaults to 3000), not `next start --port` anything else.
+- **The interface shot is choreographed, and the choreography is a bug report.** `ResumingSplash`
+  covers the screen for the first second, so nothing before 1.4s is photographable. Worse,
+  `AnnotatedPassage` draws its highlight in an effect and **a later re-render of the passage strips
+  it back out** — highlights do not survive on screen, in the interface or in review. The script
+  therefore steps forward and back to remount the passage and shoots the moment the highlight
+  reappears. **Fix that defect before anyone leans harder on the highlighter claim**; it is in
+  `src/components/annotated-passage.tsx`, which the test-interface freeze does not cover, but its
+  only in-exam call site does.
+- **One frame, one ratio, or the acceptance criterion is gone.** All four files are 2880×1800 and
+  the frame is an `aspect-[8/5]` box that has its height before the image loads.
+  `tests/screenshot-tabs.test.ts` reads the WebP headers off disk and fails if a capture drifts.
+  Measured: CLS **0** across all four switches; only the caption below the frame varies, by ≤19px.
+- **The copy lives in `src/lib/product-screens.ts`, the pixels in the client island.** Same split as
+  `site-stats.ts` against `stats-banner.tsx` — a test can then pin "two or three callouts, labels
+  not paragraphs" without rendering a client component or teaching vitest to import a `.webp`. The
+  image imports have to stay literal; a template string leaves webpack unable to resolve the file,
+  and with it the intrinsic dimensions and the blur placeholder.
+- **`next.config.mjs` now sets `formats: ["image/avif", "image/webp"]`** and `sharp` is a
+  dependency — self-hosted `next start` warns and degrades without it. Served at 1080w: 88 kB AVIF
+  / 107 kB WebP for **all four**, and only the open tab is fetched, so a first view costs 12–38 kB.
+  Route cost: `/` 9.42 → **16.3 kB**, First Load 123 → **139 kB**, which is Radix Tabs plus
+  `next/image`.
+- **The root layout now declares `viewport`** with `maximumScale: 5`. Next's default already allows
+  pinch zoom; stating it stops anyone quietly removing it, which matters most on this section — a
+  1440px screen shrunk into a 360px phone is legible only if you can zoom.
 
 ## Copy rules
 

@@ -7,6 +7,7 @@ import { HowItWorks } from "@/components/marketing/how-it-works";
 import { loadDemoQuestions } from "@/components/marketing/demo-questions";
 import { LandingHeader } from "@/components/marketing/landing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { ScreenshotTabs } from "@/components/marketing/screenshot-tabs";
 import { StatsBanner } from "@/components/marketing/stats-banner";
 import { organizationJsonLd, webApplicationJsonLd } from "@/lib/json-ld";
 import { SITE_TITLE, pageMetadata } from "@/lib/site";
@@ -40,6 +41,9 @@ export default async function Home() {
       <main>
         <Hero demoQuestions={demoQuestions} />
         <StatsBanner />
+        {/* Proof before the pitch: the demo shows one question, the strip
+            counts the bank, and this shows the rest of the product. */}
+        <ScreenshotTabs />
         <Features />
         <HowItWorks />
         <CtaBanner />
