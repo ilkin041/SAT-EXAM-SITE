@@ -28,7 +28,7 @@ reads as "the gradient thing" because of them.
 
 | Route | Kept | Why that one |
 |---|---|---|
-| `/` | `Sign Up Free` hero CTA (`Button variant="accent"`) | The single primary CTA. A headline and a CTA cannot both be the signature, and only one of them is clickable |
+| `/` | ~~`Sign Up Free` hero CTA (`Button variant="accent"`)~~ → **the demo panel's top rail** (T3.4) | Was the single primary CTA. T3.4 made `LiveQuestionDemo` the hero, and policy allows `--gradient-primary` to be the CTA *or* the hero signature: the signature is now something you can use, so the CTA is flat `primary`. Measured after: 1 counted gradient in the fold at 1280×800, 0 at 360px (the rail is below it) |
 | `/dashboard` | `TestCard` left accent strip above the fold; `--gradient-warm` on `Continue test` in the history table below it | `--gradient-warm` is reserved for resume, and this is the dashboard's resume affordance. The strip is kept by instruction — see the residual note |
 | `/results/[attemptId]` | The `ScoreDial` ring | Policy allows `--gradient-primary` to be the score gauge **or** the hero signature; the gauge is the reason the page exists |
 | all 15 `/admin/*` | The `AdminNav` navy bar | `--brand-navy` is admin chrome and nothing else on the page carries it |
@@ -156,6 +156,11 @@ the `/ui` gallery, `soft` with a three-card rail specimen showing what it is for
 This also resolves the T0.6 note that `Button`'s `accent` variant had **zero call sites**. It has
 one now — the `/` hero CTA — and it is the only gradient button left in the app. `globals.css`'s
 `.from-indigo-500 :focus-visible` override stays with it.
+
+**T3.4 update: `accent` is back to zero call sites.** The `/` hero CTA became flat `primary` when
+the demo panel took the page's one gradient, so there is now no gradient button anywhere in the
+app. The variant and its focus-ring override are kept — the next thing that wants a gradient button
+has to argue for it against the route's budget first, which is the point.
 
 ## Totals
 

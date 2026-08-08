@@ -418,6 +418,25 @@
   }
 
   /*
+   * Answer-bubble lattice for the landing hero (T3.4). Rings rather than dots,
+   * because the shape is the thing: a field of empty answer bubbles is what the
+   * page is about. Held at 3% of `--foreground` so it survives the theme flip
+   * in both directions and never competes with the demo panel sitting on it.
+   *
+   * Not counted against the gradient budget — the audit's rule has never
+   * counted radial textures, which carry no brand colour at full strength.
+   */
+  .bubble-lattice {
+    background-image: radial-gradient(
+      circle at center,
+      transparent 0 3.5px,
+      hsl(var(--foreground) / 0.03) 3.5px 4.5px,
+      transparent 4.5px
+    );
+    background-size: 28px 28px;
+  }
+
+  /*
    * Dot lattice for the auth pages' brand panel. Lives in CSS so the white
    * stays out of `.tsx` — this replaces the `rgba(255,255,255,0.8)` that was
    * copy-pasted across all four auth pages behind an eslint suppression.
@@ -543,6 +562,38 @@
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/*
+ * The landing hero's one orchestrated load sequence (T3.4).
+ *
+ * Five elements, 60ms apart, ordered by the reading order rather than by DOM
+ * accident: eyebrow, headline, sub-copy, buttons, demo. `--rise-step` is the
+ * element's place in that queue and is set at the call site with a Tailwind
+ * arbitrary property, so the stagger is visible in the markup.
+ *
+ * `both` holds the from-state during the delay, which is what stops a late
+ * element flashing in at full opacity before its turn. That fill is also why
+ * the reduced-motion case cannot rely on the global kill switch: it collapses
+ * the *duration* but not the *delay*, so an element would sit invisible for its
+ * 240ms and then snap. Switching the animation off entirely is the honest
+ * reading of "no motion" — every element is simply already there. Same lesson
+ * as `score-dial`'s `forwards`, from the other end.
+ */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-rise {
+  animation: hero-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--rise-step, 0) * 60ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise {
+    animation: none;
+  }
 }
 
 /* Subtle spin for loading indicators */

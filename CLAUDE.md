@@ -123,8 +123,10 @@ cannot reach it. Same category as the Bluebook chrome.
 shared chrome, 8 before T1.8 did the pages). Per-route before/after counts are in
 `docs/gradient-audit.md`. The only residual is `/dashboard` at 2 total — the `TestCard` left accent
 strip (which does clear the fold at 1280×800, and is the page's one above it) and the warm
-`Continue test` in the history table two sections below. Both are deliberate. There are **no hand-rolled `bg-gradient-*` buttons left** — `Button variant="accent"` on the
-`/` hero is the app's one gradient button.
+`Continue test` in the history table two sections below. Both are deliberate. There are **no hand-rolled `bg-gradient-*` buttons left**, and since T3.4 **no gradient button at all**:
+`/`'s one gradient moved off the hero CTA and onto the rail across the top of the demo panel,
+which is the hero signature. `Button variant="accent"` now has no call site — check the budget
+before giving it one.
 
 | Token | Reserved for |
 |---|---|
@@ -406,8 +408,9 @@ product.
 Recon W3: `/practice` already lets a logged-out visitor take a **full**, timed, real test, bound to
 their browser by an HMAC cookie. So the demo is not the unauthenticated path — it is the entry
 point to it, and every exit it offers points at `/practice`. Sections on `/` are composed in
-`page.tsx`; the demo is `src/components/marketing/live-question-demo.tsx` (server) plus
-`-client.tsx` (the island).
+`page.tsx`; the demo is `src/components/marketing/demo-questions.ts` (the server query, split out
+in T3.4) plus `live-question-demo-client.tsx` (the island), and since T3.4 it renders **inside the
+hero** rather than as a section of its own.
 
 - **`Question.publicDemo` is a licensing flag, not a publish state.** Ticking it asserts the
   question is originally authored and safe on the open web. The bank references "Official SAT
@@ -454,8 +457,41 @@ point to it, and every exit it offers points at `/practice`. Sections on `/` are
   building with and without the section. It stays cheap because the island imports `RichHtml` and
   never `RichContent` — the T2.1 rule — and because `demo-question.ts` is pure, so the island can
   share logic with the route handler without dragging Prisma or KaTeX toward the browser.
-- **`id="demo"` is a section anchor, not a nav item.** `MARKETING_NAV` is untouched; adding an
-  entry there is T3.4's call when it rebuilds the hero.
+- **`id="demo"` is an anchor, not a nav item.** `MARKETING_NAV` is still untouched — T3.4 kept the
+  id (the hero's own `Try a question` points at it) and added nothing to the nav, because the demo
+  is now the first thing on the page and a nav link to the top of the page is noise.
+
+## The hero is the demo (T3.4)
+
+`src/components/marketing/hero.tsx` is eyebrow, headline, sub-copy, two buttons and then the demo
+panel — nothing else. `MockTestCard` is deleted (a picture of the product, hidden behind `lg:block`
+from every phone, replaced by the product), along with the three green-check items, which said at
+body weight what the stats strip says one section down with numbers.
+
+- **The demo carries the page's one gradient**, a rail across the top of the panel. Policy allows
+  `--gradient-primary` to be the primary CTA *or* the hero signature; the headline's gradient span
+  went in T1.8 and the CTA's `variant="accent"` went here, so the one element that is actually
+  *usable* is the one that is bold. Measured in the browser: one counted gradient in the fold at
+  1280×800, zero at 360px (the rail sits below it). The bloom and the answer-bubble lattice are
+  radial textures and the audit's counting rule has never counted those.
+- **`page.tsx` loads the questions and passes them down**, which is why it is `async` now. The
+  hero's primary CTA is `Try a question` → `#demo` when there are questions and `Try a sample test`
+  → `/practice` when there are not; a component cannot branch on a sibling rendering null, and a
+  `#demo` anchor pointing at a section that is not on the page is worse than a different
+  destination. `loadDemoQuestions()` never throws — an empty array is both "nothing is flagged" and
+  "the database is unreachable", and both mean the same thing on screen.
+- **`.hero-rise` + `[--rise-step:n]` is the load sequence**: five elements, 60ms apart, in reading
+  order. The stagger is a Tailwind arbitrary property at the call site so it is visible in the
+  markup. **It is switched off entirely under reduced motion, not left to the global kill switch** —
+  that block collapses the duration but not the delay, and `animation-fill-mode: both` would then
+  hold an element invisible for its 240ms and snap it in. Mirror image of `score-dial`'s `forwards`.
+- **Hero height is content-driven** — `py-16 md:py-24`, no `min-h-screen`. Padding to fill a
+  viewport is what pushes the demo below the fold on the laptops it exists to catch.
+- **No "adaptive" in the hero copy.** Routing is implemented and tested, but
+  `SELECT mode, count(*) FROM "Test" WHERE "isPublic"` returns **5 LINEAR, 0 ADAPTIVE**, so the word
+  would describe the code rather than what a visitor gets. Same reason the demo's summary lost
+  "timed and adaptive". `Features`' `Adaptive Testing` tile still claims it — that is T3.6's, which
+  has the instruction in its prompt. Route cost unchanged: `/` is 9.42 kB / 123 kB First Load.
 
 ## Copy rules
 
@@ -725,7 +761,9 @@ T1.8 added two `Button` options:
 
 Do not guess. Ask if a task depends on an unresolved one.
 
-1. **Primary audience — student or tutor?** Blocks all landing copy (Phase 3).
+1. ~~Primary audience — student or tutor?~~ **Answered in T3.4: student-first.** The landing page
+   speaks to the person taking the test; Appendix B's default copy deck applies. Tutors convert on
+   a dedicated band plus `/for-tutors` (T3.8), not in the hero.
 2. ~~Does adaptive mode ship?~~ **Answered: yes, in code.** Query `Test.mode` where `isPublic` to
    see whether *published data* is adaptive before writing landing copy about it.
 3. **Paid tiers?** "Free to use" appears repeatedly on the landing page.

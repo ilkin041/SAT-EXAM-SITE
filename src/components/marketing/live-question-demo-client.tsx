@@ -175,6 +175,11 @@ export function LiveQuestionDemoClient({ questions }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      {/* The page's one gradient (T3.4). Policy reserves `--gradient-primary`
+          for the primary CTA, the score gauge *or* the hero signature; this
+          panel is the hero signature, so the hero's buttons are flat. */}
+      <div className="h-1 bg-gradient-primary" aria-hidden />
+
       {/* Chrome, matching the real test interface. */}
       <div className="flex items-center justify-between gap-3 border-b border-border bg-paper-sunk px-4 py-3 sm:px-6">
         <div className="min-w-0">
@@ -422,42 +427,50 @@ function DemoSummaryPanel({
   const summary = buildDemoSummary(answers);
 
   return (
-    <div className="mx-auto max-w-2xl rounded-xl border border-border bg-card p-6 text-center shadow-sm sm:p-8">
-      <p className="eyebrow text-muted-foreground">Demo complete</p>
-      <p className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-h2">
-        <span className="tabular">{summary.scoreText}</span>
-        <span className="text-muted-foreground" aria-hidden>
-          ·
-        </span>
-        <span className="tabular text-muted-foreground">{summary.durationText}</span>
-      </p>
-      <p className="mx-auto mt-4 max-w-[52ch] text-body-lg text-muted-foreground">
-        Three questions is too few to estimate a score. A full practice test is two modules per
-        section, timed and adaptive, and it ends with a real score report.
-      </p>
+    <div className="mx-auto max-w-2xl overflow-hidden rounded-xl border border-border bg-card text-center shadow-sm">
+      {/* Same rail as the question panel — the summary replaces it in place,
+          and the signature should not blink out on the last click. */}
+      <div className="h-1 bg-gradient-primary" aria-hidden />
 
-      <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Button asChild>
-          <Link href="/practice">
-            Take a full sample test
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </Button>
-        <Button asChild variant="secondary">
-          <Link href="/signup">Create free account</Link>
-        </Button>
+      <div className="p-6 sm:p-8">
+        <p className="eyebrow text-muted-foreground">Demo complete</p>
+        <p className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-h2">
+          <span className="tabular">{summary.scoreText}</span>
+          <span className="text-muted-foreground" aria-hidden>
+            ·
+          </span>
+          <span className="tabular text-muted-foreground">{summary.durationText}</span>
+        </p>
+        {/* T3.4: "timed and adaptive" was here. Every public test is `LINEAR`,
+            so the word described the code rather than what this visitor gets. */}
+        <p className="mx-auto mt-4 max-w-[52ch] text-body-lg text-muted-foreground">
+          Three questions is too few to estimate a score. A full practice test is two timed
+          modules per section, and it ends with a real score report.
+        </p>
+
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Button asChild>
+            <Link href="/practice">
+              Take a full sample test
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link href="/signup">Create free account</Link>
+          </Button>
+        </div>
+        <p className="mt-3 text-caption text-muted-foreground">
+          The sample test needs no signup.
+        </p>
+
+        <button
+          type="button"
+          onClick={onRestart}
+          className="mt-6 rounded-sm text-caption text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Try the demo again
+        </button>
       </div>
-      <p className="mt-3 text-caption text-muted-foreground">
-        The sample test needs no signup.
-      </p>
-
-      <button
-        type="button"
-        onClick={onRestart}
-        className="mt-6 rounded-sm text-caption text-muted-foreground underline underline-offset-4 hover:text-foreground"
-      >
-        Try the demo again
-      </button>
     </div>
   );
 }
